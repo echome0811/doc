@@ -3583,20 +3583,13 @@ begin
   xRec.Sq:=xRecP.Sq;
 end;
 
-function SaveStockWeightData(aSrcFile,aDstDir:String;var aErrMsg:string;var tsUptFiles:TStringList):Boolean;
 Const BlockSize = 50;
      _FiledSep=';';
      _CompareSep='#CompareSep#';
      _CompareSep2='#CompareSep2#';
      _CompareSep3='#CompareSep3#';
-
-var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
-  aRecP:TWeightAssignRecP; rOne: TWeightAssignRec;
-  i,j,k,Remain,GotCount,ReadCount,ii : integer;
-  aDstFile,aDstFileBak,aTempFile,sDatLine,iYear,sTempYear:string;
-  ts,ts2:TStringList; tsDat1,tsDatDel:TList;
-
-  function GetPartTwoData(aInputLine:string;var aOutPart1,aOutPart2:string):boolean;
+     
+function GetPartTwoData(aInputLine:string;var aOutPart1,aOutPart2:string):boolean;
   var xi1,xi2:integer;
   begin
     aOutPart1:=''; aOutPart2:='';
@@ -3613,62 +3606,148 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
       raise Exception.Create('GetPartTwoData fail.'+aInputLine);
     end;
   end;
+  function F2StrEmptyIsNull(aF:Double):string;
+  begin
+    if aF=ValueEmpty then result:=''
+    else result:=FloatToStr(aF);
+  end;
+
+  procedure ReadOfFileToList(aInputFile:string; var aList:TList);
+  var xf:File of TWeightAssignRec;  xr:array [0..BlockSize-1] of TWeightAssignRec;  aRecP:TWeightAssignRecP;
+    xReMain,xReadCount,xGotCount,xi:integer;
+  begin
+    if FileExists(aInputFile) then
+    begin
+      try
+        AssignFile(xf,aInputFile);
+        FileMode := 0;
+        ReSet(xf);
+        xReMain := FileSize(xf);
+        while xReMain>0 do
+        Begin
+             if xRemain<BlockSize then xReadCount := xReMain
+             Else xReadCount := BlockSize;
+             BlockRead(xf,xr[0],xReadCount,xGotCount);
+             For xi:=0 to xGotCount-1 do
+             Begin
+               new(aRecP);
+               AssignWeightAssignRec(xr[xi],aRecP);
+               aList.add(aRecP);
+             End;
+             xRemain:=xRemain-xGotCount;
+        End;
+      finally
+        CloseFile(xf);
+      end;
+    end;
+  end;
+  procedure SaveToFileToList(aInputFile:string; var aList:TList);
+  var xf:File of TWeightAssignRec; xi:integer; aRecP:TWeightAssignRecP; rOne:TWeightAssignRec;
+  begin
+    SortWeightAssignList(aList);
+    try
+      AssignFile(xf,aInputFile);
+      FileMode := 2;
+      ReWrite(xf);
+      for xi:=0 to aList.count-1 do
+      begin
+        aRecP:=aList.Items[xi];
+        AssignWeightAssignRec2(aRecP,rOne);
+        write(xf,rOne);
+      end;
+    finally
+      CloseFile(xf);
+    end;
+  end;
+
+  procedure ClsWeightAssignRecPList(var aList:TList);
+  var i:integer; aRecP:TWeightAssignRecP;
+  begin
+    if Assigned(aList) then
+    for i:=0 to aList.count-1 do
+    begin
+      aRecP:=aList.Items[i];
+      Dispose(aRecP);
+      aRecP:=nil;
+    end;
+    aList.Clear;
+  end;
+
+
+function SaveStockWeightData(aSrcFile,aDstDir:String;var aErrMsg:string;var tsUptFiles:TStringList):Boolean;
+var aRecP:TWeightAssignRecP; rOne: TWeightAssignRec;
+  i,j,k,ii : integer;
+  aDstFile,aDstFileBak,aTempFile,sDatLine,iYear,sTempYear:string;
+  ts,ts2:TStringList; tsDat1,tsDatDel:TList; bUptDelFile:boolean;
+
+  function GetMaxSqByList(aInputCode,aInputWeightAssignDate:string;aList:TList):integer;
+  var xi:Integer;
+  begin
+    result:=0;
+    for xi:=0 to aList.count-1 do
+    begin
+      aRecP:=aList.items[xi];
+      if SameText(aRecP.Code,aInputCode) and
+         SameText(FmtTwDt2(aRecP.WeightAssignDate),aInputWeightAssignDate)  then
+      begin
+        if aRecP.Sq>result then
+          result:=aRecP.Sq;
+      end;
+    end;
+  end;
+  function GetMaxSqEx(aInputCode,aInputWeightAssignDate:string):integer;
+  var xi1,xi2:integer;
+  begin
+    result:=0;
+    xi1:=GetMaxSqByList(aInputCode,aInputWeightAssignDate,tsDat1);
+    xi2:=GetMaxSqByList(aInputCode,aInputWeightAssignDate,tsDatDel);
+    if result<xi1 then
+      result:=xi1;
+    if result<xi2 then
+      result:=xi2;
+  end;
 
   procedure ReadOfDelList;
-  var xf:File of TWeightAssignRec; xstrDelRecFile:string;
+  var  xstrDelRecFile:string;
+  begin
+     xstrDelRecFile:=aDstDir+_stockweightDelF;
+     ReadOfFileToList(xstrDelRecFile,tsDatDel);
+  end;
+  function SaveOfDelList:Boolean;
+  var  xstrDelRecFile,xstrDelRecFileTmp,xstrDelRecFileBak:string;
   begin
     result:=false;
-     xstrDelRecFile:=aDstDir+'stockweightdel.dat';
-      try
-        AssignFile(xf,xstrDelRecFile);
-        FileMode := 2;
-        if not FileExists(xstrDelRecFile) then
-          Rewrite(xf)
-        else
-          ReSet(xf);
-        ReMain := FileSize(xf);
-        if ReMain>0 then 
-          Seek(xf,ReMain);
-        Write(xf,aWriteR);
-      finally
-        CloseFile(xf);
+    if bUptDelFile then
+    begin
+      xstrDelRecFile:=aDstDir+_stockweightDelF;
+      xstrDelRecFileTmp:=aDstDir+'~'+_stockweightDelF;
+      xstrDelRecFileBak:=aDstDir+'bak\'+sDatLine+_stockweightDelF;
+      if FileExists(xstrDelRecFileTmp) then
+      begin
+        DeleteFile(PChar(xstrDelRecFileTmp));
       end;
-      result:=true;
-  end;
-  procedure WriteToDelList;
-  begin
-  
-  end;
-  procedure SaveOfDelList;
-  begin
-  
-  end;
-
-  
-  function WriteRecToDel(aWriteR:TWeightAssignRec):boolean;
-  var xf:File of TWeightAssignRec; xstrDelRecFile:string;
-  begin
-    result:=false;
-     xstrDelRecFile:=aDstDir+'stockweightdel.dat';
-      try
-        AssignFile(xf,xstrDelRecFile);
-        FileMode := 2;
-        if not FileExists(xstrDelRecFile) then
-          Rewrite(xf)
-        else
-          ReSet(xf);
-        ReMain := FileSize(xf);
-        if ReMain>0 then 
-          Seek(xf,ReMain);
-        Write(xf,aWriteR);
-      finally
-        CloseFile(xf);
+      SaveToFileToList(xstrDelRecFileTmp,tsDatDel);
+      CopyFile(PChar(xstrDelRecFile),PChar(xstrDelRecFileBak),false);
+      if not CopyFile(PChar(xstrDelRecFileTmp),PChar(xstrDelRecFile),false) then
+      begin
+        aErrMsg:='更新數據del檔案失敗.'+xstrDelRecFile;
+        exit;
       end;
-      result:=true;
+      tsUptFiles.Add(xstrDelRecFile);
+      DeleteFile(PChar(xstrDelRecFileTmp));
+    end;
+    result:=true;
+  end;
+  procedure AddToDelList(aInputRec:TWeightAssignRec);
+  begin
+    new(aRecP);
+    AssignWeightAssignRec(aInputRec,aRecP);
+    tsDatDel.add(aRecP);
+    bUptDelFile:=True;
   end;
   
   function SetOneData(aInputLine,aYearStr:string;var aInputList:TList):integer;
-  var xi,xic:integer; xRecP,xRecP2:TWeightAssignRecP; StrLst2:_cStrLst2;
+  var xi,xiSQ:integer; xRecP,xRecP2:TWeightAssignRecP; StrLst2:_cStrLst2;
      xstr1,xstr2,xstr3,xstr4,xstr5,xstr6,xstrInitInput,xstrOp,xLine0,xLine1,xLine2:string; xb:boolean;
      xf:File of TWeightAssignRec; xrOne: TWeightAssignRec;
   begin
@@ -3686,14 +3765,15 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
       aErrMsg:='data format invalidate.'+xstrInitInput;
       raise Exception.Create(aErrMsg);
     end;
-    
+    xiSQ:=GetMaxSqEx(StrLst2[0],StrLst2[1]);
+
     xstrOp:=StrLst2[24]; //0新增,1刪除,2替代
     if xstrOp='1' then
     begin
       with xrOne do
       begin
         Code:=StrLst2[0];
-        WeightAssignDate:=TwDateStrToDate(StrLst2[1]);  
+        WeightAssignDate:=TwDateStrToDate(StrLst2[1]);
         DocDate:=TwDateStrToDate(StrLst2[3]);
         DocTime:=TimeStrToTime(StrLst2[4]);
         DatType:=StrToInt(StrLst2[5]);
@@ -3715,9 +3795,9 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
         XJZZRGJ:=CFS(StrLst2[21]);
         DZFee:=CFS(StrLst2[22]);
         MGME:=trim(StrLst2[23]);
-        Sq:=0;
+        Sq:=xiSQ+1;
       end;
-      WriteRecToDel(xrOne);
+      AddToDelList(xrOne);
       result:=1;
       exit;
     end;
@@ -3738,7 +3818,7 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
       else xLine2:=xLine2+','+xLine0;
     end;
     
-    xic:=0; xb:=false; xRecP2:=nil;
+    xb:=false; xRecP2:=nil;
     for xi:=0 to aInputList.count-1 do
     begin
       xRecP:=aInputList.items[xi];
@@ -3747,8 +3827,6 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
       if SameText(xstr3,xstr1) then
       begin
         xRecP2:=aInputList.items[xi];
-        if xRecP.Sq>xic then
-          xic:=xRecP.Sq;
         xLine1:=FmtTwDt2(xRecP.DocDate)+','+
                       FormatDateTime('hh:mm:ss',xRecP.DocTime)+','+
                       inttostr(xRecP.DatType)+','+
@@ -3805,15 +3883,15 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
         xRecP.XJZZRGJ:=CFS(StrLst2[21]);
         xRecP.DZFee:=CFS(StrLst2[22]);
         xRecP.MGME:=trim(StrLst2[23]);
-        xRecP.Sq:=xic+1;
-      
+        xRecP.Sq:=xiSQ+1;
+
         aInputList.add(xRecP);
       end
       else if xstrOp='2' then begin
         if xRecP2<>nil then
         begin
           AssignWeightAssignRecP2Rec(xRecP2,xrOne);
-          WriteRecToDel(xrOne);
+          AddToDelList(xrOne);
 
           xRecP2.Code:=StrLst2[0];
           xRecP2.WeightAssignDate:=TwDateStrToDate(StrLst2[1]);
@@ -3838,6 +3916,7 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
           xRecP2.XJZZRGJ:=CFS(StrLst2[21]);
           xRecP2.DZFee:=CFS(StrLst2[22]);
           xRecP2.MGME:=trim(StrLst2[23]);
+          xRecP2.Sq:=xiSQ+1;
         end;
       end;
       setlength(StrLst2,0);
@@ -3846,6 +3925,7 @@ var f:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
   end;
 begin
   result := false;
+  bUptDelFile:=false;
   tsUptFiles.clear;
   if not DirectoryExists(aDstDir+'bak\') then
     Mkdir_Directory(aDstDir+'bak\');
@@ -3864,7 +3944,9 @@ begin
     ts:=TStringList.create;
     ts2:=TStringList.create;
     tsDat1:=TList.create;
+    tsDatDel:=TList.create;
     ts.LoadFromFile(aSrcFile);
+    ReadOfDelList;
 
     for i:=0 to ts.count-1 do
     begin
@@ -3880,7 +3962,7 @@ begin
       if MayBeDigital(sTempYear) then
       begin
         if ts2.IndexOf(sTempYear)=-1 then
-          ts2.Add(sTempYear)
+          ts2.Add(sTempYear);
       end;
     end;
 
@@ -3893,31 +3975,8 @@ begin
       aTempFile:=aDstDir+'~'+ExtractFileName(aDstFile);
       if FileExists(aTempFile) then
         DeleteFile(PChar(aTempFile));
-        
-        if FileExists(aDstFile) then
-        begin
-          try
-            AssignFile(f,aDstFile);
-            FileMode := 0;
-            ReSet(f);
-            ReMain := FileSize(f);
-            while ReMain>0 do
-            Begin
-                 if Remain<BlockSize then ReadCount := ReMain
-                 Else ReadCount := BlockSize;
-                 BlockRead(f,r[0],ReadCount,GotCount);
-                 For k:=0 to GotCount-1 do
-                 Begin
-                   new(aRecP);
-                   AssignWeightAssignRec(r[k],aRecP);
-                   tsDat1.add(aRecP);
-                 End;
-                 Remain:=Remain-GotCount;
-            End;
-          finally
-            CloseFile(f);
-          end;
-        end;
+      ReadOfFileToList(aDstFile,tsDat1);
+
         i:=0;
         while i<ts.count do
         begin
@@ -3944,32 +4003,11 @@ begin
             continue;
           end;
         end;
-        SortWeightAssignList(tsDat1);
-        try
-          AssignFile(f,aTempFile);
-          FileMode := 2;
-          ReWrite(f);
-          for i:=0 to tsDat1.count-1 do
-          begin
-            aRecP:=tsDat1.Items[i];
-            AssignWeightAssignRec2(aRecP,rOne);
-            write(f,rOne);
-          end;
-        finally
-          CloseFile(f);
-        end;
-
-        for i:=0 to tsDat1.count-1 do
-        begin
-          aRecP:=tsDat1.Items[i];
-          Dispose(aRecP);
-          aRecP:=nil;
-        end;
-        tsDat1.Clear;
-
+        SaveToFileToList(aTempFile,tsDat1);
+        ClsWeightAssignRecPList(tsDat1);
         if FileExists(aTempFile) then
         begin
-          if FileExists(aDstFile) then 
+          if FileExists(aDstFile) then
           CopyFile(PChar(aDstFile),PChar(aDstFileBak),false);
           if not CopyFile(PChar(aTempFile),PChar(aDstFile),false) then
           begin
@@ -3988,36 +4026,56 @@ begin
       aErrMsg:='未預期的資料.'+ts.text;
       exit;
     end;
+    if not SaveOfDelList then
+      exit;
     result:=true;
   finally
-    for i:=0 to tsDat1.count-1 do
-    begin
-      aRecP:=tsDat1.Items[i];
-      Dispose(aRecP);
-      aRecP:=nil;
-    end;
-    tsDat1.Clear;
+    ClsWeightAssignRecPList(tsDat1);
     FreeAndNil(tsDat1);
+    ClsWeightAssignRecPList(tsDatDel);
+    FreeAndNil(tsDatDel);
   end;
 end;
 
-function F2StrEmptyIsNull(aF:Double):string;
-begin
-  if aF=ValueEmpty then result:=''
-  else result:=FloatToStr(aF);
-end;
 
 function DelStockWeightData(aDataSValue,aDstDir:String;var aErrMsg:string;var tsUptFiles:TStringList;var aDelCodeField:string):Boolean;
-Const BlockSize = 50;
-     _FiledSep=';';
-     _CompareSep='#CompareSep#';
-     _CompareSep2='#CompareSep2#';
-     _CompareSep3='#CompareSep3#';
-
-var f,f2,f3:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
-  k,Remain,GotCount,ReadCount,kTemp : integer; bDel:boolean;
+var k,kTemp: integer; bDel:boolean;
   aDstFile,aDstFileBak,aTempFile,sDelFile,sDatLine,iYear,sLine0,sLine1,sLine2:string;
-  StrLst2:_cStrLst2; xstr6:string;
+  StrLst2:_cStrLst2; xstr6:string; tsDat1,tsDatDel:TList; bUptDelFile:boolean;
+  aRecP:TWeightAssignRecP;
+
+  procedure ReadOfDelList;
+  var  xstrDelRecFile:string;
+  begin
+     xstrDelRecFile:=aDstDir+_stockweightDelF;
+     ReadOfFileToList(xstrDelRecFile,tsDatDel);
+  end;
+  function SaveOfDelList:boolean;
+  var  xstrDelRecFile,xstrDelRecFileTmp,xstrDelRecFileBak:string;
+  begin
+    result:=false;
+    if bUptDelFile then
+    begin
+      xstrDelRecFile:=aDstDir+_stockweightDelF;
+      xstrDelRecFileTmp:=aDstDir+'~'+_stockweightDelF;
+      xstrDelRecFileBak:=aDstDir+'bak\'+sDatLine+_stockweightDelF;
+      if FileExists(xstrDelRecFileTmp) then
+      begin
+        DeleteFile(PChar(xstrDelRecFileTmp));
+      end;
+      SaveToFileToList(xstrDelRecFileTmp,tsDatDel);
+      CopyFile(PChar(xstrDelRecFile),PChar(xstrDelRecFileBak),false);
+      if not CopyFile(PChar(xstrDelRecFileTmp),PChar(xstrDelRecFile),false) then
+      begin
+        aErrMsg:='更新數據del檔案失敗.'+xstrDelRecFile;
+        exit;
+      end;
+      tsUptFiles.Add(xstrDelRecFile);
+      DeleteFile(PChar(xstrDelRecFileTmp));
+    end;
+    result:=true;
+  end;
+
 begin
   result := false; aDelCodeField:='';
   tsUptFiles.clear;
@@ -4074,123 +4132,245 @@ begin
   if FileExists(aDstFile) then
   begin
     try
-      AssignFile(f,aDstFile);
-      AssignFile(f2,aTempFile);
-      FileMode := 2;
-      ReSet(f);
-      ReWrite(f2);
-      ReMain := FileSize(f);
-      while ReMain>0 do
+      tsDat1:=TList.create;
+      tsDatDel:=TList.create;
+      ReadOfFileToList(aDstFile,tsDat1);
+      ReadOfDelList;
+      for k:=0 to tsDat1.count-1 do
       Begin
-           if Remain<BlockSize then ReadCount := ReMain
-           Else ReadCount := BlockSize;
-           BlockRead(f,r[0],ReadCount,GotCount);
-           For k:=0 to GotCount-1 do
-           Begin
-             sLine1:=(r[k].Code)+','+
-                      FmtTwDt2(r[k].WeightAssignDate)+','+
-                      inttostr(r[k].Sq)+','+
-                      FmtTwDt2(r[k].DocDate)+','+
-                      FormatDateTime('hh:mm:ss',r[k].DocTime)+','+
-                      inttostr(r[k].DatType)+','+
-                      inttostr(r[k].BelongYear)+','+
-                      F2StrEmptyIsNull(r[k].YYZZZPG)+','+
-                      F2StrEmptyIsNull(r[k].FDYYGJ_ZBGJZZZPG)+','+
-                      FmtTwDt2(r[k].DivRightDate)+','+
-                      F2StrEmptyIsNull(r[k].PGZGS)+','+
-                      F2StrEmptyIsNull(r[k].PGZGE)+','+
-                      F2StrEmptyIsNull(r[k].PGZGSRate)+','+
-                      F2StrEmptyIsNull(r[k].YGHLRate)+','+
-                      F2StrEmptyIsNull(r[k].YYFPGDGL)+','+
-                      F2StrEmptyIsNull(r[k].FDYYGJ_ZBGJFFXJ)+','+
-                      FmtTwDt2(r[k].DivWeigthDate)+','+
-                      FmtTwDt2(r[k].XJGLDate)+','+
-                      F2StrEmptyIsNull(r[k].YGGLZJE)+','+
-                      F2StrEmptyIsNull(r[k].XJZZZGS)+','+
-                      F2StrEmptyIsNull(r[k].XJZZRate)+','+
-                      F2StrEmptyIsNull(r[k].XJZZRGJ)+','+
-                      F2StrEmptyIsNull(r[k].DZFee)+','+
-                      (r[k].MGME);
-             {if sametext(r[k].Code,StrLst2[0])  and
-                (r[k].WeightAssignDate=TwDateStrToDate(StrLst2[1]))  and
-                (r[k].Sq=StrToInt(StrLst2[2]))  and
-                (r[k].DocDate=TwDateStrToDate(StrLst2[3]))  and
-                (r[k].DocTime=TimeStrToTime(StrLst2[4]))  and
-                (r[k].DatType=StrToInt(StrLst2[5]))  and
-                (r[k].BelongYear=StrToInt(StrLst2[6]))  and
-                (r[k].YYZZZPG=CFS(StrLst2[7]))  and
-                (r[k].FDYYGJ_ZBGJZZZPG=CFS(StrLst2[8]))  and
-                (r[k].DivRightDate=TwDateStrToDate(StrLst2[9]))  and
-                (r[k].PGZGS=CFS(StrLst2[10]))  and
-                (r[k].PGZGE=CFS(StrLst2[11]))  and
-                (r[k].PGZGSRate=CFS(StrLst2[12]))  and
-                (r[k].YGHLRate=CFS(StrLst2[13]))  and
-                (r[k].YYFPGDGL=CFS(StrLst2[14]))  and
-                (r[k].FDYYGJ_ZBGJFFXJ=CFS(StrLst2[15]))  and
-                (r[k].DivWeigthDate=TwDateStrToDate(StrLst2[16]))  and
-                (r[k].XJGLDate=TwDateStrToDate(StrLst2[17]))  and
-                (r[k].YGGLZJE=CFS(StrLst2[18]))  and
-                (r[k].XJZZZGS=CFS(StrLst2[19]))  and
-                (r[k].XJZZRate=CFS(StrLst2[20]))  and
-                (r[k].XJZZRGJ=CFS(StrLst2[21]))  and
-                (r[k].DZFee=CFS(StrLst2[22]))  and
-                sametext(r[k].MGME,trim(StrLst2[23]))  
-                then}
-             if sLine1=sLine2 then
-             begin
-               bDel:=true;
-                try
-                  AssignFile(f3,sDelFile);
-                  FileMode := 2;
-                  if not FileExists(sDelFile) then
-                    Rewrite(f3)
-                  else
-                    ReSet(f3);
-                  kTemp := FileSize(f3);
-                  if kTemp>0 then
-                    Seek(f3,kTemp);
-                  Write(f3,r[k]);
-                finally
-                  CloseFile(f3);
-                end;
-             end
-             else begin
-               Write(f2,r[k]);
-             end;
-           End;
-           Remain:=Remain-GotCount;
+         aRecP:=tsDat1.items[k];
+         sLine1:=(aRecP.Code)+','+
+                  FmtTwDt2(aRecP.WeightAssignDate)+','+
+                  inttostr(aRecP.Sq)+','+
+                  FmtTwDt2(aRecP.DocDate)+','+
+                  FormatDateTime('hh:mm:ss',aRecP.DocTime)+','+
+                  inttostr(aRecP.DatType)+','+
+                  inttostr(aRecP.BelongYear)+','+
+                  F2StrEmptyIsNull(aRecP.YYZZZPG)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJZZZPG)+','+
+                  FmtTwDt2(aRecP.DivRightDate)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGS)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGE)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGSRate)+','+
+                  F2StrEmptyIsNull(aRecP.YGHLRate)+','+
+                  F2StrEmptyIsNull(aRecP.YYFPGDGL)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJFFXJ)+','+
+                  FmtTwDt2(aRecP.DivWeigthDate)+','+
+                  FmtTwDt2(aRecP.XJGLDate)+','+
+                  F2StrEmptyIsNull(aRecP.YGGLZJE)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZZGS)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRate)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRGJ)+','+
+                  F2StrEmptyIsNull(aRecP.DZFee)+','+
+                  (aRecP.MGME);
+         if sLine1=sLine2 then
+         begin
+           bDel:=true;
+           tsDat1.Delete(k);
+           tsDatDel.Add(aRecP);
+           bUptDelFile:=True;
+           Break;
+         end;
       End;
+
+      tsUptFiles.Add(aDstFile);
+      if bDel then
+      begin
+        SaveToFileToList(aTempFile,tsDat1);
+        if FileExists(aTempFile) then
+        begin
+          if FileExists(aDstFile) then
+            CopyFile(PChar(aDstFile),PChar(aDstFileBak),false);
+          if not CopyFile(PChar(aTempFile),PChar(aDstFile),false) then
+          begin
+            aErrMsg:='更新數據檔案失敗.'+aDstFile;
+            exit;
+          end;
+          DeleteFile(PChar(aTempFile));
+        end;
+        if not SaveOfDelList then
+          exit;
+      end;
     finally
-      try CloseFile(f); except end;
-      try CloseFile(f2); except end;
+      ClsWeightAssignRecPList(tsDat1);
+      FreeAndNil(tsDat1);
+      ClsWeightAssignRecPList(tsDatDel);
+      FreeAndNil(tsDatDel);
     end;
   end;
-  tsUptFiles.Add(aDstFile);
-  if bDel then
-  begin
-    if FileExists(aDstFile) then
-      CopyFile(PChar(aDstFile),PChar(aDstFileBak),false);
-    if not CopyFile(PChar(aTempFile),PChar(aDstFile),false) then
-    begin
-      aErrMsg:='更新數據檔案失敗.'+aDstFile;
-      exit;
-    end;
-  end;
-  DeleteFile(PChar(aTempFile));
   result := true;
 end;
 
 function ReBackStockWeightData(aDataSValue,aDstDir:String;var aErrMsg:string;var tsUptFiles:TStringList;var aDelCodeField:string):Boolean;
-Const BlockSize = 50;
-     _FiledSep=';';
-     _CompareSep='#CompareSep#';
-     _CompareSep2='#CompareSep2#';
-     _CompareSep3='#CompareSep3#';
-     
-var f,f2,f3:File of TWeightAssignRec; r:array [0..BlockSize-1] of TWeightAssignRec;
-  k,Remain,GotCount,ReadCount,kTemp : integer; bDel:boolean;
-  aDstFile,aDstFileBak,aTempFile,aDelTempFile,sDelFile,sDatLine,iYear,sLine1,sLine2,sLine0:string;
-  StrLst2:_cStrLst2; xstr6:string; tsDat1:TList; aRecP:TWeightAssignRecP; rOne:TWeightAssignRec;
+var k,kTemp: integer; bDel:boolean;
+  sDelFile,sDatLine,sLine0,sLine1,sLine2:string;
+  StrLst2:_cStrLst2; xstr6:string; tsDatDel:TList; bUptDelFile:boolean;
+  aRecP:TWeightAssignRecP;
+
+  procedure ReadOfDelList;
+  var  xstrDelRecFile:string;
+  begin
+     xstrDelRecFile:=aDstDir+_stockweightDelF;
+     ReadOfFileToList(xstrDelRecFile,tsDatDel);
+  end;
+  function SaveOfDelList:boolean;
+  var  xstrDelRecFile,xstrDelRecFileTmp,xstrDelRecFileBak:string;
+  begin
+    result:=false;
+    if bUptDelFile then
+    begin
+      xstrDelRecFile:=aDstDir+_stockweightDelF;
+      xstrDelRecFileTmp:=aDstDir+'~'+_stockweightDelF;
+      xstrDelRecFileBak:=aDstDir+'bak\'+sDatLine+_stockweightDelF;
+      if FileExists(xstrDelRecFileTmp) then
+      begin
+        DeleteFile(PChar(xstrDelRecFileTmp));
+      end;
+      SaveToFileToList(xstrDelRecFileTmp,tsDatDel);
+      CopyFile(PChar(xstrDelRecFile),PChar(xstrDelRecFileBak),false);
+      if not CopyFile(PChar(xstrDelRecFileTmp),PChar(xstrDelRecFile),false) then
+      begin
+        aErrMsg:='更新數據del檔案失敗.'+xstrDelRecFile;
+        exit;
+      end;
+      tsUptFiles.Add(xstrDelRecFile);
+      DeleteFile(PChar(xstrDelRecFileTmp));
+    end;
+    result:=true;
+  end;
+begin
+  result := false; aDelCodeField:='';
+  tsUptFiles.clear;
+  if not DirectoryExists(aDstDir+'bak\') then
+    Mkdir_Directory(aDstDir+'bak\');
+  aDataSValue:=StringReplace(aDataSValue,_CompareSep,'',[rfReplaceAll]);
+  aDataSValue:=StringReplace(aDataSValue,_CompareSep2,'',[rfReplaceAll]);
+  aDataSValue:=StringReplace(aDataSValue,_CompareSep3,'',[rfReplaceAll]);
+
+  xstr6:=_FiledSep;
+  StrLst2:=DoStrArray2_2(aDataSValue,xstr6);
+  if Length(StrLst2)<>27 then
+  begin
+    aErrMsg:=aDataSValue+' 參數錯誤[len='+inttostr(Length(StrLst2))+'].';
+    exit;
+  end;
+
+  if (StrLst2[0]='') or (StrLst2[1]='') or (StrLst2[2]='') then
+  begin
+    aErrMsg:=StrLst2[0]+','+StrLst2[1]+','+StrLst2[2]+' 參數錯誤[1].';
+    exit;
+  end;
+  aDelCodeField:=StrLst2[0]+','+StrLst2[1]+','+StrLst2[2];
+  if not DirectoryExists(aDstDir) then
+  begin
+    ForceDirectories(aDstDir);
+  end;
+
+  sLine2:='';
+  for kTemp:=0 to 23 do
+  begin
+    sLine0:=StringReplace(StrLst2[kTemp],',','',[rfReplaceAll]);
+    if sLine2='' then sLine2:=sLine0
+    else sLine2:=sLine2+','+sLine0;
+  end;
+
+  sDatLine:='Bak'+FormatDateTime('yyyymmddmmhhss',now)+'_';
+  sDelFile:=aDstDir+'stockweightdel.dat';
+
+  bDel:=false;
+  if FileExists(aDstDir+_stockweightDelF) then
+  begin
+    try
+      tsDatDel:=TList.create;
+      ReadOfDelList;
+      for k:=0 to tsDatDel.count-1 do
+      Begin
+         aRecP:=tsDatDel.items[k];
+         sLine1:=(aRecP.Code)+','+
+                  FmtTwDt2(aRecP.WeightAssignDate)+','+
+                  inttostr(aRecP.Sq)+','+
+                  FmtTwDt2(aRecP.DocDate)+','+
+                  FormatDateTime('hh:mm:ss',aRecP.DocTime)+','+
+                  inttostr(aRecP.DatType)+','+
+                  inttostr(aRecP.BelongYear)+','+
+                  F2StrEmptyIsNull(aRecP.YYZZZPG)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJZZZPG)+','+
+                  FmtTwDt2(aRecP.DivRightDate)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGS)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGE)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGSRate)+','+
+                  F2StrEmptyIsNull(aRecP.YGHLRate)+','+
+                  F2StrEmptyIsNull(aRecP.YYFPGDGL)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJFFXJ)+','+
+                  FmtTwDt2(aRecP.DivWeigthDate)+','+
+                  FmtTwDt2(aRecP.XJGLDate)+','+
+                  F2StrEmptyIsNull(aRecP.YGGLZJE)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZZGS)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRate)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRGJ)+','+
+                  F2StrEmptyIsNull(aRecP.DZFee)+','+
+                  (aRecP.MGME);
+         if sLine1=sLine2 then
+         begin
+           bDel:=true;
+           tsDatDel.Delete(k);
+           bUptDelFile:=True;
+           Break;
+         end;
+      End;
+
+      tsUptFiles.Add(sDelFile);
+      if bDel then
+      begin
+        if not SaveOfDelList then
+          exit;
+      end;
+    finally
+      ClsWeightAssignRecPList(tsDatDel);
+      FreeAndNil(tsDatDel);
+    end;
+  end;
+  result := true;
+end;
+
+{
+function ReBackStockWeightData(aDataSValue,aDstDir:String;var aErrMsg:string;var tsUptFiles:TStringList;var aDelCodeField:string):Boolean;
+var k,kTemp: integer; bDel:boolean;
+  aDstFile,aDstFileBak,aTempFile,sDelFile,sDatLine,iYear,sLine0,sLine1,sLine2:string;
+  StrLst2:_cStrLst2; xstr6:string; tsDat1,tsDatDel:TList; bUptDelFile:boolean;
+  aRecP:TWeightAssignRecP;
+
+  procedure ReadOfDelList;
+  var  xstrDelRecFile:string;
+  begin
+     xstrDelRecFile:=aDstDir+_stockweightDelF;
+     ReadOfFileToList(xstrDelRecFile,tsDatDel);
+  end;
+  function SaveOfDelList:boolean;
+  var  xstrDelRecFile,xstrDelRecFileTmp,xstrDelRecFileBak:string;
+  begin
+    result:=false;
+    if bUptDelFile then
+    begin
+      xstrDelRecFile:=aDstDir+_stockweightDelF;
+      xstrDelRecFileTmp:=aDstDir+'~'+_stockweightDelF;
+      xstrDelRecFileBak:=aDstDir+'bak\'+sDatLine+_stockweightDelF;
+      if FileExists(xstrDelRecFileTmp) then
+      begin
+        DeleteFile(PChar(xstrDelRecFileTmp));
+      end;
+      SaveToFileToList(xstrDelRecFileTmp,tsDatDel);
+      CopyFile(PChar(xstrDelRecFile),PChar(xstrDelRecFileBak),false);
+      if not CopyFile(PChar(xstrDelRecFileTmp),PChar(xstrDelRecFile),false) then
+      begin
+        aErrMsg:='更新數據del檔案失敗.'+xstrDelRecFile;
+        exit;
+      end;
+      tsUptFiles.Add(xstrDelRecFile);
+      DeleteFile(PChar(xstrDelRecFileTmp));
+    end;
+    result:=true;
+  end;
 begin
   result := false; aDelCodeField:='';
   tsUptFiles.clear;
@@ -4243,169 +4423,80 @@ begin
   aTempFile:=aDstDir+'~'+ExtractFileName(aDstFile);
   if FileExists(aTempFile) then
     DeleteFile(PChar(aTempFile));
-  aDelTempFile:=aDstDir+'~'+ExtractFileName(sDelFile);
-  if FileExists(aDelTempFile) then
-    DeleteFile(PChar(aDelTempFile));
+
   bDel:=false;
-  if FileExists(sDelFile) then
+  if FileExists(aDstDir+_stockweightDelF) then
   begin
-    tsDat1:=TList.Create;
     try
-      try
-        //先將要恢復的記錄從del文檔中刪除（并添加到tsDat1，後面與年份檔案進行合併）
-        AssignFile(f,sDelFile);
-        AssignFile(f2,aDelTempFile);
-        FileMode := 2;
-        ReSet(f);
-        ReWrite(f2);
-        ReMain := FileSize(f);
-        while ReMain>0 do
-        Begin    
-             if Remain<BlockSize then ReadCount := ReMain
-             Else ReadCount := BlockSize;
-             BlockRead(f,r[0],ReadCount,GotCount);
-             For k:=0 to GotCount-1 do
-             Begin
-               sLine1:=(r[k].Code)+','+
-                      FmtTwDt2(r[k].WeightAssignDate)+','+
-                      inttostr(r[k].Sq)+','+
-                      FmtTwDt2(r[k].DocDate)+','+
-                      FormatDateTime('hh:mm:ss',r[k].DocTime)+','+
-                      inttostr(r[k].DatType)+','+
-                      inttostr(r[k].BelongYear)+','+
-                      F2StrEmptyIsNull(r[k].YYZZZPG)+','+
-                      F2StrEmptyIsNull(r[k].FDYYGJ_ZBGJZZZPG)+','+
-                      FmtTwDt2(r[k].DivRightDate)+','+
-                      F2StrEmptyIsNull(r[k].PGZGS)+','+
-                      F2StrEmptyIsNull(r[k].PGZGE)+','+
-                      F2StrEmptyIsNull(r[k].PGZGSRate)+','+
-                      F2StrEmptyIsNull(r[k].YGHLRate)+','+
-                      F2StrEmptyIsNull(r[k].YYFPGDGL)+','+
-                      F2StrEmptyIsNull(r[k].FDYYGJ_ZBGJFFXJ)+','+
-                      FmtTwDt2(r[k].DivWeigthDate)+','+
-                      FmtTwDt2(r[k].XJGLDate)+','+
-                      F2StrEmptyIsNull(r[k].YGGLZJE)+','+
-                      F2StrEmptyIsNull(r[k].XJZZZGS)+','+
-                      F2StrEmptyIsNull(r[k].XJZZRate)+','+
-                      F2StrEmptyIsNull(r[k].XJZZRGJ)+','+
-                      F2StrEmptyIsNull(r[k].DZFee)+','+
-                      (r[k].MGME);
-               {if sametext(r[k].Code,StrLst2[0])  and
-                  (r[k].WeightAssignDate=TwDateStrToDate(StrLst2[1]))  and
-                  (r[k].Sq=StrToInt(StrLst2[2]))  and
-                  (r[k].DocDate=TwDateStrToDate(StrLst2[3]))  and
-                  (r[k].DocTime=TimeStrToTime(StrLst2[4]))  and
-                  (r[k].DatType=StrToInt(StrLst2[5]))  and
-                  (r[k].BelongYear=StrToInt(StrLst2[6]))  and
-                  (r[k].YYZZZPG=CFS(StrLst2[7]))  and
-                  (r[k].FDYYGJ_ZBGJZZZPG=CFS(StrLst2[8]))  and
-                  (r[k].DivRightDate=TwDateStrToDate(StrLst2[9]))  and
-                  (r[k].PGZGS=CFS(StrLst2[10]))  and
-                  (r[k].PGZGE=CFS(StrLst2[11]))  and
-                  (r[k].PGZGSRate=CFS(StrLst2[12]))  and
-                  (r[k].YGHLRate=CFS(StrLst2[13]))  and
-                  (r[k].YYFPGDGL=CFS(StrLst2[14]))  and
-                  (r[k].FDYYGJ_ZBGJFFXJ=CFS(StrLst2[15]))  and
-                  (r[k].DivWeigthDate=TwDateStrToDate(StrLst2[16]))  and
-                  (r[k].XJGLDate=TwDateStrToDate(StrLst2[17]))  and
-                  (r[k].YGGLZJE=CFS(StrLst2[18]))  and
-                  (r[k].XJZZZGS=CFS(StrLst2[19]))  and
-                  (r[k].XJZZRate=CFS(StrLst2[20]))  and
-                  (r[k].XJZZRGJ=CFS(StrLst2[21]))  and
-                  (r[k].DZFee=CFS(StrLst2[22]))  and
-                  sametext(r[k].MGME,trim(StrLst2[23]))
-                  then}
-               if sLine1=sLine2 then
-               begin
-                 bDel:=true;
-                 new(aRecP);
-                 AssignWeightAssignRec(r[k],aRecP);
-                 tsDat1.add(aRecP);
-               end
-               else begin
-                 Write(f2,r[k]);
-               end;
-             End;
-             Remain:=Remain-GotCount;
-        End;
-      finally
-        try CloseFile(f); except end;
-        try CloseFile(f2); except end;
-      end;
+      tsDat1:=TList.create;
+      tsDatDel:=TList.create;
+      ReadOfFileToList(aDstFile,tsDat1);
+      ReadOfDelList;
+      for k:=0 to tsDatDel.count-1 do
+      Begin
+         aRecP:=tsDatDel.items[k];
+         sLine1:=(aRecP.Code)+','+
+                  FmtTwDt2(aRecP.WeightAssignDate)+','+
+                  inttostr(aRecP.Sq)+','+
+                  FmtTwDt2(aRecP.DocDate)+','+
+                  FormatDateTime('hh:mm:ss',aRecP.DocTime)+','+
+                  inttostr(aRecP.DatType)+','+
+                  inttostr(aRecP.BelongYear)+','+
+                  F2StrEmptyIsNull(aRecP.YYZZZPG)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJZZZPG)+','+
+                  FmtTwDt2(aRecP.DivRightDate)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGS)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGE)+','+
+                  F2StrEmptyIsNull(aRecP.PGZGSRate)+','+
+                  F2StrEmptyIsNull(aRecP.YGHLRate)+','+
+                  F2StrEmptyIsNull(aRecP.YYFPGDGL)+','+
+                  F2StrEmptyIsNull(aRecP.FDYYGJ_ZBGJFFXJ)+','+
+                  FmtTwDt2(aRecP.DivWeigthDate)+','+
+                  FmtTwDt2(aRecP.XJGLDate)+','+
+                  F2StrEmptyIsNull(aRecP.YGGLZJE)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZZGS)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRate)+','+
+                  F2StrEmptyIsNull(aRecP.XJZZRGJ)+','+
+                  F2StrEmptyIsNull(aRecP.DZFee)+','+
+                  (aRecP.MGME);
+         if sLine1=sLine2 then
+         begin
+           bDel:=true;
+           tsDatDel.Delete(k);
+           tsDat1.Add(aRecP);
+           bUptDelFile:=True;
+           Break;
+         end;
+      End;
+
       tsUptFiles.Add(aDstFile);
       if bDel then
       begin
-        //讀取年份數據文檔到list中
-        if FileExists(aDstFile) then
+        SaveToFileToList(aTempFile,tsDat1);
+        if FileExists(aTempFile) then
         begin
-          try
-            AssignFile(f3,aDstFile);
-            FileMode := 0;
-            ReSet(f3);
-            ReMain := FileSize(f3);
-            while ReMain>0 do
-            Begin
-                 if Remain<BlockSize then ReadCount := ReMain
-                 Else ReadCount := BlockSize;
-                 BlockRead(f3,r[0],ReadCount,GotCount);
-                 For k:=0 to GotCount-1 do
-                 Begin
-                   new(aRecP);
-                   AssignWeightAssignRec(r[k],aRecP);
-                   tsDat1.add(aRecP);
-                 End;
-                 Remain:=Remain-GotCount;
-            End;
-          finally
-            CloseFile(f3);
-          end;
-        end;
-        //排序后，先保存到臨時數據檔案中，然後由臨時數據檔案覆蓋到正式年份檔案中
-        SortWeightAssignList(tsDat1);
-        try
-          AssignFile(f3,aTempFile);
-          FileMode := 2;
-          ReWrite(f3);
-          for k:=0 to tsDat1.count-1 do
+          if FileExists(aDstFile) then
+            CopyFile(PChar(aDstFile),PChar(aDstFileBak),false);
+          if not CopyFile(PChar(aTempFile),PChar(aDstFile),false) then
           begin
-            aRecP:=tsDat1.Items[k];
-            AssignWeightAssignRec2(aRecP,rOne);
-            write(f3,rOne);
+            aErrMsg:='更新數據檔案失敗.'+aDstFile;
+            exit;
           end;
-        finally
-          CloseFile(f3);
+          DeleteFile(PChar(aTempFile));
         end;
-
-        if not CopyFile(PChar(aDelTempFile),PChar(sDelFile),false) then
-        begin
-          aErrMsg:='更新數據檔案失敗.'+sDelFile;
+        if not SaveOfDelList then
           exit;
-        end;
-        
-        if FileExists(aDstFile) then
-          CopyFile(PChar(aDstFile),PChar(aDstFileBak),false);
-        if not CopyFile(PChar(aTempFile),PChar(aDstFile),false) then
-        begin
-          aErrMsg:='更新數據檔案失敗.'+aDstFile;
-          exit;
-        end;
       end;
     finally
-      for k:=0 to tsDat1.count-1 do
-      begin
-        aRecP:=tsDat1.Items[k];
-        Dispose(aRecP);
-        aRecP:=nil;
-      end;
-      tsDat1.Clear;
+      ClsWeightAssignRecPList(tsDat1);
       FreeAndNil(tsDat1);
+      ClsWeightAssignRecPList(tsDatDel);
+      FreeAndNil(tsDatDel);
     end;
   end;
-
-  DeleteFile(PChar(aDelTempFile));
-  DeleteFile(PChar(aTempFile));
   result := true;
 end;
+}
 
 
 initialization

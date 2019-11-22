@@ -97,7 +97,7 @@ _stockweightMCaption='嘖瞳煦饜揃蹋鋤荾';
   _OpUptStr='修改';
   _OpAddStr='新增';
   _OpDelStr='刪除';
-  _OpReBackStr='恢復';
+  _OpReBackStr='復原刪除';
   _OpAutoAuditStr='自動審核';
   _OpManulAuditStr='人工審核';
   _OpUptSubStr='修改子項';
@@ -5105,7 +5105,7 @@ begin
         begin
           bPro:=false;
         end
-        else ShowMsgTw('恢復資料成功');
+        else ShowMsgTw('復原刪除功');
 
         if not bPro then
           WriteLnErrEx('後台處理失敗.'+sErr)

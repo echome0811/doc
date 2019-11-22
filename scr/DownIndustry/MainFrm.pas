@@ -2902,15 +2902,27 @@ var i,i0,i2,iStartIdx,iPos1,iPos2,j : integer; iYear,iMonth,iYearHis,iMonthHis,i
       aOutPart1:=Copy(aInputLine,1,xi1-1);
     xi2:=Pos(_CompareSep2,aInputLine);
     if xi2>0 then
-      aOutPart2:=Copy(aInputLine,xi2+length(_CompareSep2),Length(aInputLine));  
+      aOutPart2:=Copy(aInputLine,xi2+length(_CompareSep2),Length(aInputLine));
     aOutPart3:=GetStrOnly2(_CompareSep2,_CompareSep3,aInputLine,false);
     if (aOutPart1='') or (aOutPart2='') or (aOutPart3='') then
     begin
       raise Exception.Create('GetPartThreeData fail.'+aInputLine);
     end;
+    aOutPart1:=StringReplace(aOutPart1,_CompareSep,'',[rfReplaceAll]);
+    aOutPart1:=StringReplace(aOutPart1,_CompareSep2,'',[rfReplaceAll]);
+    aOutPart1:=StringReplace(aOutPart1,_CompareSep3,'',[rfReplaceAll]);
     aOutPart1:=StringReplace(aOutPart1,',','',[rfReplaceAll]);
+
+    aOutPart2:=StringReplace(aOutPart2,_CompareSep,'',[rfReplaceAll]);
+    aOutPart2:=StringReplace(aOutPart2,_CompareSep2,'',[rfReplaceAll]);
+    aOutPart2:=StringReplace(aOutPart2,_CompareSep3,'',[rfReplaceAll]);
     aOutPart2:=StringReplace(aOutPart2,',','',[rfReplaceAll]);
+
+    aOutPart3:=StringReplace(aOutPart3,_CompareSep,'',[rfReplaceAll]);
+    aOutPart3:=StringReplace(aOutPart3,_CompareSep2,'',[rfReplaceAll]);
+    aOutPart3:=StringReplace(aOutPart3,_CompareSep3,'',[rfReplaceAll]);
     aOutPart3:=StringReplace(aOutPart3,',','',[rfReplaceAll]);
+
   end;
 
   procedure TsAddDatLine(aInputNew:boolean;aInputLine:string;var tsInput:TStringList);
@@ -3133,11 +3145,12 @@ begin
       sAryItem[0]:=tsAry[6][i];
       if tsAry[6][i]='' then
         Continue;
-      {if Pos('2465',sAryItem[0])=1 then
+      {if Pos('2887',sAryItem[0])=1 then
       begin
         WriteLineForApp('','');
-      end;  }
+      end;}
       GetPartThreeData(sAryItem[0],sAryItem[1],sAryItem[3],sAryItem[2]);
+      ProOfThePart2(sAryItem[3]);
       for j:=0 to tsAry[9].count-1 do
       begin
         if tsAry[9][j]='' then

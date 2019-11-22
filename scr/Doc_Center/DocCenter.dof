@@ -66,7 +66,7 @@ AutoIncBuild=1
 MajorVer=4
 MinorVer=3
 Release=0
-Build=219
+Build=222
 Debug=0
 PreRelease=0
 Special=0
@@ -77,7 +77,7 @@ CodePage=936
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=4.3.0.219
+FileVersion=4.3.0.222
 InternalName=
 LegalCopyright=
 LegalTrademarks=
