@@ -8,8 +8,8 @@ uses
   Dialogs, StdCtrls, ExtCtrls, Buttons, ComCtrls, IdIntercept, IdLogBase, IdLogDebug,
   IdBaseComponent, IdAntiFreezeBase, IdAntiFreeze,csDef, IdComponent,
   IdTCPConnection, IdTCPClient, IdHTTP,IniFiles,TCommon,TDocMgr, ImgList,
-  CoolTrayIcon,TDwnHttp,TParsePolaNewsHtm,SocketClientFrm,
-  TParseHtmTypes,TSocketClasses,
+  CoolTrayIcon,TDwnHttp,TParsePolaNewsHtm,
+  TParseHtmTypes,SocketClientFrm,TSocketClasses,
   WinInet,urlmon,ActiveX; //TWarningServer
 
 type
@@ -603,7 +603,6 @@ begin
           End;
           DocDataMgr.SetADocMemo(ADoc,MemoTxt);
           DocDataMgr.SetADocID(ADoc,GetIDList(MemoTxt));
-
         end
 
       end;
@@ -631,7 +630,6 @@ begin
       //save pbulish news
       DocDataMgr.SaveToTempDocFile_News_TW;
       DocDataMgr.ClearData;
-
     End Else
     begin
       ShowMsg(AppParam.ConvertString('标题页面下载失败'));
@@ -675,6 +673,7 @@ end;
 //--DOC4.0.0—N001 huangcq090407 add----------->
 procedure TAMainFrm.SendDocMonitorStatusMsg;
 begin
+
   if ASocketClientFrm<>nil Then
   Begin
      ASocketClientFrm.SendText('SendTo=DocMonitor;'+

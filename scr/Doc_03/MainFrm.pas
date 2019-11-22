@@ -140,6 +140,7 @@ type
     AppParam : TDocMgrParam;
     FMonitor:TDownLoadMonitor;
     FDeadLine:boolean;
+    FDocKeyList:TStringList;
 
     FStopRunningSkt : Boolean;  //--DOC4.0.0—N001 huangcq090407 add
     ASocketClientFrm : TASocketClientFrm; //--DOC4.0.0—N001 huangcq090407 add
@@ -197,7 +198,6 @@ var
   AMainFrm: TAMainFrm;
   //20070530修改适应于新的网站
   AllPage_All : Integer;
-  Doc03List:TIniFile; //定位标签与关键字列表 //20071212添加网页截取接口-by cody-add
   ATeamFile:string; //存放路径变量  //20071212添加网页截取接口-by cody-add
 implementation
 
@@ -463,12 +463,48 @@ begin
 
 end;
 
+
+function TAMainFrm.ThisMemoIsOk(const Memo: String): Boolean;
+var i:integer;
+begin
+    Result:=False;
+    if FDocKeyList.Count=0 then
+    begin
+      result:=true;
+      exit;
+    end;
+    for i:=0 to FDocKeyList.Count-1 do
+    begin
+      if (Pos(FDocKeyList[i],Memo)>0) then
+      begin
+        result:=true;
+        exit;
+      end;
+    end;
+    //Result :=  (Pos('可转债',Memo)>0) or (Pos('可转换公司债',Memo)>0) or(Pos('可分离债',Memo)>0);
+    //Result:=(Pos(Doc03List.ReadString('Key','1',''),Memo)>0)or (Pos(Doc03List.ReadString('Key','2',''),Memo)>0)or(Pos(Doc03List.ReadString('Key','3',''),Memo)>0);
+end;
+
 procedure TAMainFrm.FormCreate(Sender: TObject);
+var Doc03List:TIniFile;  
+  i,Count:integer; sTemp:string;
 begin
    InitForm;
    InitObj;
    //20071212
-    Doc03List:=TIniFile.Create(FTeamFilePath); //20071212添加网页截取接口-by cody-add
+   FDocKeyList:=TStringList.create;
+   if FileExists(FTeamFilePath) then
+   begin
+     Doc03List:=TIniFile.Create(FTeamFilePath); //20071212睰呼篒钡-by cody-add
+     Count:=Doc03List.ReadInteger('Key','Count',0);
+     for i:=1 to Count do
+     begin
+       sTemp:=Doc03List.ReadString('Key',IntToStr(i),'');
+       if sTemp='' then
+         Continue;
+       FDocKeyList.Add(sTemp);
+     end;
+   end;
    //************************
    btnGo.Click;
    self.Show;
@@ -558,103 +594,73 @@ begin
 end;
 
 function TAMainFrm.GetDocTitle(AIntext:String;var ParseOk:boolean):boolean;
-const
-  ConstBaseUrl='http://www.csrc.gov.cn';
-  SFlagUrl='<a href=';
-  EFlagUrl='target=';
-  SFlagDate='<li class="fbrq">';
-  EFlagDate='日</li>';
-  RowFlag='<li class="xh">';
-Var
-  i,iBegin,iEnd : integer;
-  vInText,vOutText,sTemp1 : String;
+var i : integer;
+  vInText,vOutText,sTemp1,sLine : String;
   TxtHttp,TxtCaption,TxtDateTime  : String;
   TxtTime  : TTime;TxtDate  : TDate;DateTime : TDateTime;
   Year,Month,Day : Word;  bValidate,b2:Boolean;
+  tsAry:array[0..5] of TStringList;
 begin
   Result := True;  ParseOk:=False; bValidate:=true;b2:=false;
   vInText :=  AIntext;
-  vOutText := '';
+  vOutText := GetStrOnly2('<div class="fl_list">','</ul>',vInText,True);
+  if vOutText='' then
+    exit;
 try
-  if not GetText(ttDiv,1,vInText,vOutText) then
-    exit;
-  Sleep(100);
-  vInText := vOutText;
-  if not GetText(ttDiv,3,vInText,vOutText) then
-    exit;
-  Sleep(100);
-  vInText := vOutText;
-  if not GetText(ttDiv,2,vInText,vOutText) then
-    exit;
-
-  vInText := vOutText;
-
-  i := 1;
-  while True do
+try
+  for i:=0 to High(tsAry) do
+    tsAry[i]:=TStringList.Create;
+  vOutText:=StringReplace(vOutText,#13#10,'',[rfReplaceAll]);
+  vOutText:=StringReplace(vOutText,#10,'',[rfReplaceAll]);
+  vOutText:=StringReplace(vOutText,#13,'',[rfReplaceAll]);
+  vOutText:=StringReplace(vOutText,#9,'',[rfReplaceAll]);
+  vOutText:=StringReplace(vOutText,'<li>',#13#10+'<li>',[rfReplaceAll]);
+  ///SaveMsg('vOutText:'+vOutText); 
+  tsAry[0].text:=vOutText;
+  for i:=0 to tsAry[0].count-1 do
   begin
-    Application.ProcessMessages;
     Sleep(100);
-    if not GetText(ttDiv,i,vInText,vOutText) then
-      Break;
-    //'审核结果'
-    //if Pos('可转换公司债券',vOutText)>0 then
+    Application.ProcessMessages;
+    sLine:=tsAry[0][i];
+    if (Pos('<li>',sLine)>0) and (Pos('</li>',sLine)>0) then
     begin
-        Sleep(100);
-        if GetText(ttA,1,vOutText,TxtCaption) then
-        begin
-          iBegin := Pos(SFlagUrl,vOutText);
-          iEnd := Pos(EFlagUrl,vOutText);
-          TxtHttp := Copy(vOutText,iBegin+Length(SFlagUrl),iEnd-(iBegin+Length(SFlagUrl)) );
-          ReplaceSubString('"','',TxtHttp);
-          TxtHttp := ConstBaseUrl + TxtHttp;
+      TxtHttp:=GetStrOnly2('href="','"',sLine,false);
+      if Pos('../../../',TxtHttp)>0 then
+        TxtHttp:=StringReplace(TxtHttp,'../../../','http://www.csrc.gov.cn/',[rfReplaceAll]);
+      TxtCaption:=GetStrOnly2('<a','</a>',sLine,true);
+      TxtCaption:=GetStrOnly2('>','</a>',TxtCaption,false);
+      TxtDateTime:=GetStrOnly2('<span>','</span>',sLine,false);
+      ReplaceSubString('年',DateSeparator,TxtDateTime);
+      ReplaceSubString('月',DateSeparator,TxtDateTime);
+      ShowMsg(TxtCaption+'('+TxtDateTime+')');
+      Application.ProcessMessages;
+      SaveMsg(TxtCaption+'('+TxtDateTime+')'+TxtHttp);
+      DateTime := StrToDate2(TxtDateTime);
+      DeCodeDate(DateTime,Year,Month,Day);
+      TxtDate := EncodeDate(Year,Month,Day);
+      TxtTime := 0;
+      if ((DateTime<=1) or
+         (TxtCaption='') or
+         (TxtHttp='')) then
+      begin
+        bValidate:=false;
+        Continue;
+      end;
 
-          iBegin := Pos(SFlagDate,vOutText);
-          iEnd := Pos(EFlagDate,vOutText);
-          TxtDateTime := Copy(vOutText,iBegin+Length(SFlagDate),iEnd-(iBegin+Length(SFlagDate)) );
-          ReplaceSubString('年',DateSeparator,TxtDateTime);
-          ReplaceSubString('月',DateSeparator,TxtDateTime);
-          sTemp1:=GetStr('<font','>',TxtCaption,true,false);
-          if sTemp1<>'' then
-          begin
-            TxtCaption:=StringReplace(TxtCaption,sTemp1,'',[rfReplaceAll]);
-          end;
-          TxtCaption:=StringReplace(TxtCaption,'</font>','',[rfReplaceAll]);
-          ShowMsg(TxtCaption+'('+TxtDateTime+')');
-          Application.ProcessMessages;
-          SaveMsg(TxtCaption+'('+TxtDateTime+')'+TxtHttp);
-          DateTime := StrToDate2(TxtDateTime);
-          DeCodeDate(DateTime,Year,Month,Day);
-          TxtDate := EncodeDate(Year,Month,Day);
-          TxtTime := 0;
-          if ((DateTime<=1) or
-             (TxtCaption='') or
-             (TxtHttp='')) then
-          begin
-            bValidate:=false;
-            Continue;
-          end;
-          
-          b2:=True;
-          if IsDeadLineDate(TxtDate) then
-          begin
-            FDeadLine:=true;
-            Break;
-          end;
-          Application.ProcessMessages;
-          Sleep(10);
-          DocDataMgr.AddADoc01(TxtCaption,'','',TxtDate,TxtTime,TxtHttp);
-          Application.ProcessMessages;
-          {if DocDataMgr.AddADoc(TxtCaption,'','',TxtDate,TxtTime,TxtHttp)=nil Then
-            Begin
-                Result := false;
-                Break;
-            End;}
-        end;
-
-        if StopRunning Then exit;
+      b2:=True;
+      if IsDeadLineDate(TxtDate) then
+      begin
+        FDeadLine:=true;
+        Break;
+      end;
+      Application.ProcessMessages;
+      Sleep(10);
+      DocDataMgr.AddADoc01(TxtCaption,'','',TxtDate,TxtTime,TxtHttp);
+      Application.ProcessMessages;
     end;
-    Inc(i);
+    if StopRunning Then exit;
   end;
+
   ParseOk:=bValidate and b2;
 except
   on e:Exception do
@@ -662,6 +668,10 @@ except
     Result := false;
     e := nil;
   end;
+end;
+finally
+  for i:=0 to High(tsAry) do
+    FreeAndNil(tsAry[i]);
 end;
 end;
 
@@ -865,14 +875,15 @@ begin
       if Length(ErrMsg)>0 Then
         raise Exception.Create(ErrMsg);
       if StopRunning Then Exit;
+      if (UTF8Decode(ResultStr))<>''  then 
       ResultStr:=UTF8Decode(ResultStr) ;
-      //(Pos('审核结果',ResultStr)>0)
-      if (Length(ResultStr)>0) then
-      //and (Pos('可转换公司债券',ResultStr)>0)Then
+      if (Length(ResultStr)>0) then 
+      //  and ((Pos('可转换公司债券',ResultStr)>0) or (Pos('可转债',ResultStr)>0))
+      //  and (Pos('审核结果',ResultStr)>0) then
       Begin
-        if iFangFa=0 then
-          Result := GetDocTitle0(ResultStr,ParseOk)
-        else
+        //if iFangFa=0 then
+        //  Result := GetDocTitle0(ResultStr,ParseOk)
+        //else
          Result := GetDocTitle(ResultStr,ParseOk);
       End else
         Result := true;
@@ -904,7 +915,8 @@ const
   //ConstUrl='http://www.csrc.gov.cn/wcm/govsearch/keywordView.jsp?nameID=%E5%8F%AF%E8%BD%AC%E5%80%BA%20or%20%E5%8F%AF%E8%BD%AC%E6%8D%A2%E5%85%AC%E5%8F%B8%E5%80%BA%E5%88%B8&rela=&slID=&pID=keywords&name=%E5%8F%AF%E8%BD%AC%E5%80%BA&page=%pageindex%';
   //ConstUrl='http://www.csrc.gov.cn/wcm/govsearch/keywordView.jsp?nameID=%E5%AE%A1%E6%A0%B8%E7%BB%93%E6%9E%9C&rela=and&slID=subcat=3480&pID=keywords&name=%E5%8F%91%E5%AE%A1%E5%A7%94%E5%AE%A1%E6%A0%B8%E5%85%AC%E5%91%8A&page=%pageindex%';
   //ConstUrl='http://www.csrc.gov.cn/wcm/govsearch/year_gkml_list.jsp?schn=3621&years=ss%year%&sinfo=3300&countpos=1&curpos=%E5%8F%91%E5%AE%A1%E4%BC%9A%E5%85%AC%E5%91%8A&page=%pageindex%';
-  ConstUrl0='http://www.csrc.gov.cn/pub/zjhpublic/3300/3621/index_7401.htm';
+  //ConstUrl0='http://www.csrc.gov.cn/pub/zjhpublic/3300/3621/index_7401.htm';
+  ConstUrl0='http://www.csrc.gov.cn/pub/newsite/fxjgb/fshgg/index.html';
 var
   i,AllPage,NowPage : Integer;
   Url,ResultStr ,TxtMemo,vErrMsg: String;
@@ -953,8 +965,6 @@ begin
       begin
         NowPage := 1;
         Url:=ConstUrl0+'?tick='+inttostr(GetTickCount);
-        //Url :=StringReplace(Url,'%pageindex%',IntToStr(NowPage),[rfReplaceAll]);
-        //Url :=StringReplace(Url,'%year%',IntToStr(aYear+1),[rfReplaceAll]);
         ShowRunBar(0,0,'');
         DoneOk := true;
         AllPage := AppParam.Doc03PageSum;
@@ -984,8 +994,8 @@ begin
             exit;
           Inc(NowPage);
           Url:=ConstUrl0;
-          Url :=StringReplace(Url,'7401.htm',Format('7401_%d.htm',[NowPage-1]),[rfReplaceAll]);
-          Url:=ConstUrl0+'?tick='+inttostr(GetTickCount);
+          Url :=StringReplace(Url,'index.html',Format('index_%d.html',[NowPage-1]),[rfReplaceAll]);
+          Url:=Url+'?tick='+inttostr(GetTickCount);
         end;
       end;
 
@@ -1368,35 +1378,6 @@ begin
        DisplayMsg.SaveMsg(Msg);
 end;
 
-//调用DLLHtmlParser.dll截取公告内容-by cody-add
-//**********************************************************
-function TAMainFrm.ThisMemoIsOk(const Memo: String): Boolean;
-var
-  Count:integer;
-  i:integer; sTemp:string;
-begin
-    Result:=False;
-    Count:=Doc03List.ReadInteger('Key','Count',0);
-    if Count=0 then
-    begin
-      result:=true;
-      exit;
-    end;
-    for i:=1 to Count do
-    begin
-      sTemp:=Doc03List.ReadString('Key',IntToStr(i),'');
-      if sTemp='' then
-        Continue;
-      if (Pos(sTemp,Memo)>0) then
-      begin
-        result:=true;
-        exit;
-      end;
-    end;
-    //Result :=  (Pos('可转债',Memo)>0) or (Pos('可转换公司债',Memo)>0) or(Pos('可分离债',Memo)>0);
-    //Result:=(Pos(Doc03List.ReadString('Key','1',''),Memo)>0)or (Pos(Doc03List.ReadString('Key','2',''),Memo)>0)or(Pos(Doc03List.ReadString('Key','3',''),Memo)>0);
-end;
-//***************************************************
 
 procedure TAMainFrm.CoolTrayIconDblClick(Sender: TObject);
 begin

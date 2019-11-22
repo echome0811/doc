@@ -63,9 +63,7 @@ type
     PanelCaption_URL: TPanel;
     ImageList1: TImageList;
     TimerSendLiveToDocMonitor: TTimer;
-    WebBrowserExtractDoc: TWebBrowser;
     Label2: TLabel;
-    wb1: TWebBrowser;
     Timer1: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure btnGoClick(Sender: TObject);
@@ -137,10 +135,8 @@ type
  
     //function GetWMLDocInfo(AWMLUrl:String):Boolean;// add by wangjinhua 20090512 Doc20090306
     //add by wangjinhua 0306
-    function GetTextFromHtml(ASouce:String;var AOutText:String):Boolean;
     function GetHtmlText(AHTTP: TIdHTTP;AUrl:String;var OutHtmlText,ErrMsg:String):Boolean;
     function GetSourceCode2(AUrl:String;var HtmlText:String;Times:Integer=5):Boolean;
-    function GetHtmlDocInfo(AUrl:String):Boolean;
     procedure OnGetLogFile(FileName: String);
 
      procedure HttpStatusEvent(ASender: TObject;AStatusText: string;aKey:string);
@@ -148,8 +144,6 @@ type
      procedure HttpEndEvent(Sender: TObject;aDoneOk:Boolean;aKey,aResult:string);
      procedure HttpWorkEvent(Sender: TObject; AWorkCount,AWorkMax: Integer;aKey:string);
      function GetHttpTextByUrl(aUrl:string; var aOutHtmlText,aErrStr:string):Boolean;
-     function GetHttpTextByUrl_Web(aUrl:string;iPage:integer;var aOutHtmlText,aErrStr:string):Boolean;
-     function GoToNextPage(aLastPageIdx:integer):Boolean;
     //--
   end;
 
@@ -465,124 +459,6 @@ end;
 end; }
 
 
-function TAMainFrm.GetHtmlDocInfo(AUrl:String):Boolean;
-var
-  tmpTxt,txtMemo,ErrMsg:String;
-  i,k :Integer;
-begin
-  Result := false;
-
-try
-try
-  WebBrowserExtractDoc.Navigate('about:blank');
-       WebBrowserExtractDoc.Silent := true;
-       WebBrowserExtractDoc.Navigate(AUrl);
-       k := 0;
-
-       while( (not( WebBrowserExtractDoc.ReadyState = READYSTATE_COMPLETE)) )do
-       begin
-           if StopRunning Then
-           begin
-             WebBrowserExtractDoc.Refresh;
-             Exit;
-           end;
-           SleepWait(1);
-           Inc(k);
-           StatusBar1.Panels[2].Text := IntToStr(k) + 's...';
-           if k > 120 then // 搜索超过两分钟，则跳过
-             exit;
-       end;
-       //or (not AWebBroswer.Busy)
-
-       txtMemo := IHtmlDocument2(WebBrowserExtractDoc.Document).Body.OuterText;
-       WebBrowserExtractDoc.Refresh;
- { if (not GetHtmlText(HTTP,AUrl,txtMemo,ErrMsg)) or
-       (Length(ErrMsg)>0) Then
-  begin
-    SendDocMonitorWarningMsg('拟发行公告下载过程出现错误('+ErrMsg+')$E010');//--DOC4.0.0—N001 huangcq090407 add
-     //SendToSoundServer('GET_DOC_ERROR',RunHttp.RunErrMsg,svrMsgError);   //--DOC4.0.0—N001 huangcq090407 del
-    txtMemo:='';
-  end; }
-
-  if (Length(txtMemo) <> 0) Then
-  begin
-
-    DocDataMgr.SetADocMemo(FTmpDoc,txtMemo);
-    DocDataMgr.SetADocID(FTmpDoc,GetIDList(txtMemo));
-    ShowMsg('(搜索完成)  ' + FTmpDoc.Title);
-    SaveMsg('(搜索完成)  ' + FTmpDoc.Title);
-    Result := true;
-  end
-  else begin
-    ShowMsg('(搜索失败)  ' + FTmpDoc.Title);
-    SaveMsg('(搜索失败)  ' + FTmpDoc.Title);
-  end;
-except
-  on e:Exception do
-  begin
-    SaveMsg(e.Message);
-    e := nil;
-  end;
-end;
-finally
-  FHtmlParseOk := true;
-end;
-end;
-
-function TAMainFrm.GetTextFromHtml(ASouce:String;var AOutText:String):Boolean;
-var
-  ts:TStringList;
-  k:Integer;
-begin
-  Result := false;
-  //AOutText := ASouce;
-  AOutText := '';
-try
-try
-    try
-       ts := TStringList.Create;
-       ts.Text := ASouce;
-       ts.SaveToFile(FTempFile);
-     finally
-       try
-          if Assigned(ts) then
-           FreeAndNil(ts);
-       except
-       end;
-     end;
-
-       WebBrowserExtractDoc.Navigate('about:blank');
-       WebBrowserExtractDoc.Silent := true;
-       WebBrowserExtractDoc.Navigate(FTempFile);
-       k := 0;
-       while( (not( WebBrowserExtractDoc.ReadyState = READYSTATE_COMPLETE))  )do
-       begin
-           if StopRunning Then
-           begin
-             WebBrowserExtractDoc.Refresh;
-             Exit;
-           end;
-           SleepWait(1);
-           Inc(k);
-           StatusBar1.Panels[2].Text := IntToStr(k) + 's...';
-       end;
-       //or (not AWebBroswer.Busy)
-
-       AOutText := IHtmlDocument2(WebBrowserExtractDoc.Document).Body.OuterText;
-       WebBrowserExtractDoc.Refresh;
-       Result := true;
-except
-  On e:Exception Do
-  begin
-    SaveMsg(e.Message);
-    e := nil;
-  end;
-end;
-finally
-  FHtmlParseOk := true;
-end;
-end;
-
 
 
 function TAMainFrm.GetHtmlText(AHTTP: TIdHTTP;AUrl:String;var OutHtmlText,ErrMsg:String):Boolean;
@@ -648,7 +524,7 @@ end;
 //--
 
 procedure TAMainFrm.InitForm;
-const _FmtUrl='http://quotes.money.163.com/hs/marketdata/service/gsgg.php?host=/hs/marketdata/service/gsgg.php&page=0&query=leixing:00;start:%DateS%;end:%DateE%&sort=PUBLISHDATE&order=desc&count=%LoadC%&type=query';
+const _FmtUrl='http://quotes.money.163.com/hs/marketdata/service/gsgg.php?host=/hs/marketdata/service/gsgg.php&page=%pagec%&query=leixing:00;start:%DateS%;end:%DateE%&sort=PUBLISHDATE&order=desc&count=%LoadC%&type=query';
 var i:integer;
   fini:TIniFile; sfile:string;
 begin
@@ -875,6 +751,7 @@ var ts1,ts2:TStringList;
 begin
 try
 try
+  ParseOk:=false;
   ts1:=TStringList.create; ts2:=TStringList.create;
   Result := true; ParseOk:=False; bValidate:=true;b2:=false;
   tmpSource := Txt.Text;
@@ -892,6 +769,22 @@ try
           tmpStr:=Trim(Txt[i]);
           if Pos('"SYMBOL"',tmpStr)>0 then
           begin
+            if not GetJsonValueEx(tmpStr,'ANNOUNMT2',TxtCaption) then
+            begin
+              SaveMsg('GetJsonValueEx ANNOUNMT2 fail.'+tmpStr);
+              continue;
+            end;
+            if not (
+                ( (Pos('转债',TxtCaption)>0) or
+                  (Pos('可转换公司债',TxtCaption)>0)
+                ) and
+                ( (Pos('拟发',TxtCaption)>0) or
+                  (Pos('发行',TxtCaption)>0)
+                )
+            )then
+              Continue;
+            
+            
             if not GetJsonValueEx(tmpStr,'PUBLISHDATE',TxtDateTime) then
             begin
               SaveMsg('GetJsonValueEx PUBLISHDATE fail.'+tmpStr);
@@ -909,11 +802,7 @@ try
               SaveMsg('GetJsonValueEx SYMBOL fail.'+tmpStr);
               continue;
             end;
-            if not GetJsonValueEx(tmpStr,'ANNOUNMT2',TxtCaption) then
-            begin
-              SaveMsg('GetJsonValueEx ANNOUNMT2 fail.'+tmpStr);
-              continue;
-            end;
+
             if not GetJsonValueEx(tmpStr,'ANNOUNMT1',TxtType) then
             begin
               SaveMsg('GetJsonValueEx ANNOUNMT1 fail.'+tmpStr);
@@ -949,6 +838,8 @@ try
                 if DocDataMgr.AddADoc01(TxtCaption,TxtID,TxtType,TxtDate,TxtTime,TXTHttp) <> nil then
                   SaveMsg('  Add Success' + TxtHttp);
               end;
+              Application.ProcessMessages;
+              if StopRunning Then Exit;
             end;
           end;
         end;
@@ -1158,6 +1049,9 @@ begin
     //ňゎ碻吏
     while iXunHuan<100 do
     begin
+      Application.ProcessMessages;
+      if StopRunning then exit;
+
         Inc(iXunHuan);
         Inc(NowPage);
         if NowPage>AllPage then
@@ -1170,16 +1064,19 @@ begin
         Url:=RplStr(Url,'%DateS%',FmtDt10(dt1));
         Url:=RplStr(Url,'%DateE%',FmtDt10(dt2));
         Url:=RplStr(Url,'%LoadC%',IntToStr(FLoadCount));
+        Url:=Url+'&tick='+inttostr(GetTickCount);
 
         if NowPage=1 then
           ShowRunBar2(Format('第%d页',[NowPage]))
         else
           ShowRunBar2(Format('第%d/%d页',[NowPage,AllPage]));
+        SaveMsg(Url);
         if not GetHttpTextByUrl(Url,ResultStr,ErrMsg) then
         begin
-          SendDocMonitorWarningMsg('拟发行公告下载过程出现错误('+ErrMsg+')$E010');
+          //SendDocMonitorWarningMsg('拟发行公告下载过程出现错误('+ErrMsg+')$E010');
           break;
         end;
+        Application.ProcessMessages;
         if StopRunning Then Exit;
 
         if Length(ResultStr)>0 Then
@@ -1201,6 +1098,7 @@ begin
            else b2:=true;
            if not b1 then
              bParseOk:=false;
+           Application.ProcessMessages;
            if StopRunning Then Exit;
           finally
             try
@@ -1637,103 +1535,6 @@ begin
   StatusBar1.Panels[2].Text := IntToStr(AworkCount) + ' bytes.';
 end;
 
-function TAMainFrm.GetHttpTextByUrl_Web(aUrl:string;iPage:integer; var aOutHtmlText,aErrStr:string):Boolean;
-var j:integer; ts:TStringList;
-begin
-  result:=false;
-  aErrStr:='';
-  aOutHtmlText:='';
-try
-  if aUrl<>'' then
-  begin
-    ShowURL(aUrl);
-    wb1.Navigate('about:blank');
-    for j:=1 to 5 do
-     SleepWait(1);
-    wb1.Navigate(aUrl);
-    try
-        for j:=1 to GWaitForWb do
-        begin
-          StatusBar1.Panels[2].Text := Format('wait %d. ',[j]);
-          SleepWait(1);
-          if StopRunning then
-           exit;
-        end;
-    finally
-      StatusBar1.Panels[2].Text :='';
-    end;
-  end;
-  aOutHtmlText := wb1.OleObject.document.body.InnerHtml;
-  //aOutHtmlText:=UTF8Decode(aOutHtmlText);
-  ts:=TStringList.create;
-  ts.text := wb1.OleObject.document.body.InnerHtml;
-  //ts.SaveToFile('c:\1.txt');
-  ts.text := wb1.OleObject.document.body.outerHtml;
-  //ts.SaveToFile('c:\2.txt');
-  ts.free;
-  result:=Trim(aOutHtmlText)<>'';
-except
-    on e:Exception do
-    begin
-      aErrStr:=e.Message;
-      SaveMsg('GetHttpTextByUrl_Web/'+inttostr(iPage)+'/'+e.Message);
-      result:=false;
-    end;
-end;
-end;
-
-function TAMainFrm.GoToNextPage(aLastPageIdx:integer):Boolean;
-var i,j,i1,i2:integer; sText1,sText2,sTemp1:string;
-begin
-  result:=false;
-  for i := wb1.OleObject.Document.links.Length - 1 downto 0 do
-  begin
-    sText1:=wb1.OleObject.Document.Links.Item(i);
-    sText2:=wb1.OleObject.Document.Links.Item(i).innertext;
-    //SaveMsg('test--------'+sText1+'@@@'+sText2);
-    if ( (pos( 'http://quotes.money.163.com/#page=',sText1)>0) or
-         (pos( 'http://quotes.money.163.com/old/#page=',sText1)>0) 
-       ) then
-    SaveMsg('--------'+sText1+'@@@'+sText2);
-  end;
-  for i := wb1.OleObject.Document.links.Length - 1 downto 0 do
-  begin
-    sText1:=wb1.OleObject.Document.Links.Item(i);
-    sText2:=wb1.OleObject.Document.Links.Item(i).innertext;
-    if ( (pos( 'http://quotes.money.163.com/#page=',sText1)>0) or
-         (pos( 'http://quotes.money.163.com/old/#page=',sText1)>0) 
-       ) and
-       (
-         Pos('下一页',sText2)>0
-       )then
-    begin
-      i1:=PosEx('#page=',sText1);
-      sTemp1:=Copy(sText1,i1+length('#page='),Length(sText1));
-      if MayBeDigital(sTemp1) then
-      begin
-        if StrToInt(sTemp1)>aLastPageIdx then
-        begin
-          SaveMsg(sText1+'@@@'+sText2);
-          wb1.OleObject.Document.Links.Item(i).click;
-          result:=true;
-          try
-            for j:=1 to GWaitForWb do
-            begin
-              StatusBar1.Panels[2].Text := Format('wait %d. ',[j]);
-              SleepWait(1);
-              if StopRunning then
-               exit;
-            end;
-          finally
-            StatusBar1.Panels[2].Text :='';
-          end;
-        end;
-      end;
-
-      break;
-    end;
-  end;
-end;
 
 function TAMainFrm.GetHttpTextByUrl(aUrl:string; var aOutHtmlText,aErrStr:string):Boolean;
 var aHttpGet:THttpGet;

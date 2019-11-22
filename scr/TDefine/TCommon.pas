@@ -16,6 +16,7 @@ interface
 const
   MaxP = 30;
   SubDir = 'Data\DwnDocLog\Doc_CBDataEdit\';
+  SubDirEcb = 'DataEcb\DwnDocLog\Doc_CBDataEdit\';
   IFRSOpLogDir = 'Data\DwnDocLog\IFRSOpLog\';
   WM_CloseAllApp = WM_USER + 11;
   WM_CloseAllMinotorApp = WM_USER + 123;
@@ -129,7 +130,6 @@ function GetStrOnly2Ex(StartTag,EndTag:string;ASource:String;IncludeTag:Boolean=
 function GetStrOnly(StartTag,EndTag:string;ASource:String):string;
 function MayBeDigital(sVar:string):boolean;
 Function TwDateStrToDate(Str:String):TDate;
-
 //--
 
 
@@ -197,6 +197,10 @@ function  GetIniFile(SectionName:PChar;
                     FileName:PChar):ShortString;
 function GetIniValueByT(SectionName,keyName,DefaultS,FileName:string):string;
 function  GetIniFileEx(SectionName:string;
+                    keyName:string;
+                    DefaultS:string;
+                    FileName:string):ShortString;
+function  GetIniFileByTiniFile(SectionName:string;
                     keyName:string;
                     DefaultS:string;
                     FileName:string):ShortString;
@@ -373,6 +377,7 @@ procedure SleepWait(Const Value:Double);
   procedure AddTextToFile(AFile,AMsg:String);
   procedure WriteARecLog(AnID,AnOp,AnOperator,AnModouleName,AnModouleNameEn:ShortString);
   procedure WriteARec(ARec:TTrancsationRec);
+  procedure WriteARecEcb(ARec:TTrancsationRec);
   procedure WriteARecToFile(ARec:TTrancsationRec;aFile:string);
   function ReadLogRecs(ALogFile:String):TTrancsationRecs;
   procedure UptLogRecsFile(AModoule,AModouleEn:ShortString;SaveRec:Boolean=true);
@@ -773,6 +778,12 @@ begin
   WriteARecToFile(ARec,vFile);
 end;
 
+procedure WriteARecEcb(ARec:TTrancsationRec);
+var vFile:String;
+begin
+  vFile := ExtractFilePath(ParamStr(0))+  SubDirEcb + FormatDateTime('yyyymmdd',date) +  '.log';
+  WriteARecToFile(ARec,vFile);
+end;
 
 function ReadLogRecs(ALogFile:String):TTrancsationRecs;
 var
@@ -1817,7 +1828,10 @@ Try
 Finally
    DateSeparator:=Sep;
 End;
+
 End;
+
+  
 
 function  IsDate(StrDate:ShortString):Boolean;
 Var
@@ -2076,7 +2090,7 @@ End;
 
 End;
 
-function DateStr8ToDate(Str: String): TDate; //DateStr8:yyyymmdd --DOC4.0.0¡ªN004 huangcq090317 add
+function DateStr8ToDate(Str: String): TDate; //DateStr8:yyyymmdd --DOC4.0.0¡ªN004 huangcq090317 add 
 begin
   try
     Result := 0;
@@ -3091,6 +3105,23 @@ function  GetIniFileEx(SectionName:string;
                     FileName:string):ShortString;
 begin
   result:=GetIniFile(PChar(SectionName),PChar(keyName),PChar(DefaultS),PChar(FileName));
+end;
+
+function  GetIniFileByTiniFile(SectionName:string;
+                    keyName:string;
+                    DefaultS:string;
+                    FileName:string):ShortString;
+var fini:TIniFile;
+begin
+  result:=DefaultS;
+  if not FileExists(FileName) then
+    exit;
+  try
+    fini:=TIniFile.Create(FileName);
+    result:=fini.ReadString(SectionName,keyName,DefaultS);
+  finally
+    FreeAndNil(fini);
+  end;
 end;
 
 function GetIniFile(SectionName:PChar;keyName:PChar;DefaultS:PChar;FileName:PChar):ShortString;

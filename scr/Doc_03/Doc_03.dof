@@ -41,7 +41,7 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=
+OutputDir=\\192.168.88.182\QA197DocMgr
 UnitOutputDir=
 PackageDLLOutputDir=
 PackageDCPOutputDir=
@@ -93,7 +93,7 @@ Count=1
 Item0=..\TDefine
 [HistoryLists\hlOutputDirectorry]
 Count=6
-Item0=..\Build
+Item0=\\192.168.88.182\QA197DocMgr
 Item1=..\..\Build
 Item2=F:\Doc_4.0.0.0(Huangcq-090714)\QA197DocMgr
 Item3=F:\DocMgr_CN

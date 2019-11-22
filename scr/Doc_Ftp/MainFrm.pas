@@ -42,6 +42,8 @@ type
       destructor  Destroy; override;
       procedure AddMsg1(Const Msg:String);
       procedure AddMsg2(Const Msg:String);
+      procedure AddMsg1Ecb(Const Msg:String);
+      procedure AddMsg2Ecb(Const Msg:String);
       procedure AddMsg(const RunStatus:TRunStatus; Const Msg:String);//====DOC4.2-N003-sun-20090922
       procedure ClearMsg1();
       procedure ClearMsg2();
@@ -117,9 +119,8 @@ type
     NowIsStopOrStart : Boolean;
     DisplayMemo : TDisplayMemo;
     FDataPath : String;
-    FDocPath  : String;
     DocDataMgr : TDocDataMgr;
-    CBDataMgr  : TCBDataMgr;
+    CBDataMgr:TCBDataMgr; CBDataMgrEcb:TCBDataMgrEcb; 
     DatPackageParam : TDatPackageParam;//====DOC4.2-N003-sun-20090922
     ASocketClientFrm : TASocketClientFrm; //--DOC4.0.0—N001 huangcq090407 add
     procedure SendDocMonitorStatusMsg;//--DOC4.0.0—N001 huangcq090407 add
@@ -167,7 +168,9 @@ type
     function  GetNeedUpLoadIDLstCount(index :integer):integer;
     //DocFtp2.0.0.0-Doc2.3.0.0-需求8-libing-2007/09/20
     //----------------------------------------------------------
-    function FtpDataCBTxt2(index:integer):boolean;   //睰肚ま絪腹
+    function FtpDataCBTxt2():boolean;
+    function FtpDataCBTxt2Ecb():boolean;
+    function FtpDataRateDataTxt2Ecb():boolean;
     //----------------------------------------------------------
     procedure ReStart();
     procedure Start();
@@ -405,18 +408,20 @@ begin
 end;
 
 procedure TAMainFrm.InitObj;
+var sDocPath:string;
 begin
    FRateDatTickCount:=0;
    FRateDatTickCount2:=0;
    
    AppParam := TDocMgrParam.Create;
+   FAppParamEcb := TDocMgrParam.Create(ExtractFilePath(Application.ExeName)+'ecbsetup.ini');
    FDataPath := ExtractFilePath(Application.ExeName)+'Data\';
-   FDocPath := AppParam.FTPTr1DBPath  + 'CBData\Document\';
+   sDocPath := AppParam.FTPTr1DBPath  + 'CBData\Document\';
 
    DisplayMemo := TDisplayMemo.Create(ListMemo1,ListMemo2);
-   DocDataMgr := TDocDataMgr.Create(FDataPath,FDocPath);
+   DocDataMgr := TDocDataMgr.Create(FDataPath,sDocPath);
    CBDataMgr  := TCBDataMgr.Create(AppParam.IsTwSys,AppParam.FTPTr1DBPath);
-
+   CBDataMgrEcb := TCBDataMgrEcb.Create(FAppParamEcb.IsTwSys,FAppParamEcb.Tr1DBPath);
    Caption :=  AppParam.ConvertString('公告信息上传工具');
 
    Act_StartServer.Caption :=  AppParam.ConvertString('启动服务');
@@ -443,7 +448,6 @@ begin
   //========Doc4.2-N003-sun-20090922====================
     DatPackageParam := TDatPackageParam.Create;
   //======================================================
-
 end;
 
 procedure TAMainFrm.ReStart;
@@ -470,7 +474,6 @@ end;
 procedure TAMainFrm.Start;
 var sAppIni,sSleep:string;
 begin
-
    if NowIsStopOrStart Then  Exit;
    NowIsStopOrStart := True;
    StopRunning := False;
@@ -480,7 +483,7 @@ begin
    //ShowMessage('ok');
    //Halt;
    sAppIni:=ExtractFilePath(ParamStr(0))+'setup.ini';
-   sSleep:=GetIniFile(PChar('CONFIG'),PChar('DocFtpSleepTime'),PChar('5'),PChar(sAppIni));
+   sSleep:=GetIniFileByTiniFile(('CONFIG'),('DocFtpSleepTime'),('5'),(sAppIni));
    if MayBeDigital(sSleep) and (StrToInt(sSleep)>0) then
      Timer_Start.Interval:=StrToInt(sSleep)*1000;
    Timer_Start.Enabled := True;
@@ -502,40 +505,35 @@ begin
 
 end;
 
-//DocFtp2.0.0.0-Doc2.3.0.0-需求8-libing-2007/09/20
-//****************************************************************************
-function TAMainFrm.FtpDataCBTxt2(index:integer): boolean;
+
+function TAMainFrm.FtpDataCBTxt2(): boolean;
 Var
   Server,AUserName,Pass,uplDir : String;
   UsePass : Boolean;
   APort : Integer;
   FileLst : _CStrLst;
   FileName ,FTPFileName: string;
-  i,j,k : Integer;    //k为服务器编号
+  i,j,k : Integer;    //k狝叭竟絪腹
   IsTransSuccess,needupload,uploadsuccess:Boolean;
 
 begin
   Result := false;
-   //DocFtp2.0.0.0-Doc2.3.0.0-需求8-libing-2007/09/20
-//----------------
-  needupload:=False;//
+  needupload:=False;
   for k:=0 to AppParam.CBFTPCount-1 do
   begin
     if (GetNeedUpLoadIDLstCount(k)>0) then
       needupload:=true;
   end;
-//-------------
   FileLst := CBDataMgr.GetUploadTmpFile;
   if High(FileLst)<0 Then Exit;
-  //DocFtp2.0.0.0-Doc2.3.0.0-需求8-libing-2007/09/20
  try
     Try
       for k:=0 to AppParam.CBFTPCount-1 do
       begin
-         DisplayMemo.AddMsg1(AppParam.ConvertString('开始准备上传CB数据'));
+         DisplayMemo.AddMsg1(AppParam.TwConvertStr2('秨﹍非称肚CB计沮'));
          SetLength(FileLst,0);
          FileLst:=CBDataMgr.GetUploadTmpFile;
-        if (High(CBDataMgr.GetUploadTmpFile)>=0)or needupload then
+        if (High(FileLst)>=0)or needupload then
         begin
          Server:=AppParam.CBFTPInfos[k].FFTPServer;
          uplDir:=AppParam.CBFTPInfos[k].FFTPUploadDir;
@@ -546,10 +544,9 @@ begin
         end;
         with IdFTP1 do
         Begin
-            //DisplayMemo.AddMsg1(AppParam.ConvertString('连结服务器 ') + Server);
             if Connected Then
               Disconnect;
-            DisplayMemo.AddMsg1(AppParam.ConvertString('连结服务器 ') + Server);
+            DisplayMemo.AddMsg1(AppParam.TwConvertStr2('硈挡狝叭竟 ') + Server);
             if Not Connected Then
             Begin
                UserName := AUserName;
@@ -570,7 +567,7 @@ begin
                  DeleteFile(FileLst[i]);
                  Continue;
                end;
-               uploadsuccess:=False;//--DOC4.0.0—N002 huangcq081223 add 这里应该要赋初值
+               uploadsuccess:=False;//--DOC4.0.0N002 huangcq081223 add 硂ń莱赣璶结
                ChangeDir(CBDataMgr.GetUploadAFolder(FileLst[i]));
 
                if StopRunning Then Exit;
@@ -579,13 +576,13 @@ begin
                Begin
                  FileName := CBDataMgr.GetUploadAFileName(FileLst[i]);
                  if StopRunning Then Exit;
-                 //如果附檔名是.DAT的就壓縮檔案上傳
+                 //狦郎琌.DAT碞溃罽郎肚
                  if (Pos('.DAT',UpperCase(FileName))>0){ And (ExtractFileName(FileName)<>'dealerlst.dat') }Then
                  Begin
                       CompressFile(GetCompressFile(FileName),FileName,clMax);
                       FileName := GetCompressFile(FileName);
 
-                      DisplayMemo.AddMsg1(AppParam.ConvertString('上传 ') + ExtractFileName(FileName));
+                      DisplayMemo.AddMsg1(AppParam.TwConvertStr2('肚 ') + ExtractFileName(FileName));
                       if StopRunning Then Exit;
                       if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
                       Begin
@@ -596,7 +593,7 @@ begin
                       End;
                  End Else
                  Begin
-                    DisplayMemo.AddMsg1(AppParam.ConvertString('上传 ') + ExtractFileName(FileName));
+                    DisplayMemo.AddMsg1(AppParam.TwConvertStr2('肚 ') + ExtractFileName(FileName));
                     if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
                     Begin
                         FileName := '';
@@ -608,7 +605,7 @@ begin
 
                if (Length(FileName)=0) and (Pos('.TXT',UpperCase(CBDataMgr.GetUploadAFileName(FileLst[i])))>0) Then
                Begin
-                  uploadsuccess:=False;//--DOC4.0.0N002 huangcq081223 add ňゎ.lstゅン⊿Τ砆肚
+                  uploadsuccess:=False;
                   FileName := ExtractFilePath(CBDataMgr.GetUploadAFileName(FileLst[i]))+'dblst.lst';
                   if Not FileExists(FileName) Then
                      FileName := ExtractFilePath(FileName)+'dblst2.lst';
@@ -616,7 +613,7 @@ begin
 
                   for j:=0 to 3 do
                   Begin
-                    DisplayMemo.AddMsg1(AppParam.ConvertString('上传 ') + ExtractFileName(FileName));
+                    DisplayMemo.AddMsg1(AppParam.TwConvertStr2('肚 ') + ExtractFileName(FileName));
                     if StopRunning Then Exit;
                     if(ExtractFileName(FileName)='dblst2.lst')then
                       FTPFileName := 'dblst311.lst'
@@ -629,49 +626,22 @@ begin
                       Break;
                     End;
                   End;
-
-                  {if(ExtractFileName(FTPFileName)='dblst311.lst')then
-                  begin
-                    uploadsuccess:=False;
-                    FileName := ExtractFilePath(CBDataMgr.GetUploadAFileName(FileLst[i]))+'dblst201508.lst';
-                    CBDataMgr.ChangeDBLstVer(FileName);
-
-                    for j:=0 to 3 do
-                    Begin
-                      DisplayMemo.AddMsg1(AppParam.ConvertString('上传 ') + ExtractFileName(FileName));
-                      if StopRunning Then Exit;
-                      FTPFileName := ExtractFileName(FileName);
-                      if FtpData(FileName,'',FTPFileName) Then
-                      Begin
-                        FileName := '';
-                        uploadsuccess:=true;
-                        Break;
-                      End;
-                    End;
-                  end;}
                 
                End;
                if Length(FileName)>0 Then
                Begin
-                 DisplayMemo.AddMsg2(FileName+AppParam.ConvertString(' 上传错误.'));
+                 DisplayMemo.AddMsg2(FileName+AppParam.TwConvertStr2(' 肚岿粇.'));
                  Exit;
                End Else
                Begin
-                //if k=1   then    //DocFtp2.0.0.0-Doc2.3.0.0-需求8-libing-2007/09/20
                   if uploadsuccess then
                   begin
                     CBDataMgr.SetCBDataLog('DocFtp_'+IntToStr(k+1),
                                           CBDataMgr.GetUploadAFileName(FileLst[i]),FileLst[i],'','',
-                                          AppParam.CBFTPCount,Server+';'+uplDir); //--DOC4.0.0—N002 huangcq081223 add
-                    //if k =(AppParam.CBFTPCount-1) then
+                                          AppParam.CBFTPCount,Server+';'+uplDir); 
                     if CBDataMgr.FinishUploadCBDataByLog(CBDataMgr.GetUploadAFileName(FileLst[i]),FileLst[i],AppParam.CBFTPCount) then
                     begin
                       DeleteFile(FileLst[i]);
-                      {FileName := CBDataMgr.GetUploadAFileName(FileLst[i]);
-                      if SameText(ExtractFileExt(FileName),'.upl') then
-                      begin
-                        DeleteFile(FileName);
-                      end;}
                     end;
                     break;
                   end;
@@ -685,8 +655,7 @@ begin
       On E: Exception do
         Begin
           DisplayMemo.AddMsg2(E.Message);
-          //SendToSoundServer('GET_DOC_ERROR',E.Message,svrMsgError); //--DOC4.0.0—N001 huangcq090407 del
-          SendDocMonitorWarningMsg(AppParam.ConvertString('CB数据上传出现错误')+'('+E.Message+')$E009');//--DOC4.0.0—N001 huangcq090407 add
+          SendDocMonitorWarningMsg(AppParam.TwConvertStr2('CB计沮肚瞷岿粇')+'('+E.Message+')$E009');
         End;
     end;
   Finally
@@ -697,19 +666,323 @@ begin
    End;
    if StopRunning Then
    Begin
-      DisplayMemo.AddMsg1(AppParam.ConvertString('上传CB数据中断'));
-      //SendToSoundServer('GET_DOC_ERROR',AppParam.ConvertString('上传CB数据中断'),svrMsgError); //--DOC4.0.0—N001 huangcq090407 del
+      DisplayMemo.AddMsg1(AppParam.TwConvertStr2('肚CB计沮い耞'));
    End Else
    Begin
       if Result Then
-        DisplayMemo.AddMsg1(AppParam.ConvertString('完成上传CB数据'))
+        DisplayMemo.AddMsg1(AppParam.TwConvertStr2('ЧΘ肚CB计沮'))
       Else Begin
-        DisplayMemo.AddMsg1(AppParam.ConvertString('上传CB数据失败'));
-        //SendToSoundServer('GET_DOC_ERROR',AppParam.ConvertString('上传CB数据失败'),svrMsgError); //--DOC4.0.0—N001 huangcq090407 del
+        DisplayMemo.AddMsg1(AppParam.TwConvertStr2('肚CB计沮ア毖'));
       End;
    End;
  end;
 end;
+
+function TAMainFrm.FtpDataRateDataTxt2Ecb():boolean;
+var Server,AUserName,Pass,uplDir : String;
+  UsePass : Boolean;
+  APort : Integer;
+  FileLst : _CStrLst;
+  FileName ,FTPFileName: string;
+  i,j,k : Integer;    //k狝叭竟絪腹
+  IsTransSuccess,uploadsuccess:Boolean;
+
+begin
+  Result := false;
+  FileLst := CBDataMgrEcb.GetUploadTmpFileRateData;
+  if High(FileLst)<0 Then Exit;
+ try
+    Try
+      for k:=0 to FAppParamEcb.RateDatFTPCount-1 do
+      begin
+         DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('秨﹍非称肚rate计沮'));
+         SetLength(FileLst,0);
+         FileLst:=CBDataMgrEcb.GetUploadTmpFileRateData;
+         if (High(FileLst)>=0) then
+         begin
+           Server:=FAppParamEcb.RateDatFTPInfos[k].FFTPServer;
+           uplDir:=FAppParamEcb.RateDatFTPInfos[k].FFTPUploadDir;
+           AUserName:=FAppParamEcb.RateDatFTPInfos[k].FFTPUserName;
+           Pass:=FAppParamEcb.RateDatFTPInfos[k].FFTPPassword;
+           APort := FAppParamEcb.RateDatFTPInfos[k].FFTPPort;
+           UsePass := FAppParamEcb.RateDatFTPInfos[k].FFTPPassive;
+         end;
+        with IdFTP1 do
+        Begin
+            if Connected Then
+              Disconnect;
+            DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('硈挡狝叭竟 ') + Server);
+            if Not Connected Then
+            Begin
+               UserName := AUserName;
+               Password := Pass;
+               Host     := Server;
+               Passive  := UsePass;
+               Port     := APort;
+               Connect;
+               TransferType := ftBinary;
+               ChangeDir(FAppParamEcb.CBFTPInfos[k].FFTPUploadDir);
+               //ChangeDir(uplDir);
+            End;
+
+          For i:=0 to High(FileLst) do
+          Begin
+               if GetFileSize(FileLst[i])=0 then
+               begin
+                 DeleteFile(FileLst[i]);
+                 Continue;
+               end;
+               uploadsuccess:=False;//--DOC4.0.0N002 huangcq081223 add 硂ń莱赣璶结
+               ChangeDir(CBDataMgrEcb.GetUploadAFolder(FileLst[i]));
+
+               if StopRunning Then Exit;
+
+               for j:=0 to 3 do
+               Begin
+                 FileName := CBDataMgrEcb.GetUploadAFileName(FileLst[i]);
+                 if StopRunning Then Exit;
+                 //狦郎琌.DAT碞溃罽郎肚
+                 if (Pos('.DAT',UpperCase(FileName))>0) Then
+                 Begin
+                      CompressFile(GetCompressFile(FileName),FileName,clMax);
+                      FileName := GetCompressFile(FileName);
+
+                      DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚 ') + ExtractFileName(FileName));
+                      if StopRunning Then Exit;
+                      if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
+                      Begin
+                        DeleteFile(FileName);
+                        FileName := '';
+                        uploadsuccess:=true;
+                        Break;
+                      End;
+                 End Else
+                 Begin
+                    DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚 ') + ExtractFileName(FileName));
+                    if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
+                    Begin
+                        FileName := '';
+                        uploadsuccess:=true;
+                        Break;
+                    End;
+                 End;
+               End;
+
+               if Length(FileName)>0 Then
+               Begin
+                 DisplayMemo.AddMsg2Ecb(FileName+FAppParamEcb.TwConvertStr2(' 肚岿粇.'));
+                 Exit;
+               End Else
+               Begin
+                  if uploadsuccess then
+                  begin
+                    CBDataMgrEcb.SetCBDataLog('DocFtp_'+IntToStr(k+1),
+                                          CBDataMgrEcb.GetUploadAFileName(FileLst[i]),FileLst[i],'','',
+                                          FAppParamEcb.RateDatFTPCount,Server+';'+uplDir);
+                    if CBDataMgrEcb.FinishUploadCBDataByLog(CBDataMgrEcb.GetUploadAFileName(FileLst[i]),FileLst[i],FAppParamEcb.RateDatFTPCount) then
+                    begin
+                      DeleteFile(FileLst[i]);
+                    end;
+                    break;
+                  end;
+               End;
+               ChangeDir('..');
+          end;
+        End;
+        Result := True;
+      end;
+    Except
+      On E: Exception do
+        Begin
+          DisplayMemo.AddMsg2Ecb(E.Message);
+          SendDocMonitorWarningMsg(FAppParamEcb.TwConvertStr2('CB计沮肚瞷岿粇')+'('+E.Message+')$E009');
+        End;
+    end;
+  Finally
+   if Not Result Then
+   Begin
+     if IdFTP1.Connected Then
+        IdFTP1.Disconnect;
+   End;
+   if StopRunning Then
+   Begin
+      DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚CB计沮い耞'));
+   End Else
+   Begin
+      if Result Then
+        DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('ЧΘ肚CB计沮'))
+      Else Begin
+        DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚CB计沮ア毖'));
+      End;
+   End;
+ end;
+end;
+
+function TAMainFrm.FtpDataCBTxt2Ecb(): boolean;
+var Server,AUserName,Pass,uplDir : String;
+  UsePass : Boolean;
+  APort : Integer;
+  FileLst : _CStrLst;
+  FileName ,FTPFileName: string;
+  i,j,k : Integer;    //k狝叭竟絪腹
+  IsTransSuccess,uploadsuccess:Boolean;
+
+begin
+  Result := false;
+  FileLst := CBDataMgrEcb.GetUploadTmpFile;
+  if High(FileLst)<0 Then Exit;
+ try
+    Try
+      for k:=0 to FAppParamEcb.CBFTPCount-1 do
+      begin
+         DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('秨﹍非称肚CB计沮'));
+         SetLength(FileLst,0);
+         FileLst:=CBDataMgrEcb.GetUploadTmpFile;
+         if (High(FileLst)>=0) then
+         begin
+           Server:=FAppParamEcb.CBFTPInfos[k].FFTPServer;
+           uplDir:=FAppParamEcb.CBFTPInfos[k].FFTPUploadDir;
+           AUserName:=FAppParamEcb.CBFTPInfos[k].FFTPUserName;
+           Pass:=FAppParamEcb.CBFTPInfos[k].FFTPPassword;
+           APort := FAppParamEcb.CBFTPInfos[k].FFTPPort;
+           UsePass := FAppParamEcb.CBFTPInfos[k].FFTPPassive;
+         end;
+        with IdFTP1 do
+        Begin
+            if Connected Then
+              Disconnect;
+            DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('硈挡狝叭竟 ') + Server);
+            if Not Connected Then
+            Begin
+               UserName := AUserName;
+               Password := Pass;
+               Host     := Server;
+               Passive  := UsePass;
+               Port     := APort;
+               Connect;
+               TransferType := ftBinary;
+               ChangeDir(FAppParamEcb.CBFTPInfos[k].FFTPUploadDir);
+               //ChangeDir(uplDir);
+            End;
+
+          For i:=0 to High(FileLst) do
+          Begin
+               if GetFileSize(FileLst[i])=0 then
+               begin
+                 DeleteFile(FileLst[i]);
+                 Continue;
+               end;
+               uploadsuccess:=False;//--DOC4.0.0N002 huangcq081223 add 硂ń莱赣璶结
+               ChangeDir(CBDataMgrEcb.GetUploadAFolder(FileLst[i]));
+
+               if StopRunning Then Exit;
+
+               for j:=0 to 3 do
+               Begin
+                 FileName := CBDataMgrEcb.GetUploadAFileName(FileLst[i]);
+                 if StopRunning Then Exit;
+                 //狦郎琌.DAT碞溃罽郎肚
+                 if (Pos('.DAT',UpperCase(FileName))>0) Then
+                 Begin
+                      CompressFile(GetCompressFile(FileName),FileName,clMax);
+                      FileName := GetCompressFile(FileName);
+
+                      DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚 ') + ExtractFileName(FileName));
+                      if StopRunning Then Exit;
+                      if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
+                      Begin
+                        DeleteFile(FileName);
+                        FileName := '';
+                        uploadsuccess:=true;
+                        Break;
+                      End;
+                 End Else
+                 Begin
+                    DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚 ') + ExtractFileName(FileName));
+                    if FtpData(FileName,'',LowerCase(ExtractFileName(FileName))) Then
+                    Begin
+                        FileName := '';
+                        uploadsuccess:=true;
+                        Break;
+                    End;
+                 End;
+               End;
+
+               if (Length(FileName)=0) and (Pos('.TXT',UpperCase(CBDataMgrEcb.GetUploadAFileName(FileLst[i])))>0) Then
+               Begin
+                  uploadsuccess:=False;
+                  FileName := ExtractFilePath(CBDataMgrEcb.GetUploadAFileName(FileLst[i]))+'dblst.lst';
+                  if Not FileExists(FileName) Then
+                     FileName := ExtractFilePath(FileName)+'dblst2.lst';
+                  CBDataMgrEcb.ChangeDBLstVer(FileName);
+
+                  for j:=0 to 3 do
+                  Begin
+                    DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚 ') + ExtractFileName(FileName));
+                    if StopRunning Then Exit;
+                    if(ExtractFileName(FileName)='dblst2.lst')then
+                      FTPFileName := 'dblst311.lst'
+                    else
+                      FTPFileName := 'dblst.lst';
+                    if FtpData(FileName,'',FTPFileName) Then
+                    Begin
+                      FileName := '';
+                      uploadsuccess:=true;
+                      Break;
+                    End;
+                  End;
+                
+               End;
+               if Length(FileName)>0 Then
+               Begin
+                 DisplayMemo.AddMsg2Ecb(FileName+FAppParamEcb.TwConvertStr2(' 肚岿粇.'));
+                 Exit;
+               End Else
+               Begin
+                  if uploadsuccess then
+                  begin
+                    CBDataMgrEcb.SetCBDataLog('DocFtp_'+IntToStr(k+1),
+                                          CBDataMgrEcb.GetUploadAFileName(FileLst[i]),FileLst[i],'','',
+                                          FAppParamEcb.CBFTPCount,Server+';'+uplDir); 
+                    if CBDataMgrEcb.FinishUploadCBDataByLog(CBDataMgrEcb.GetUploadAFileName(FileLst[i]),FileLst[i],FAppParamEcb.CBFTPCount) then
+                    begin
+                      DeleteFile(FileLst[i]);
+                    end;
+                    break;
+                  end;
+               End;
+               ChangeDir('..');
+          end;
+        End;
+        Result := True;
+      end;
+    Except
+      On E: Exception do
+        Begin
+          DisplayMemo.AddMsg2Ecb(E.Message);
+          SendDocMonitorWarningMsg(FAppParamEcb.TwConvertStr2('CB计沮肚瞷岿粇')+'('+E.Message+')$E009');
+        End;
+    end;
+  Finally
+   if Not Result Then
+   Begin
+     if IdFTP1.Connected Then
+        IdFTP1.Disconnect;
+   End;
+   if StopRunning Then
+   Begin
+      DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚CB计沮い耞'));
+   End Else
+   Begin
+      if Result Then
+        DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('ЧΘ肚CB计沮'))
+      Else Begin
+        DisplayMemo.AddMsg1Ecb(FAppParamEcb.TwConvertStr2('肚CB计沮ア毖'));
+      End;
+   End;
+ end;
+end;
+
 //*******************************************************************************
 
 function TAMainFrm.GetCompressFile(fileName: String): String;
@@ -1937,6 +2210,22 @@ begin
   FMemo2.ItemIndex := FMemo2.Items.Add(Msg);
 end;
 
+procedure TDisplayMemo.AddMsg1Ecb(const Msg: String);
+begin
+  if(FMemo1.Count>100)then
+    FMemo1.Clear;
+  FMemo1.ItemIndex := FMemo1.Items.Add('(ecb)'+Msg);
+  SaveToLogFile(Msg);
+end;
+
+procedure TDisplayMemo.AddMsg2Ecb(const Msg: String);
+begin
+  if(FMemo2.Count>100)then
+    FMemo2.Clear;
+  FMemo2.ItemIndex := FMemo2.Items.Add('(ecb)'+Msg);
+end;
+
+
 procedure TDisplayMemo.ClearMsg1;
 begin
    FMemo1.Clear;
@@ -2107,7 +2396,7 @@ begin
 end;
 
 procedure TAMainFrm.Timer_StartTimer(Sender: TObject);
-var k,i,ftpcount : integer;  //穝糤ftpcount
+var k,i,iDoOk : integer;  //穝糤ftpcount
   FileLst : _CStrLst; ADoc : TUploadDoc;
   con,needupload,UPLSuccess_DataDoc,UPLSuccess_DocLst,IsSuccess_CBData : boolean;//穝糤IsSuccess_CBData
 
@@ -2236,18 +2525,26 @@ Try
      //-------------------------------------------------------------------------
 
      //肚CB戈
-     if ftpcount<AppParam.CBFTPCount then
-     begin
-       //肚CB戈
-       Try
-         IsSuccess_CBData:=FtpDataCBTxt2(k);      //睰肚ま
-         inc(ftpcount);
-         //FtpDataCBTxt;   //DocFtp2.0.0.0-Doc2.3.0.0-惠―5-libing-2007/09/20
-       Except
-         On E: Exception do
-            IsSuccess_CBData:=false;
-       End;
-     end;
+     Try
+       IsSuccess_CBData:=FtpDataCBTxt2();
+       //FtpDataCBTxt; //DocFtp2.0.0.0-Doc2.3.0.0-惠―5-libing-2007/09/20
+     Except
+       On E: Exception do
+          IsSuccess_CBData:=false;
+     End;
+     Try
+       IsSuccess_CBData:=FtpDataCBTxt2Ecb();
+     Except
+       On E: Exception do
+          IsSuccess_CBData:=false;
+     End;
+     //肚ecb ratadata戈
+     Try
+       IsSuccess_CBData:=FtpDataRateDataTxt2Ecb();
+     Except
+       On E: Exception do
+          IsSuccess_CBData:=false;
+     End;
 
      //==============******Doc4.2-sun-20090922==================
      if UpLoadDocMark then
@@ -2276,8 +2573,8 @@ Try
               dtTemp:=DateStr8ToDate(sFile);
               if dtTemp<>0 then
               begin
-                ftpcount:=FtpRateDat(dtTemp,@WizDayConvDatRunStatus1);
-                if ftpcount=1 then
+                iDoOk:=FtpRateDat(dtTemp,@WizDayConvDatRunStatus1);
+                if iDoOk=1 then
                 begin
                   bDealWithLog:=DealWithUploadLog(UploadFiles[i],'irrate');
                   if bDealWithLog then

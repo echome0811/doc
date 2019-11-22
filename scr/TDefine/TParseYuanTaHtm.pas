@@ -20,6 +20,7 @@ type
     FTitleLst:TTitleRLst;
     FLastErrMsg:PChar;
     IniFileName :PChar;
+    FHtmlTxt,FTempTs:TStringList;
 
     FContinueDo:Boolean; //是否继续进行接下来的网页的解析活动
   protected
@@ -45,11 +46,72 @@ type
 
     // Function ReadStartGetDate(AIniFileName :PChar):Double; //***Doc4.2-N001-sun-090610
     Function ReadStartGetDate(StartDateStr:PChar):Double;    //***Doc4.2-N001-sun-090610
+    function HtmlTableToStrTable(aHtmlTable:string):string;
 
   end;
 
 
 implementation
+
+
+function RplHtmlZhuanYi(aInput:string):string;
+begin
+  result:=aInput;
+  ReplaceSubString('&NBSP;',' ',result);
+  ReplaceSubString('&nbsp;',' ',result);
+  ReplaceSubString('&quot;','"',result);
+  ReplaceSubString('&QUOT;','"',result);
+  ReplaceSubString('&amp;','&',result);
+  ReplaceSubString('&AMP;','&',result);
+  ReplaceSubString('&lt;','<',result);
+  ReplaceSubString('&LT;','<',result);
+  ReplaceSubString('&gt;','>',result);
+  ReplaceSubString('&GT;','>',result);
+end;
+
+function RplHtmlHuanHang(MemoTxt:string):string;
+begin
+  result:=MemoTxt;
+  ReplaceSubString('</tr>',#13#10,MemoTxt);
+  ReplaceSubString('</Tr>',#13#10,MemoTxt);
+  ReplaceSubString('</TR>',#13#10,MemoTxt);
+  ReplaceSubString('</tR>',#13#10,MemoTxt);
+  ReplaceSubString('<P>',#13#10,MemoTxt);
+  ReplaceSubString('<p>',#13#10,MemoTxt);
+  ReplaceSubString('</P>',#13#10,MemoTxt);
+  ReplaceSubString('</p>',#13#10,MemoTxt);
+  ReplaceSubString('<h3>',#13#10,MemoTxt);
+  ReplaceSubString('</h3>',#13#10,MemoTxt);
+  ReplaceSubString('<H3>',#13#10,MemoTxt);
+  ReplaceSubString('</H3>',#13#10,MemoTxt);
+
+  ReplaceSubString('<br>',#13#10,MemoTxt);
+  ReplaceSubString('<Br>',#13#10,MemoTxt);
+  ReplaceSubString('<BR>',#13#10,MemoTxt);
+  ReplaceSubString('<bR>',#13#10,MemoTxt);
+  result:=MemoTxt;
+end;
+
+function RmvHtmlTag2(MemoTxt:string):string;
+var
+  i,StartP,EndP,StartP2,EndP2:integer;
+  Str_temp,Str_temp2:String;
+begin
+    StartP := Pos('<',MemoTxt);
+    i:=0;
+    While StartP>0 do
+    Begin
+      inc(i);
+      if(i>10000)then break;
+      EndP := Pos('>',MemoTxt);
+      if EndP=0 then break;
+      ReplaceSubString(Copy(MemoTxt,StartP,EndP-StartP+1),'',MemoTxt);
+      StartP := Pos('<',MemoTxt);
+    End;
+    result:=MemoTxt;
+end;
+
+
 //------------------------------------------------------------------------------
 // 接口实现
 //------------------------------------------------------------------------------
@@ -65,6 +127,8 @@ begin
   FLastErrMsg:='';
   FDeadLineDate:=StrToDate('1999/01/01'); 
   IniFileName :=AIniFileName;
+  FHtmlTxt:=TStringList.create;
+  FTempTs:=TStringList.create;
 try
   f := TIniFile.Create(StrPas(IniFileName));
   Str:=f.ReadString('CONFIG','StartGetDate','1999/01/01');   //by leon 081016
@@ -295,21 +359,16 @@ begin
 end;
 
 Function TParseYuanTaHtmMgr._GetHtmlMemo(Var MemoTxt:String):Boolean;
-var
-  HtmlTxt:TStringList;
-  i,StartP,EndP,StartP2,EndP2:integer;
-  Str_temp,Str_temp2:String;
+var  i,StartP,EndP,StartP2,EndP2,iCycle:integer;
+  Str_temp,Str_temp2,sMem,sLine,sTagBegin,sTagEnd:String;
 begin
-
   FLastErrMsg := '';
   Result := False;
-  //create
-  HtmlTxt:=TStringList.Create;
   Try
   Try
     if (Length(MemoTxt)=0)then exit;
+    
     //gettext
-
     StartP:=Pos('<table border="0" width="600">',MemoTxt)+30;
     MemoTxt:=Copy(MemoTxt,StartP,Length(MemoTxt)-StartP);
     if(Pos('<a href="javascript:',MemoTxt)>0)then
@@ -319,124 +378,73 @@ begin
     MemoTxt:=Copy(MemoTxt,1,EndP-1);
 
     //Parse
-    HtmlTxt:=TStringList.Create;
+    FHtmlTxt.clear;
     if (Length(MemoTxt)<>0)then
-      HtmlTxt.Text:=MemoTxt
+      FHtmlTxt.Text:=MemoTxt
     else
      exit;
-
-    for i:=0 to HtmlTxt.Count-1 do
+    for i:=0 to FHtmlTxt.Count-1 do
     begin
-      if Pos(CGbToBig5('相关个股:'),HtmlTxt.Strings[i])>0 Then
+      if Pos('闽:',FHtmlTxt.Strings[i])>0 Then
       Begin
-        HtmlTxt.Delete(i);
+        FHtmlTxt.Delete(i);
         Break;
       End;
     end;
-
-    MemoTxt := HtmlTxt.Text;
-    HtmlTxt.Clear;
+    MemoTxt := FHtmlTxt.Text;
+    FHtmlTxt.Clear;
 
     //Replace
-    StartP:=Pos('<tr><td class="p1"><P>'+CGBToBIg5('精实新闻'),MemoTxt);
-    EndP:=Pos(CGBToBIg5('报导</P>'),MemoTxt)+Length(CGBToBIg5('报导</P>'));
+    StartP:=Pos('<tr><td class="p1"><P>'+'弘龟穝籇',MemoTxt);
+    EndP:=Pos('厨旧</P>',MemoTxt)+Length('厨旧</P>');
     if Length(MemoTxt)>0 then
     begin
       if(StartP>0)and(EndP>0)then
         ReplaceSubString(Copy(MemoTxt,StartP,EndP-StartP),'',MemoTxt);
     end;
 
-    //add by JoySun 2005/10/24 处理Table格式
-    //---------------------------------------------------
-    StartP := Pos('<TABLE',MemoTxt);
-    if(StartP>0)then
+    MemoTxt:=StringReplace(MemoTxt,#13#10,'',[rfReplaceAll]);
+    for iCycle:=1 to 30 do
     begin
-      EndP := Pos('</TABLE>',MemoTxt);
-      Str_temp:=Copy(MemoTxt,StartP,EndP-StartP+Length('</TABLE>'));
-
-      HtmlTxt.Clear;
-      StartP2 := Pos('<TR',Str_temp);
-      i:=0;
-      While StartP2>0 do
-      Begin
-        inc(i);
-        if(i>1000)then break;
-        EndP2 := Pos('</TR>',Str_temp);
-        if EndP2=0 then break;
-        Str_temp2:=Copy(Str_temp,StartP2,EndP2-StartP2);
-        ReplaceSubString(#13#10,'  ',Str_temp2);
-        HtmlTxt.Add(Str_temp2);
-        ReplaceSubString_first(Copy(Str_temp,StartP2,EndP2-StartP2+Length('</TR>')),'',Str_temp);
-        StartP2 := Pos('<TR',Str_temp);
-      End;
-      Str_temp:=HtmlTxt.Text;
-      HtmlTxt.Clear;
-
-      ReplaceSubString_first(Copy(MemoTxt,StartP,EndP-StartP+Length('</TABLE>')),Str_temp,MemoTxt);
-    end;
-    //---------------------------------------------------
-
-
-    //add by JoySun 2005/10/24 拆分<P></P> 保持原有的行格式
-    //---------------------------------------------------
-    {HtmlTxt.Clear;
-    StartP := Pos('<P>',MemoTxt);
-    if(StartP>0)and(StartP<>1)then
-    begin
-      Str_temp2:=Copy(MemoTxt,0,StartP-1);
-      ReplaceSubString(#$D#$A,'  ',Str_temp2);
-      HtmlTxt.Add(Str_temp2);
-      ReplaceSubString(Copy(MemoTxt,0,StartP-1),'',MemoTxt);
+      sTagBegin:='<TBODY>';
+      sTagEnd:='</TBODY>';
+      sMem:=GetStrOnly2(sTagBegin,sTagEnd,MemoTxt,false);
+      if sMem='' then
+        break;
+      sLine:=HtmlTableToStrTable(sTagBegin+sMem+sTagEnd);
+      Str_temp:=sTagBegin+sMem+sTagEnd;
+      MemoTxt:=StringReplace(MemoTxt,Str_temp,sLine,[rfReplaceAll]);
+      Str_temp:=LowerCase(sTagBegin)+sMem+LowerCase(sTagEnd);
+      MemoTxt:=StringReplace(MemoTxt,Str_temp,sLine,[rfReplaceAll]);
     end;
 
-    StartP := Pos('<P',MemoTxt);
-    While StartP>0 do
-    Begin
-      EndP := Pos('</P>',MemoTxt);
-      HtmlTxt.Add(Copy(MemoTxt,StartP+Length('<P'),EndP-StartP-Length('<P')));
-      ReplaceSubString(Copy(MemoTxt,StartP,EndP-StartP+Length('</P>')),'',MemoTxt);
-      StartP := Pos('<P',MemoTxt);
-    End;
+    MemoTxt:=RplHtmlZhuanYi(MemoTxt);
+    MemoTxt:=RplHtmlHuanHang(MemoTxt);
+    MemoTxt:=StringReplace(MemoTxt,'<div class="p01">',#13#10+'<div class="p01">',[rfReplaceAll]);
+    //MemoTxt:=RmvHtmlTag_SaveUrl(MemoTxt);
+    MemoTxt:=RmvHtmlTag2(MemoTxt);
 
-    if(Length(HtmlTxt.Text)>0)then            
-      MemoTxt:=HtmlTxt.Text;
-    HtmlTxt.Clear;   }
-    //--------------------------------------------------------
-
-    StartP := Pos('<',MemoTxt);
-    i:=0;
-    While StartP>0 do
-    Begin
-      inc(i);
-      if(i>10000)then break;
-      EndP := Pos('>',MemoTxt);
-      if EndP=0 then break;
-      //保持原有的换行
-      if(Pos('<BR',Copy(MemoTxt,StartP,EndP-StartP+1))=1)then
-        ReplaceSubString(Copy(MemoTxt,StartP,EndP-StartP+1),#13#10,MemoTxt)
+    FHtmlTxt.text:=MemoTxt;
+    while FHtmlTxt.Count>0 do
+    begin
+      if Trim(FHtmlTxt[FHtmlTxt.Count-1])='' then
+        FHtmlTxt.delete(FHtmlTxt.Count-1)
       else
-        ReplaceSubString(Copy(MemoTxt,StartP,EndP-StartP+1),'',MemoTxt);
-      StartP := Pos('<',MemoTxt);
-    End;
-    ReplaceSubString('&NBSP;',' ',MemoTxt);
+        break;
+    end;
+    MemoTxt:=FHtmlTxt.text;
 
-    //去掉第一行的空格
+    //奔材︽
     if(Pos(#13#10,MemoTxt)=1)then
       MemoTxt := Copy(MemoTxt,Length(#13#10)+1,Length(MemoTxt)-Length(#13#10));
-
     Result := True;
-
   Except
     On E:Exception Do
       FLastErrMsg := PChar(E.Message);
   End;
-
   //free
   Finally
-    if Assigned(HtmlTxt)then
-      HtmlTxt.Free;
   End;
-
 end;
 
 Function TParseYuanTaHtmMgr._GetLastErrorMsg():PChar;
@@ -486,11 +494,106 @@ begin
       DateSeparator := Fstr;
     end;
 end;
-//**************************************************************
+
+function TParseYuanTaHtmMgr.HtmlTableToStrTable(aHtmlTable:string):string;
+var i,j,k,iCol:integer;
+  sLine,sMem:string; aAryLen:array of integer;  cStrLst:_cStrLst2;
+
+  procedure SetColLen(aInputCol:integer;aInputColStr:string);
+  var ix:integer;
+  begin
+    if aInputCol>=High(aAryLen) then
+    begin
+      SetLength(aAryLen,aInputCol+1);
+      aAryLen[aInputCol]:=0;
+    end;
+    if aAryLen[aInputCol]<Length(aInputColStr) then
+      aAryLen[aInputCol]:=Length(aInputColStr);
+  end;
+  function GetColLenStr(aInputCol:integer;aInputColStr:string):string;
+  var ix,ix2:integer;
+  begin
+    result:=aInputColStr;
+    ix2:=aAryLen[aInputCol]-Length(aInputColStr);
+    if ix2>0 then
+    begin
+      for ix:=1 to ix2 do
+        result:=result+' ';
+    end;
+  end;
+begin
+  try
+    result:=aHtmlTable;
+    sMem:=aHtmlTable;
+    while True do
+    begin
+      if Pos('  ',sMem)<=0 then
+        break;
+      sMem:=StringReplace(sMem,'  ',' ',[rfReplaceAll]);
+    end;
+    sMem:=StringReplace(sMem,#13#10,'',[rfReplaceAll]);
+    sMem:=StringReplace(sMem,'<tr',#13#10+'<tr',[rfReplaceAll]);
+    sMem:=StringReplace(sMem,'<TR',#13#10+'<TR',[rfReplaceAll]);
+    sMem:=StringReplace(sMem,'</td>','%tagtd%',[rfReplaceAll]);
+    sMem:=StringReplace(sMem,'</TD>','%tagtd%',[rfReplaceAll]);
+    sMem:=RplHtmlZhuanYi(sMem);
+    sMem:=RmvHtmlTag2(sMem);
+
+    FTempTs.clear;
+    FTempTs.text:=sMem;
+    for i:=0 to FTempTs.count-1 do
+    begin
+      if Pos('%tagtd%',FTempTs[i])>0 then
+      begin
+        sLine:=FTempTs[i];
+        //sLine:=StringReplace(sLine,'%tagtd%',#13#10,[rfReplaceAll]);
+        cStrLst:=DoStrArray2(sLine,'%tagtd%');
+        for j:=0 to High(cStrLst) do
+          SetColLen(j,cStrLst[j]);
+      end;
+    end;
+
+    for i:=0 to FTempTs.count-1 do
+    begin
+      if Pos('%tagtd%',FTempTs[i])>0 then
+      begin
+        sLine:=FTempTs[i];
+        //sLine:=StringReplace(sLine,'%tagtd%',#13#10,[rfReplaceAll]);
+        cStrLst:=DoStrArray2(sLine,'%tagtd%');
+        for j:=0 to High(cStrLst) do
+        begin
+          if j=0 then sLine:=GetColLenStr(j,cStrLst[j])
+          else sLine:=sLine+#9+GetColLenStr(j,cStrLst[j]);
+        end;
+        FTempTs[i]:=sLine;
+      end;
+    end;
+    while FTempTs.count>0 do
+    begin
+      if Trim(FTempTs[0])='' then
+        FTempTs.Delete(0)
+      else
+        break;
+    end;
+    while FTempTs.count>0 do
+    begin
+      if Trim(FTempTs[FTempTs.count-1])='' then
+        FTempTs.Delete(FTempTs.count-1)
+      else
+        break;
+    end;
+
+    result:=FTempTs.text;
+  finally
+    SetLength(aAryLen,0);
+  end;
+end;
 
 destructor TParseYuanTaHtmMgr.Destroy;
 begin
   SetLength(FTitleLst,0);
+  FreeAndNil(FHtmlTxt);
+  FreeAndNil(FTempTs);
   //inherited;
 end;
 

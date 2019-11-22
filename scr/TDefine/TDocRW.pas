@@ -53,6 +53,11 @@ type
     ASTOPCONV_DETAILS  : Array[0..15] of TSTOPCONV_PERIOD_DETAIL //期间数值
   End;
 
+  TSTOPCONV_PERIOD_RPTEcb= Record
+    ID                 : String[38]; //证券代号
+    ASTOPCONV_DETAILS  : Array[0..15] of TSTOPCONV_PERIOD_DETAIL //期间数值
+  End;
+
   //--DOC4.0.0—N004 huangcq090317 add  赎回、卖回 结构共用----->
   TREDEEMSALE_PERIOD_DETAIL = Record
     DOC_FILENAME    : String[50]; //公告文件名称

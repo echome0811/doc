@@ -467,7 +467,7 @@ function InputDatFileFmt3_ForSetCBData(UplFile,ToPath:string;var aOutFile,aErr:s
   End;
   End;
 
-  
+
 function InputDatFileFmt2_ForSetCBData(UplFile,ToPath:string;var aErr:string):Boolean;
   var i,iCode : Integer;
     TempFile,TempPath,sFilePath,TempPath2,sToDir,sToDirTemp : ShortString;

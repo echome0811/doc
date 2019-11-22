@@ -4,8 +4,8 @@ object AMainFrm: TAMainFrm
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = '??'#34892#20844#21578#20195'?'#25910#38598#24037#20855
-  ClientHeight = 433
-  ClientWidth = 421
+  ClientHeight = 119
+  ClientWidth = 384
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -3824,14 +3824,14 @@ object AMainFrm: TAMainFrm
     Left = 3
     Top = 4
     Width = 297
-    Height = 97
+    Height = 62
     AutoSize = False
     WordWrap = True
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 414
-    Width = 421
+    Top = 100
+    Width = 384
     Height = 19
     Panels = <
       item
@@ -3907,8 +3907,8 @@ object AMainFrm: TAMainFrm
   end
   object PanelCaption_URL: TPanel
     Left = 0
-    Top = 384
-    Width = 421
+    Top = 70
+    Width = 384
     Height = 30
     Align = alBottom
     BevelOuter = bvNone
@@ -3918,40 +3918,13 @@ object AMainFrm: TAMainFrm
     object Label2: TLabel
       Left = 2
       Top = 2
-      Width = 417
+      Width = 380
       Height = 26
       Align = alClient
       AutoSize = False
       Caption = '??'#34892#20844#21578#20195'?'#25910#38598#24037#20855
       WordWrap = True
     end
-  end
-  object WebBrowserExtractDoc: TWebBrowser
-    Left = 384
-    Top = 24
-    Width = 17
-    Height = 9
-    TabOrder = 5
-    ControlData = {
-      4C000000C2010000EE0000000000000000000000000000000000000000000000
-      000000004C000000000000000000000001000000E0D057007335CF11AE690800
-      2B2E12620A000000000000004C0000000114020000000000C000000000000046
-      8000000000000000000000000000000000000000000000000000000000000000
-      00000000000000000100000000000000000000000000000000000000}
-  end
-  object wb1: TWebBrowser
-    Left = 0
-    Top = 68
-    Width = 421
-    Height = 316
-    Align = alBottom
-    TabOrder = 6
-    ControlData = {
-      4C000000832B0000A92000000000000000000000000000000000000000000000
-      000000004C000000000000000000000001000000E0D057007335CF11AE690800
-      2B2E126208000000000000004C0000000114020000000000C000000000000046
-      8000000000000000000000000000000000000000000000000000000000000000
-      00000000000000000100000000000000000000000000000000000000}
   end
   object IdAntiFreeze1: TIdAntiFreeze
     OnlyWhenIdle = False

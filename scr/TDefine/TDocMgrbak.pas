@@ -13,7 +13,7 @@ unit TDocMgr;
 interface
 Uses Windows,IniFiles,Controls,Classes,Forms,SysUtils,CsDef,TCommon,IdHTTP,
    Graphics,ADODB,DateUtils,Dialogs,StdCtrls,StrUtils,IdComponent,TDocRW,
-   uLevelDataFun,uFuncFileCodeDecode,FReplace;//FastStrings
+   uLevelDataFun,uFuncFileCodeDecode;
 const
   CHttpSleep=5;
   CParamSep=';';
@@ -679,6 +679,7 @@ type
                        const Time : TTime;
                        const URL  : String):TDocData;
       //--
+
   end;
 
   TDoc02DataMgr = Class
@@ -815,7 +816,7 @@ type
     FExceptCodeList:TStringList;//需要將記錄從正式數據文件分離出來的代碼列表
     FShangShiCodeList:TStringList;
 
-    function GetUploadLogFileRateData():String;
+    function LoaclDatDir():string;virtual;
     function GetUploadLogFile():String;
     function GetUploadLogFile2(aTag:string):String;
     function GetUploadLogFile3():String;
@@ -823,36 +824,32 @@ type
     function GetUploadLogFile5():String;
     function GetUploadLogFile6(aAdd,aFileName:string):String;
     function GetUploadLogFile7():String;
-    function GetUploadLogFile7RateData():String;
     function CodeInType(aCode:string):integer;
+
   public
       constructor Create(aTw:boolean;Tr1DBPath:String);
       destructor  Destroy; override;
       procedure RefreshExceptList;
       procedure RefreshShangShiCodeList;
-      function LoaclDatDir():string;virtual;
-      function LoaclDatDirRateData():string;
 
       Function GetUploadTmpFile():_cStrLst;
-      Function GetUploadTmpFileRateData():_cStrLst;
       Function GetUploadAFileName(Const FileName:String):String;
       Function GetUploadAFolder(Const FileName:String):String;
 
       procedure ChangeDBLstVer(const FileName:String);
+
       Function GetCBDataFile_FullPath(FileName:String):String;
       Function GetCBData_FullPath():String;
       Function GetCBDataTextFileName(FileName:String):String;
-      function CreateCBDataFileIfNotExists(FileName:String):boolean;
-      function CreateEmptyTextFile(aInputFile:string):Boolean;
-      function CreateEmptycbstopconvdat(aInputFile:string):Boolean;virtual;
-
 
       Function GetCBDataText(Const FileName:String):String;
       function GetCBNameFromConfig(pCBkeyName:string):string;
       Function GetCBDataLog(Const sDateS,aDateE,DstFileName:String):Boolean;
       Function GetCBDataOpLog(sDateS,aDateE,aDstFile:String):boolean;
+
       function GetNewDatFile(aSrcFile:string):string;
       function GetNewStopDatFile(aSrcFile:string):string;
+
 
       function ProSep_cbidx(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //轉股余額 cvtBin
       function ProSep_cbidx2(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //轉股余額 cvtBin
@@ -865,7 +862,7 @@ type
       function ProSep_cbpurpose(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //募集資金用途
       function ProSep_cbdoc(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //條款原文
       function ProSep_cbstockholder(aFtpXiaShi,aFtpNotXiaShi:boolean):string;
-      function ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean):string;virtual;  //停止轉換期間 InitBin
+      function ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //停止轉換期間 InitBin
       function ProSep_cbredeemdate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //贖回條款
       function ProSep_cbsaledate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //賣回條款
       function ProSep_cbdate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //重要日期
@@ -877,14 +874,21 @@ type
       function ProSepPassHis_cbpurpose(aExtractYear:string):string;  //募集資金用途
       function ProSepPassHis_cbdoc(aExtractYear:string):string;  //條款原文
       function ProSepPassHis_cbstockholder(aExtractYear:string):string;
-      function ProSepPassHis_cbstopconv(aExtractYear:string):string;virtual;  //停止轉換期間 InitBin
+      function ProSepPassHis_cbstopconv(aExtractYear:string):string;  //停止轉換期間 InitBin
       function ProSepPassHis_cbredeemdate(aExtractYear:string):string;  //贖回條款
       function ProSepPassHis_cbsaledate(aExtractYear:string):string;  //賣回條款
       function ProSepPassHis_cbdate(aExtractYear:string):string;  //重要日期
   End;
   
-  TCBDataMgr = Class(TCBDataMgrBase)
+  TCBDataMgr = Class
   private
+    FIsTw:Boolean;
+    FTr1DBPath : String;
+    FExceptCodeList:TStringList;//需要將記錄從正式數據文件分離出來的代碼列表
+    FShangShiCodeList:TStringList;
+
+    //FPassHisCodeList:TStringList;
+    
     function GetNifaxingCBText: String;
     procedure SetNifaxingCBText(const Value: String);
     function GetPassCBText: String;
@@ -894,8 +898,16 @@ type
     function GetShenshiCBText: String;
     procedure SetHushiCBText(const Value: String);
     procedure SetShenshiCBText(const Value: String);
+    function GetUploadLogFile():String;
+    function GetUploadLogFile2(aTag:string):String;
+    function GetUploadLogFile3():String;
+    function GetUploadLogFile4():String;
+    function GetUploadLogFile5():String;
+    function GetUploadLogFile6(aAdd,aFileName:string):String;
+    function GetUploadLogFile7():String;
     function GetStopCBText: String;
     procedure SetStopCBText(const Value: String);
+    function CodeInType(aCode:string):integer;
 
     function GetshangguiCBText: String;
     function GetshangshiCBText: String;
@@ -918,40 +930,47 @@ type
     procedure SaveCBTxtToUpLoad8(Const FileFolder,FileName,Operator,aTimeKey:String;TypeFlag,TypeFlag2:String);
     procedure SaveCBTxtToUpLoad9(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
   public
-      function CreateEmptycbstopconvdat(aInputFile:string):Boolean;override;
-      function ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;override;
-      function ProSepPassHis_cbstopconv(aExtractYear:string):string;override;
-
-      function LoaclDatDir():string;override;
+      constructor Create(aTw:boolean;Tr1DBPath:String);
+      destructor  Destroy; override;
+      //procedure RefreshPassHisList(aSrcText:string);
+      procedure RefreshExceptList;
+      procedure RefreshShangShiCodeList;
+      //procedure SetHisPassawayCBText(const Value,HisYear: String);
       procedure SetPassawayCBText(const Value: String);
+
+      procedure SetshangshiCBTxtEcb(const Value: String);
+
+      Function GetUploadTmpFile():_cStrLst;
+      Function GetUploadAFileName(Const FileName:String):String;
+      Function GetUploadAFolder(Const FileName:String):String;
+
+      procedure ChangeDBLstVer(const FileName:String);
+
+      Function GetCBDataFile_FullPath(FileName:String):String;
+      Function GetCBData_FullPath():String;
+      Function GetCBDB_FullPath():String;
+      Function GetCBDataTextFileName(FileName:String):String;
       Function GetDateStkIndustryTFN(FileName:String):String;
       Function GetDateStkIndustryDifTFN(FileName:String):String;
       Function GetDatecbbaseinfo(FileName:String):String;
-      Function GetDatecbbaseinfoOfWeek(FileName:String):String;
       Function GetDatecloseidlist(FileName:String):String;
-      Function closeidlistComapre(aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile:String):string;
-      Function GetDatecloseidlistEx(FileName:String):String;
-      Function GetWeekOfcloseidlist(FileName:String):String;
-      Function GetWeekOfcloseidlistEx(FileName:String):String;
-
       Function GetDateStkBase1TFN(FileName:String):String;
       Function GetDateStockweight(FileName:String):String;
-      Function GetLogStockweight(FileName:String):String;
-      Function GetLogcbbaseinfo(FileName:String):String;
-      
       Function GetDateStkBase1DifTFN(FileName:String):String;
-      Function GetADocRtfFileName(FileName:String):String;
       Function GetADocTextFileName(FileName:String):String;
       Function GetADoc2TextFileName(FileName:String):String;
+      Function GetCBDataText(Const FileName:String):String;
       Function SetCBDataText(Const FileName,Value,aOperator,aTimeKey :String):String;
       function SetCBBaseInfoIdListIsOk:Boolean;
       Function SetCBDataTextFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
       Function SetTCRITFN(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey:string):Boolean;
+      Function SetECBRate(aEcbRatePath,aOperator,aTimeKey,sCmd:string):Boolean;
       Function Setstockweight(aUptFiles:TStringList;aDstDatPath,aOperator,aTimeKey:string):Boolean;
       Function SetCBDataTextFileName_10(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       function SetNodeUpload(const aOperator,aTimeKey: String):boolean;
+      function SetNodeUploadEcb(const aOperator,aTimeKey: String):boolean;
       //--DOC4.4.0.0   pqx 20120208
       procedure Strike4ConvToResetLst(aOperator,aTimeKey:string);
       //---
@@ -961,18 +980,59 @@ type
       Function SetCBThreeTraderFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetCBBalanceDatFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       procedure ModifyThreeTraderLst(aFileName,aDate:String);//add by wangjinhua ThreeTrader 091015
+
+
       procedure ModifyDealerLst(aFileName,aDate:String);
+
+      //--DOC4.0.0〞N002 huangcq081223 add --->
       procedure SetCBDataLog(Const AppName,FileName,UpLoadCBFileName,aOperator,aTimeKey:String;
         FtpServerCount:Integer=1;FtpServerName:String='';TypeFlag:string ='');
       function FinishUploadCBDataByLog(FileName,UpLoadCBFileName:String;FtpServerCount:Integer):Boolean;
+      function GetCBNameFromConfig(pCBkeyName:string):string;
+      Function GetCBDataLog(Const sDateS,aDateE,DstFileName:String):Boolean;
+      //<--DOC4.0.0〞N002 huangcq081223---
+      Function GetCBDataOpLog(sDateS,aDateE,aDstFile:String):boolean;
       Function GetIFRSOpLog(sDateS,aDateE,aDstFile:String):boolean;
       Function GetIFRSTr1dbData(aYear,aQ,aCode,aTr1dbDatPath,aDstFile1,aDstFile2,aDstFile3:String):boolean;
 
+      function GetNewDatFile(aSrcFile:string):string;
+      function GetNewStopDatFile(aSrcFile:string):string;
+      //function GetPassHisDatFile(aSrcFile,aExtractYear:string):string;
+
       function ConvertcbidxTocbidx3:string;
       function ConvertCbidx2ToCbidx():Boolean;
+      function ProSep_cbidx(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //轉股余額 cvtBin
+      function ProSep_cbidx2(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //轉股余額 cvtBin
+      function ProSep_Cbidx2OrCbidx(sTagFile:string;aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+      function ProSep_strike2(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //轉股價格調整 cvtBin
       function ConvertStrike32ToStrike3():Boolean;
+      function ProSep_strike32(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //交易日上浮幅度 cvtBin
+      function ProSep_strike3(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //交易日上浮幅度 cvtBin
+      function ProSep_strike32Orstrike3(sTagFile:string;aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+      function ProSep_cbissue2(aFtpXiaShi,aFtpNotXiaShi:boolean):string; //網上網下 cvtBin
+      function ProSep_cbpurpose(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //募集資金用途
+      function ProSep_cbdoc(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //條款原文
+      function ProSep_cbstockholder(aFtpXiaShi,aFtpNotXiaShi:boolean):string;
+      function ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //停止轉換期間 InitBin
+      function ProSep_cbredeemdate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //贖回條款
+      function ProSep_cbsaledate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //賣回條款
+      function ProSep_cbdate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //重要日期
+
+      function ProSepPassHis_cbidx(aExtractYear:string):string; //轉股余額 cvtBin
+      function ProSepPassHis_strike2(aExtractYear:string):string; //轉股價格調整 cvtBin
+      function ProSepPassHis_strike3(aExtractYear:string):string; //交易日上浮幅度 cvtBin
+      function ProSepPassHis_cbissue2(aExtractYear:string):string; //網上網下 cvtBin
+      function ProSepPassHis_cbpurpose(aExtractYear:string):string;  //募集資金用途
+      function ProSepPassHis_cbdoc(aExtractYear:string):string;  //條款原文
+      function ProSepPassHis_cbstockholder(aExtractYear:string):string;
+      function ProSepPassHis_cbstopconv(aExtractYear:string):string;  //停止轉換期間 InitBin
+      function ProSepPassHis_cbredeemdate(aExtractYear:string):string;  //贖回條款
+      function ProSepPassHis_cbsaledate(aExtractYear:string):string;  //賣回條款
+      function ProSepPassHis_cbdate(aExtractYear:string):string;  //重要日期
+      
       function ProAfterNodeChanged(aRefreshExceptList,aRefreshShangShiCodeList:boolean;
          aFtpXiaShi,aFtpNotXiaShi:boolean;aOperator,aTimeKey:string):boolean;
+      //function ProAfterPassHisChanged(aPassHisNodeText,aExtractYear:string):boolean;
 
       property NifaxingCBText:String Read GetNifaxingCBText Write SetNifaxingCBText;
       property PassCBText:String Read GetPassCBText Write SetPassCBText;
@@ -982,63 +1042,6 @@ type
       property StopCBText:String Read GetStopCBText Write SetStopCBText;
       property shangguiCBText:String Read GetshangguiCBText write SetshangguiCBTxt;
       property shangshiCBText:String Read GetshangshiCBText write SetshangshiCBTxt;
-      property SongCBText:String Read GetSongCBText write SetSongCBTxt;
-      property guapaiCBText:String Read GetguapaiCBText write SetguapaiCBTxt;
-      property xunquanCBText:String Read GetxunquanCBText write SetxunquanCBTxt;
-  End;
-
-  TCBDataMgrEcb = Class(TCBDataMgrBase)
-  private
-    function GetNifaxingCBText: String;
-    procedure SetNifaxingCBText(const Value: String);
-    function GetPassCBText: String;
-    procedure SetPassCBText(const Value: String);
-    function GetPassawayCBText: String;
-    function GetStopCBText: String;
-    procedure SetStopCBText(const Value: String);
-
-    function GetshangguiCBText: String;
-    function GetshangshiCBText: String;
-    function GetSongCBText: String;
-    function GetguapaiCBText: String;
-    function GetxunquanCBText: String;
-    procedure SetshangguiCBTxt(const Value: String);
-    procedure SetSongCBTxt(const Value: String);
-    procedure SetguapaiCBTxt(const Value: String);
-    procedure SetxunquanCBTxt(const Value: String);
-
-    procedure SaveCBTxtToUpLoad(FileFolder,FileName,aOperator,aTimeKey:String;TypeFlag: String ='');
-    procedure SaveCBTxtToUpLoadRateData(FileFolder,FileName,aOperator,aTimeKey:String;TypeFlag: String ='');
-    procedure SaveCBTxtToUpLoad3(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-    procedure SaveCBTxtToUpLoad9(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-    procedure SaveCBTxtToUpLoad9RateData(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-  public
-      function CreateEmptycbstopconvdat(aInputFile:string):Boolean;override;
-      function ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;override;
-      function ProSepPassHis_cbstopconv(aExtractYear:string):string;override;
-      
-      function LoaclDatDir():string;override;
-      procedure SetPassawayCBText(const Value: String);
-
-      Function SetCBDataText(Const FileName,Value,aOperator,aTimeKey :String):String;
-      Function SetCBDataTextFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
-      Function SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
-      function SetNodeUpload(const aOperator,aTimeKey: String):boolean;
-
-      procedure SetCBDataLog(Const AppName,FileName,UpLoadCBFileName,aOperator,aTimeKey:String;
-        FtpServerCount:Integer=1;FtpServerName:String='';TypeFlag:string ='');
-      function FinishUploadCBDataByLog(FileName,UpLoadCBFileName:String;FtpServerCount:Integer):Boolean;
-
-      function ProAfterNodeChanged(aRefreshExceptList,aRefreshShangShiCodeList:boolean;
-         aFtpXiaShi,aFtpNotXiaShi:boolean;aOperator,aTimeKey:string):boolean;
-      Function SetECBRate(aEcbRatePath,aOperator,aTimeKey,sCmd:string):Boolean;
-
-      procedure SetshangshiCBTxt(const Value: String);
-      property NifaxingCBText:String Read GetNifaxingCBText Write SetNifaxingCBText;
-      property PassCBText:String Read GetPassCBText Write SetPassCBText;
-      property PassawayCBText:String Read GetPassawayCBText Write SetPassawayCBText;
-      property StopCBText:String Read GetStopCBText Write SetStopCBText;
-      property shangguiCBText:String Read GetshangguiCBText write SetshangguiCBTxt;
       property SongCBText:String Read GetSongCBText write SetSongCBTxt;
       property guapaiCBText:String Read GetguapaiCBText write SetguapaiCBTxt;
       property xunquanCBText:String Read GetxunquanCBText write SetxunquanCBTxt;
@@ -1107,30 +1110,12 @@ type
   Function GetItemIndex({ID:String;}IDLst:TListBox):Integer;
   function InRightList(AComponentName:String):Boolean;//add by wangjinhua 20090602 Doc4.3
   procedure ChrConvert(var ASource:String);
+  function NodeTag2FileName(aNodeTag:string):string;
 Var
   FAppParam: TDocMgrParam=nil;
   FAppParamEcb: TDocMgrParam=nil;
   F_SearchID:String;
 implementation
-
-const _TryCpyTimes=15;
-function TryToCopyFile(aTmpFile,aDstFileName:string;TryTimes:integer):boolean;
-var i:integer;
-begin
-  result:=false;
-  if not FileExists(aTmpFile) then
-    exit;
-  for i:=1 to TryTimes do
-  begin
-    if CopyFile(PChar(aTmpFile),PChar(aDstFileName),false) then
-    begin
-      result:=true;
-      break;
-    end;
-    SleepWait(1);
-    //Sleep(1000);
-  end;
-end;
 
 function GetCancelLogFile(aLogFile:string):string;
 var sPath,sName:string;
@@ -3410,10 +3395,7 @@ try
 
      For k:=0 To high(aMarkKeyWord) do
        if (Pos(aMarkKeyWord[k],Adoc.FTitle)>0) or (Pos(aMarkKeyWord[k],Adoc.FMemo)>0) then
-       begin
          SetDocDataStringList(f,ADoc);
-         //break;
-       end;
   End;
 
   if Length(FNowTempDocFileName)>0 Then
@@ -3687,7 +3669,9 @@ end;
 
 function TDocDataMgr.GetNotMemoDocLogFile(Const Tag:string): String;
 begin
-Result := ExtractFilePath(FTempDocFileName)+Tag+'NotGetMemo.log';
+
+   Result := ExtractFilePath(FTempDocFileName)+Tag+'NotGetMemo.log';
+
 end;
 
 procedure TDocDataMgr.LoadFromNotMemoDocLogFile(const tag: string);
@@ -3696,10 +3680,15 @@ Var
   s,FileName : String;
   FileStr : TStringList; j:integer;
 Begin
+
 Try
+
   ClearDataNotGetMemoList;
+
   FileName := GetNotMemoDocLogFile(Tag);
+
   if Not FileExists(FileName) Then Exit;
+
   FileStr := TStringList.Create;
   AssignFile(f,FileName);
   FileMode := 0;
@@ -3712,14 +3701,23 @@ Try
       sleep(1);
       j:=0;
     end;
-    Readln(f,s);
-    FileStr.Add(s);
+
+      Readln(f,s);
+      FileStr.Add(s);
   End;
   CloseFile(f);
+
+
   GetDocDataStringList(FileStr,FNotGetMemoDocList);
+
   FileStr.Free;
+
+
 Finally
 End;
+
+
+
 End;
 
 function TDocDataMgr.GetSection(Var StratIndex: Integer;
@@ -4236,6 +4234,7 @@ begin
            Continue;
       End;
   End;
+
 End;
 
 function TDocDataMgr.GetUploadLogFile: String;
@@ -7671,7 +7670,6 @@ except
 end;
 End;
 
-
 function TCBDataMgrBase.GetCBDataText(const FileName: String): String;
 Var
   FileName2 : String;
@@ -7730,11 +7728,6 @@ begin
    result:='';
 end;
 
-function TCBDataMgrBase.LoaclDatDirRateData():string;
-begin
-   result:=LoaclDatDir+'RateDatUpload\';
-end;
-
 function TCBDataMgrBase.GetUploadLogFile2(aTag:string):String;
 Var
   FileName,FileName2 : String;
@@ -7764,25 +7757,6 @@ begin
 
    Index := 1;
    FileName2 := LoaclDatDir()+FileName+'_'+IntToStr(Index)+FileExt;
-   While FileExists(FileName2) do
-   Begin
-       inc(Index);
-       FileName2 := LoaclDatDir()+FileName+'_'+IntToStr(Index)+FileExt;
-   End;
-   Result := FileName2;
-end;
-
-function TCBDataMgrBase.GetUploadLogFileRateData: String;
-Var
-  FileName,FileName2 : String;
-  FileExt : String;
-  Index : Integer;
-begin
-   FileName := 'upload';
-   FileExt  := '.rate';
-
-   Index := 1;
-   FileName2 := LoaclDatDirRateData()+FileName+'_'+IntToStr(Index)+FileExt;
    While FileExists(FileName2) do
    Begin
        inc(Index);
@@ -7839,18 +7813,6 @@ begin
    Result := FileName2;
 end;
 
-function TCBDataMgrBase.GetUploadLogFile7RateData():String;
-Var
-  FileName,FileName2 : String;
-  FileExt : String;
-  Index : Integer;
-begin
-   FileName := 'upload';
-   FileExt  := '.rate';
-   FileName2 := LoaclDatDirRateData()+FileName+'_lst3'+FileExt;
-   Result := FileName2;
-end;
-
 function TCBDataMgrBase.GetUploadLogFile6(aAdd,aFileName:string):String;
 Var
   FileName,FileName2,sFN : String;
@@ -7869,11 +7831,6 @@ end;
 function TCBDataMgrBase.GetUploadTmpFile: _cStrLst;
 begin
     FolderAllFiles(LoaclDatDir(),'.cb',Result,false);
-end;
-
-function TCBDataMgrBase.GetUploadTmpFileRateData: _cStrLst;
-begin
-    FolderAllFiles(LoaclDatDirRateData(),'.rate',Result,false);
 end;
 
 function TCBDataMgrBase.GetCBNameFromConfig(pCBkeyName:string):string;
@@ -8101,46 +8058,6 @@ end;
 Function TCBDataMgrBase.GetCBDataFile_FullPath(FileName:String):String;
 begin
   result := GetCBData_FullPath+FileName;
-end;
-
-function TCBDataMgrBase.CreateEmptyTextFile(aInputFile:string):Boolean;
-var xts:TStringList; xPath:string; 
-begin
-  result:=false;
-  xPath:=ExtractFilePath(aInputFile);
-  if not DirectoryExists(xPath) then
-    exit;
-  xts:=TStringList.create;
-  try
-    xts.SaveToFile(aInputFile);
-    result:=true;
-  finally
-    try FreeAndNil(xts); except end;
-  end;
-end;
-
-function TCBDataMgrBase.CreateEmptycbstopconvdat(aInputFile:string):Boolean;
-begin
-  result:=false;
-end;
-
-function TCBDataMgrBase.CreateCBDataFileIfNotExists(FileName:String):boolean;
-var sFN:string; 
-begin
-  result:=false;
-  if FileExists(FileName) then
-  begin
-    result:=true;
-    exit;
-  end;
-  sFN:=ExtractFileName(FileName);
-  if SameText(sFN,'cbstopconv.dat') then
-  begin
-    result:=CreateEmptycbstopconvdat(FileName);
-  end
-  else begin
-    result:=CreateEmptyTextFile(FileName);
-  end;
 end;
 
 function TCBDataMgrBase.GetCBDataTextFileName(FileName: String): String;
@@ -9751,14 +9668,108 @@ End;
 end;
 
 function TCBDataMgrBase.ProSepPassHis_cbstopconv(aExtractYear:string):string;
-begin
-  result:='';
-end;
+var
+  Rec :TSTOPCONV_PERIOD_RPT;
+  f1,f2 : File Of TSTOPCONV_PERIOD_RPT;
+  sFile1,sFile2:string;
+  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
+  i,iCount,iCodeType: Integer;
+Begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstopconv.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+try
+  AssignFile(f1,sFile1);
+  AssignFile(f2,sFile2);
+
+  FileMode := 2;
+  ReSet(f1);
+  ReWrite(f2);
+
+  iCount:=FileSize(f1);
+  For i:=0 To iCount-1 Do
+  Begin
+    Seek(f1,i);
+    Read(f1,Rec);
+    iCodeType:=CodeInType(Rec.ID);
+    if iCodeType=2 then
+    begin
+      Write(f2,Rec);
+    end;
+  End;
+  result:=sFile1;
+  try CloseFile(f1); except Result:=''; end;
+  try CloseFile(f2); except result:=''; end;
+Except
+  On E:Exception Do
+  begin
+    e:=nil;
+  end;
+End;
+End;
 
 function TCBDataMgrBase.ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
-begin
-  result:='';
-end;
+var
+  Rec :TSTOPCONV_PERIOD_RPT;
+  f1,f2,f3 : File Of TSTOPCONV_PERIOD_RPT;
+  sFile1,sFile2,sFile3:string;
+  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
+  i,iCount,iCodeType: Integer;
+Begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstopconv.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+try
+  AssignFile(f1,sFile1);
+  if aFtpNotXiaShi then AssignFile(f2,sFile2);
+  if aFtpXiaShi then AssignFile(f3,sFile3);
+  FileMode := 2;
+  ReSet(f1);
+  if aFtpNotXiaShi then ReWrite(f2);
+  if aFtpXiaShi then ReWrite(f3);
+  iCount:=FileSize(f1);
+  For i:=0 To iCount-1 Do
+  Begin
+    Seek(f1,i);
+    Read(f1,Rec);
+    iCodeType:=CodeInType(Rec.ID);
+    if iCodeType=1 then
+    begin
+      if aFtpXiaShi then Write(f3,Rec);
+    end
+    else if iCodeType=0 then
+    begin
+      if aFtpNotXiaShi then Write(f2,Rec);
+    end;
+  End;
+  result:=sFile1;
+  try CloseFile(f1); except Result:=''; end;
+  if aFtpNotXiaShi then try CloseFile(f2); except result:=''; end;
+  if aFtpXiaShi then try CloseFile(f3); except Result:=''; end;
+Except
+  On E:Exception Do
+  begin
+    e:=nil;
+  end;
+End;
+End;
+
 
 function TCBDataMgrBase.ProSepPassHis_strike2(aExtractYear:string):string;
 var sFile1,sFile2:string;
@@ -10374,132 +10385,40 @@ begin
   result:=true;
 end;
 
-
-
 { TCBDataMgr }
-
-function TCBDataMgr.CreateEmptycbstopconvdat(aInputFile:string):Boolean;
-var xPath:string; f1 : File Of TSTOPCONV_PERIOD_RPT;
+function TCBDataMgr.GetCBDataText(const FileName: String): String;
+Var
+  FileName2 : String;
+  f : TStringList;
 begin
-  result:=false;
-  xPath:=ExtractFilePath(aInputFile);
-  if not DirectoryExists(xPath) then
-    exit;
-  AssignFile(f1,aInputFile);
-  try
-    ReWrite(f1);
-    result:=true;
-  finally
-    try CloseFile(f1); except end;
-  end;
+    Result := '';
+    FileName2 := FTr1DBPath+'CBData\Data\'+FileName;
+    if FileExists(FileName2) Then
+    Begin
+       f := TStringList.Create;
+       f.LoadFromFile(FileName2);
+       Result := f.Text;
+       f.Free;
+    End;
 end;
 
-function TCBDataMgr.ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
-var
-  Rec :TSTOPCONV_PERIOD_RPT;
-  f1,f2,f3 : File Of TSTOPCONV_PERIOD_RPT;
-  sFile1,sFile2,sFile3:string;
-  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
-  i,iCount,iCodeType: Integer;
-Begin
-  Result:='';
-  sPath:=FTr1DBPath+'CBData\data\';
-  sTagFile:='cbstopconv.dat';
-  sFile1:=sPath+sTagFile;
-  if not FileExists(sFile1) then
-  begin
-    exit;
-  end;
-  sFile2:=GetNewDatFile(sFile1);
-  sFile3:=GetNewStopDatFile(sFile1);
-try
-  AssignFile(f1,sFile1);
-  if aFtpNotXiaShi then AssignFile(f2,sFile2);
-  if aFtpXiaShi then AssignFile(f3,sFile3);
-  FileMode := 2;
-  ReSet(f1);
-  if aFtpNotXiaShi then ReWrite(f2);
-  if aFtpXiaShi then ReWrite(f3);
-  iCount:=FileSize(f1);
-  For i:=0 To iCount-1 Do
-  Begin
-    Seek(f1,i);
-    Read(f1,Rec);
-    iCodeType:=CodeInType(Rec.ID);
-    if iCodeType=1 then
-    begin
-      if aFtpXiaShi then Write(f3,Rec);
-    end
-    else if iCodeType=0 then
-    begin
-      if aFtpNotXiaShi then Write(f2,Rec);
-    end;
-  End;
-  result:=sFile1;
-  try CloseFile(f1); except Result:=''; end;
-  if aFtpNotXiaShi then try CloseFile(f2); except result:=''; end;
-  if aFtpXiaShi then try CloseFile(f3); except Result:=''; end;
-Except
-  On E:Exception Do
-  begin
-    e:=nil;
-  end;
-End;
-End;
-
-function TCBDataMgr.ProSepPassHis_cbstopconv(aExtractYear:string):string;
-var
-  Rec :TSTOPCONV_PERIOD_RPT;
-  f1,f2 : File Of TSTOPCONV_PERIOD_RPT;
-  sFile1,sFile2:string;
-  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
-  i,iCount,iCodeType: Integer;
-Begin
-  Result:='';
-  sPath:=FTr1DBPath+'CBData\data\';
-  sTagFile:='cbstopconv.dat';
-  sFile1:=sPath+sTagFile;
-  if not FileExists(sFile1) then
-  begin
-    exit;
-  end;
-
-  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
-  Mkdir_Directory(sPath);
-  sFile2:=sPath+sTagFile;
-try
-  AssignFile(f1,sFile1);
-  AssignFile(f2,sFile2);
-
-  FileMode := 2;
-  ReSet(f1);
-  ReWrite(f2);
-
-  iCount:=FileSize(f1);
-  For i:=0 To iCount-1 Do
-  Begin
-    Seek(f1,i);
-    Read(f1,Rec);
-    iCodeType:=CodeInType(Rec.ID);
-    if iCodeType=2 then
-    begin
-      Write(f2,Rec);
-    end;
-  End;
-  result:=sFile1;
-  try CloseFile(f1); except Result:=''; end;
-  try CloseFile(f2); except result:=''; end;
-Except
-  On E:Exception Do
-  begin
-    e:=nil;
-  end;
-End;
-End;
-
-function TCBDataMgr.LoaclDatDir():string;
+constructor TCBDataMgr.Create(aTw:boolean;Tr1DBPath:String);
 begin
-  result:=ExtractFilePath(Application.ExeName)+'Data\';
+   FIsTw:=aTw;
+   FTr1DBPath := Tr1DBPath;
+   FExceptCodeList:=TStringList.create;
+   FShangShiCodeList:=TStringList.create;
+   //FPassHisCodeList:=TStringList.create;
+   RefreshExceptList;
+   RefreshShangShiCodeList;
+end;
+
+destructor TCBDataMgr.Destroy;
+begin
+  FreeAndNil(FExceptCodeList);
+  FreeAndNil(FShangShiCodeList);
+  //FreeAndNil(FPassHisCodeList);
+  inherited;
 end;
 
 function TCBDataMgr.GetHushiCBText: String;
@@ -10585,6 +10504,143 @@ begin
     End;
 end;
 
+function TCBDataMgr.GetUploadAFileName(const FileName: String): String;
+Var
+  f : TiniFile;
+begin
+   f := TIniFile.Create(FileName);
+   Result := lowercase(f.ReadString('File','FileName',''));
+   f.Free;
+end;
+
+function TCBDataMgr.GetUploadAFolder(const FileName: String): String;
+Var
+  f : TiniFile;
+begin
+
+   f := TIniFile.Create(FileName);
+   Result := lowercase(f.ReadString('File','Folder',''));
+   f.Free;
+end;
+
+function TCBDataMgr.GetUploadLogFile2(aTag:string):String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+   FileName := 'upload'+aTag;
+   FileExt  := '.cb';
+   Index := 1;
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_'+IntToStr(Index)+FileExt;
+   While FileExists(FileName2) do
+   Begin
+       inc(Index);
+       FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_'+IntToStr(Index)+FileExt;
+   End;
+   Result := FileName2;
+end;
+
+function TCBDataMgr.GetUploadLogFile: String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+
+   FileName := 'upload';
+   FileExt  := '.cb';
+
+   Index := 1;
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_'+IntToStr(Index)+FileExt;
+   While FileExists(FileName2) do
+   Begin
+       inc(Index);
+       FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_'+IntToStr(Index)+FileExt;
+   End;
+
+   Result := FileName2;
+
+end;
+
+function TCBDataMgr.GetUploadLogFile3():String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+
+   FileName := 'upload';
+   FileExt  := '.cb';
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_lst0'+FileExt;
+   {Index := 1;
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_0'+IntToStr(Index)+FileExt;
+   While FileExists(FileName2) do
+   Begin
+       inc(Index);
+       FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_0'+IntToStr(Index)+FileExt;
+   End; }
+   Result := FileName2;
+end;
+
+function TCBDataMgr.GetUploadLogFile4():String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+   FileName := 'upload';
+   FileExt  := '.cb';
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_lst1'+FileExt;
+   Result := FileName2;
+end;
+
+function TCBDataMgr.GetUploadLogFile5():String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+   FileName := 'upload';
+   FileExt  := '.cb';
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_lst2'+FileExt;
+   Result := FileName2;
+end;
+
+function TCBDataMgr.GetUploadLogFile7():String;
+Var
+  FileName,FileName2 : String;
+  FileExt : String;
+  Index : Integer;
+begin
+   FileName := 'upload';
+   FileExt  := '.cb';
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_lst3'+FileExt;
+   Result := FileName2;
+end;
+
+function TCBDataMgr.GetUploadLogFile6(aAdd,aFileName:string):String;
+Var
+  FileName,FileName2,sFN : String;
+  FileExt : String;
+  Index : Integer;
+begin
+   sFN:=ExtractFileName(aFileName);
+   sFN:=ChangeFileExt(sFN,'');
+   sFN:=LowerCase(sFN);
+   FileName := 'upload';
+   FileExt  := '.cb';
+   FileName2 := ExtractFilePath(Application.ExeName)+'Data\'+FileName+'_'+aAdd+sFN+FileExt;
+   Result := FileName2;
+end;
+
+
+
+function TCBDataMgr.GetUploadTmpFile: _cStrLst;
+begin
+    FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\','.cb',Result,false);
+end;
+
 procedure TCBDataMgr.SaveCBTxtToUpLoad(FileFolder,FileName,aOperator,aTimeKey:String;TypeFlag: String ='');  //Doc091120-sun
 Var
   f : TStringList;
@@ -10600,6 +10656,8 @@ begin
   //Doc091120-sun------------------------------------------------
    if (TypeFlag = '')  then
      SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey)
+   else if TypeFlag = 'ecbrate' then
+     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
    else if TypeFlag = 'stockweight' then
      SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
    else if SameText(TypeFlag,'publish_db') or  SameText(TypeFlag,'market_db') then
@@ -10626,9 +10684,9 @@ begin
 
    if TypeFlag = '' then
      SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey)
-   else if  pos('cbthreetrader',TypeFlag)>0  then
+   else if  pos('cbthreetrader',TypeFlag)>0  then //�蝜�岆��湮楊��
      SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'','cbthreetrader@')
-   else if  pos('cbdealer',TypeFlag)>0  then
+   else if  pos('cbdealer',TypeFlag)>0  then  // 赻茠妀
      SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'','cbdealer@')
 end;
 
@@ -10637,6 +10695,7 @@ Var
   f : TStringList;
   aCBFileName:string;
 begin
+
    f := TStringList.Create;
    f.Add('[FILE]');
    f.Add('Folder='+FileFolder);
@@ -10646,6 +10705,8 @@ begin
    f.Free;
    if (TypeFlag = '') then
      SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey)
+   else if (TypeFlag = 'ecbrate') then
+     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'',TypeFlag)
    else if  pos('cbthreetrader',TypeFlag)>0  then
      SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'','cbthreetrader@')
    else if  pos('cbdealer',TypeFlag)>0  then
@@ -10657,6 +10718,7 @@ Var
   f : TStringList;
   aCBFileName:string;
 begin
+
    f := TStringList.Create;
    f.Add('[FILE]');
    f.Add('Folder='+FileFolder);
@@ -10752,6 +10814,8 @@ begin
 end;
 
 
+//--DOC4.0.0〞N002 huangcq081223 add ---->
+
 { For Example: SetCBDataLog('DocCenter','guapai.txt','..\upload_1.cb',FtpCount,FtpServerName)   }
 procedure TCBDataMgr.SetCBDataLog(Const AppName,FileName,UpLoadCBFileName,aOperator,aTimeKey:String;
   FtpServerCount:Integer=1;FtpServerName:String='';TypeFlag:string ='');
@@ -10773,7 +10837,7 @@ begin
     if Length(FileName)<=0 then exit;
     if not FileExists(UpLoadCBFileName) then exit;
     aDt:=FileDateToDateTime(FileAge(UpLoadCBFileName));
-    aLogPath:=LoaclDatDir()+'DwnDocLog\uploadCBData\';
+    aLogPath:=ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\uploadCBData\';
     if not DirectoryExists(aLogPath) then 
       Mkdir_Directory(aLogPath);
     aLogFileName:=aLogPath+Format('%s.log',[FormatDateTime('yymmdd',aDt)]);
@@ -10802,6 +10866,18 @@ begin
        begin
          CBFileName:='swapoption'+CBFileName;
          FileNameCN:= FAppParam.TwConvertStr ('選擇權行情')+ StringReplace(TypeFlag,'swapoption','',[rfIgnoreCase]);
+       end
+       else if  pos('ecbrate',TypeFlag)>0  then
+       begin
+         CBFileName:=CBFileName;
+         if SameText(ExtractFileName(FileName),'ntd2usd.dat') then
+           FileNameCN:= FAppParam.TwConvertStr ('新臺幣/美元匯率')+ ExtractFileName(FileName)
+         else if SameText(ExtractFileName(FileName),'fed.dat') then
+           FileNameCN:= FAppParam.TwConvertStr ('fed利率資料')+ ExtractFileName(FileName)
+         else if SameText(ExtractFileName(FileName),'stockq.dat') then
+           FileNameCN:= FAppParam.TwConvertStr ('美國公債殖利率')+ ExtractFileName(FileName)
+         else
+           FileNameCN:= FAppParam.TwConvertStr ('美金匯率利率')+ ExtractFileName(FileName);
        end
        else if  pos('stockweight',TypeFlag)>0  then
        begin
@@ -10859,7 +10935,7 @@ begin
   end;
   try
     aDt := FileDateToDateTime(FileAge(UpLoadCBFileName));
-    aLogFileName := LoaclDatDir()+'DwnDocLog\uploadCBData\'+
+    aLogFileName := ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\uploadCBData\'+
                     Format('%s.log',[FormatDateTime('yymmdd',aDt)]);
     if not FileExists(aLogFileName) then
       exit;
@@ -10867,6 +10943,9 @@ begin
       aF := TIniFile.Create(aLogFileName);
       CBFileName := ExtractFileName(UpLoadCBFileName)+'@'+IntToStr(FileAge(UpLoadCBFileName));
       FileNameEN:=ExtractFileName(FileName);
+      //if aF.ReadString(CBFileName,'FileNameEN','')<>FileNameEN then
+      //if not SameText(aF.ReadString(CBFileName,'FileNameEN',''),FileNameEN) then
+      //  exit;
       for i:=1 to FtpServerCount do
       begin
         if aF.ReadString(CBFileName,Format('DocFtp_%d',[i]),'')='' then
@@ -10882,6 +10961,51 @@ begin
     //on E:Exception do
       //Showmessage(e.Message);
   end;
+end;
+
+function TCBDataMgr.GetCBNameFromConfig(pCBkeyName:string):string;
+Var aF: TiniFile;
+  aFilePath,aFileName2:String;
+begin
+  Result:=pCBkeyName;
+  aFilePath:=Format('%sData\DwnDocLog\uploadCBData\%s',
+                  [ExtractFilePath(Application.ExeName),
+                  'CBNameConfig.ini']);
+  if not FileExists(aFilePath) then exit;
+  try
+    aF:=TiniFile.Create(aFilePath);
+    aFileName2 :=aF.ReadString('CBName',pCBkeyName,pCBkeyName);
+    if aFileName2=pCBKeyName then
+    begin
+      if Pos('_',Copy(pCBKeyName,1,1))<1 then //�聹銘й偫羲芛寀郭彸脤梑眕_羲芛腔硉
+        pCBKeyName:='_'+pCBKeyName
+      else
+        pCBKeyName:=Copy(pCBKeyName,2,Length(pCBKeyName)-1);  //�譣偫羲芛寀郭彸脤梑拸_腔硉
+        
+      aFileName2 :=aF.ReadString('CBName',pCBkeyName,pCBkeyName);
+    end;
+    Result :=aFileName2;///FAppParam.ConvertString(aFileName2);
+  finally
+    aF.Free;
+  end;
+end;
+
+Function TCBDataMgr.GetCBDataOpLog(sDateS,aDateE,aDstFile:String):boolean;
+var dtTemp,dtS,dtE:TDate; sPath,sLogFile:string;
+begin
+  result:=false;
+  dtS:=DateStr8ToDate(sDateS);
+  dtE:=DateStr8ToDate(aDateE);
+  dtTemp:=dtS;
+  sPath:=ExtractFilePath(ParamStr(0))+SubDir;
+  while dtTemp<=dtE do
+  begin
+    sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'.log';
+    if FileExists(sPath+sLogFile) then
+      AddTrancsationDatToFile(sPath+sLogFile,aDstFile);
+    dtTemp:=dtTemp+1;
+  end;
+  result:=true;
 end;
 
 Function TCBDataMgr.GetIFRSTr1dbData(aYear,aQ,aCode,aTr1dbDatPath,aDstFile1,aDstFile2,aDstFile3:String):boolean;
@@ -10915,6 +11039,153 @@ begin
   result:=true;
 end;
 
+Function TCBDataMgr.GetCBDataLog(Const sDateS,aDateE,DstFileName:String):Boolean;
+var ALogFileName,aCBFileName,aLogStr,aFtpStr,aFtpLogStr,bCBFileName,sCurSec,
+   sTemp1,sTemp2:String;
+  ALogStrLst,aCBFileLst,tsNodeIndex,tsOne:TStringList; aF: TIniFile;
+  i,j,k,aCBFtpCount: Integer; dtTemp,dtS,dtE:TDate;
+  aUpLoadSucc,b1,b2: Boolean;
+
+  function CBFileUploadIsOk(aInputCbFile:string):boolean;
+  var x1,x2:integer; xStr1:string;
+  begin
+    result:=false;
+    x2 := aF.ReadInteger(aInputCbFile,'CBFtpServerCount',1);
+    For x1:=1 to x2 do
+    begin
+      xStr1 := aF.ReadString(aInputCbFile,'DocFtp_'+IntToStr(x1),'None'); //SaveTime #9 server;upldir
+      if (xStr1 = 'None') then
+      begin
+         result := False;
+         exit;
+      end;
+    end;
+    result:=true;
+  end;
+  function GetSecValue(aInput:string):string;
+  begin
+    result:=aInput;
+    result:=StringReplace(result,'[','',[rfReplaceAll]);
+    result:=StringReplace(result,']','',[rfReplaceAll]);
+  end;
+
+begin
+  Result:=false;
+  ALogStrLst:=nil;
+  try
+    ALogStrLst:=TStringList.Create;
+    tsNodeIndex:=TStringList.Create;
+    tsOne:=TStringList.Create;
+    dtS:=DateStr8ToDate(sDateS);
+    dtE:=DateStr8ToDate(aDateE);
+    dtTemp:=dtS;
+    while dtTemp<=dtE do
+    begin
+      tsOne.Clear;
+      tsNodeIndex.clear;
+      aLogFileName :=ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\uploadCBData\'+FormatDateTime('yymmdd',dtTemp)+'.log';
+      if FileExists(ALogFileName) then
+      begin
+        try
+          aF := TIniFile.Create(ALogFileName);
+          aCBFileLst := TStringList.Create;
+          aCBFileLst.LoadFromFile(ALogFileName);
+
+          For i:=0 to aCBFileLst.Count -1 do
+          begin
+            if IsSecLine(aCBFileLst[i]) and
+               (Pos('@',aCBFileLst[i])>0) and
+               (Pos('upload_lst0.cb',aCBFileLst[i])<=0) and
+               (Pos('upload_lst1.cb',aCBFileLst[i])<=0) then
+            begin
+              sCurSec:=GetSecValue(aCBFileLst[i]);
+              aLogStr := '';
+
+              aCBFileName := sCurSec;
+              aUpLoadSucc := CBFileUploadIsOk(aCBFileName);
+              
+              aLogStr := aF.ReadString(aCBFileName,'timekey','None');
+              aLogStr := aLogStr + #9 +aF.ReadString(aCBFileName,'operator','None');
+              aLogStr := aLogStr + #9 +aF.ReadString(aCBFileName,'FileNameCN','None');
+              aLogStr := aLogStr + #9 +aF.ReadString(aCBFileName,'DocCenter','None');
+              aLogStr := aLogStr + #9 + SysUtils.BoolToStr(aUpLoadSucc,True);
+              aLogStr := aLogStr + #9 + aF.ReadString(aCBFileName,'FileNameEN','None');
+              tsOne.Add(aLogStr);
+              //如果是節點上傳對應的cb資料上傳記錄，則這些上傳記錄不顯示；且當這些上傳記錄均ok則節點上傳Ok
+              sTemp1:=aF.ReadString(aCBFileName,'node','None');
+              if sTemp1='1' then
+              begin
+                tsNodeIndex.add(aLogStr);
+              end;
+            end;
+          end;
+        finally
+          try if Assigned(aF) then FreeAndNil(aF); except end;
+          try if Assigned(aCBFileLst) then FreeAndNil(aCBFileLst); except end;
+        end;
+      end;
+      //如果是節點上傳對應的cb資料上傳記錄，則這些上傳記錄不顯示；且當這些上傳記錄均ok則節點上傳Ok
+      if tsNodeIndex.Count>0 then
+      begin
+        For i:=0 to tsNodeIndex.Count-1 do
+        begin
+          j:=tsOne.IndexOf(tsNodeIndex[i]);
+          if j>=0 then
+          begin
+            aLogStr:=tsOne[j];
+            k:=Pos(#9,aLogStr);
+            if k>0 then
+            begin
+              aLogStr:=Copy(aLogStr,1,k-1);
+              aUpLoadSucc:=Pos('True',tsOne[j])>0;
+              b1:=aUpLoadSucc;
+
+              for k:=j+1 to tsOne.count-1 do
+              begin
+                if Trim(tsOne[k])='' then
+                  Continue;
+                if (Pos(aLogStr,tsOne[k])>0) and (Pos('.txt',tsOne[k])<=0) then
+                begin
+                  b2:=Pos('True',tsOne[k])>0;
+                  b1:=b1 and b2;
+                  tsOne[k]:='';
+                end
+                else begin
+                  break;
+                end;
+              end;
+              if b1<>aUpLoadSucc then
+              begin
+                aLogStr:=tsOne[j];
+                aLogStr:=StringReplace(aLogStr,'True','False',[]);
+                tsOne[j]:=aLogStr
+              end;
+            end;
+          end;
+        end;
+      end;
+      if tsOne.count>0 then
+      begin
+        For i:=0 to tsOne.Count -1 do
+        begin
+          if Trim(tsOne[i])='' then
+            continue;
+          ALogStrLst.Add(tsOne[i]);
+        end;
+      end;
+
+      dtTemp:=dtTemp+1;
+    end;
+    ALogStrLst.SaveToFile(DstFileName);
+    result:=True;
+  finally
+    try if Assigned(ALogStrLst) then FreeAndNil(ALogStrLst); except end;
+    try if Assigned(tsNodeIndex) then FreeAndNil(tsNodeIndex); except end;
+    try if Assigned(tsOne) then FreeAndNil(tsOne); except end;
+  end;
+end;
+
+
 function TCBDataMgr.SetCBDataText(const FileName,Value,aOperator,aTimeKey : String): String;
 Var
   FileName2 : String;
@@ -10932,59 +11203,101 @@ end;
 
 
 procedure TCBDataMgr.SetguapaiCBTxt(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Market_db\guapai.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetHushiCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Market_db\Hushi.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetShenshiCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Market_db\Shenshi.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
+
 procedure TCBDataMgr.SetshangguiCBTxt(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Market_db\shanggui.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetshangshiCBTxt(const Value: String);
+Var
+  FileName : String;
+  f : TStringList;
+begin
+    if Pos('[CLASS]',Value)=0 Then Exit;
+
+    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\shangshi.txt');
+    f := TStringList.Create;
+    f.Text := Value;
+    f.SaveToFile(FileName);
+    f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
+end;
+
+procedure TCBDataMgr.SetshangshiCBTxtEcb(const Value: String);
 var FileName : String;
   f : TStringList;
 begin
     if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\shangshi.txt');
+
+    FileName := LowerCase(FTr1DBPath+'CBData\ecbmarket_db\shangshi.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
@@ -10992,7 +11305,8 @@ begin
 end;
 
 procedure TCBDataMgr.SetPassawayCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
     if Pos('[CLASS]',Value)=0 Then Exit;
@@ -11001,72 +11315,151 @@ begin
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('market_db',FileName);
+    //ProAfterNodeChanged(true,false,true,false);
 end;
 
 procedure TCBDataMgr.SetNifaxingCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Publish_db\nifaxing.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('publish_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetPassCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\Publish_db\pass.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('publish_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
+
 procedure TCBDataMgr.SetSongCBTxt(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\publish_db\song.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('publish_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetxunquanCBTxt(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\publish_db\xunquan.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('publish_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
 end;
 
 procedure TCBDataMgr.SetStopCBText(const Value: String);
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     if Pos('[CLASS]',Value)=0 Then Exit;
+
     FileName := LowerCase(FTr1DBPath+'CBData\publish_db\stopissue.txt');
     f := TStringList.Create;
     f.Text := Value;
     f.SaveToFile(FileName);
     f.Free;
+
+    //SaveCBTxtToUpLoad('publish_db',FileName);
+    //ProAfterNodeChanged(false,true,false,true);
+end;
+
+
+function NodeTag2FileName(aNodeTag:string):string;
+begin
+  result:='';
+  if SameText(aNodeTag,'stop') then result:='stopissue.txt'
+  else if SameText(aNodeTag,'xunquan') then result:='xunquan.txt'
+  else if SameText(aNodeTag,'song') then result:='song.txt'
+  else if SameText(aNodeTag,'pass') then result:='pass.txt'
+  else if SameText(aNodeTag,'Nifaxing') then result:='nifaxing.txt'
+  else if SameText(aNodeTag,'passaway') then result:='passaway.txt'
+  else if SameText(aNodeTag,'hushi') then result:='Hushi.txt'
+  else if SameText(aNodeTag,'shenshi') then result:='Shenshi.txt'
+  else if SameText(aNodeTag,'shanggui') then result:='shanggui.txt'
+  else if SameText(aNodeTag,'shangshi') then result:='shangshi.txt'
+  else if SameText(aNodeTag,'guapai') then result:='guapai.txt'
+  else exit;
 end;
 
 
 function TCBDataMgr.SetNodeUpload(const aOperator,aTimeKey: String):boolean;
 var bParam1,bParam2:boolean; sMkt,sFileName,sPath,sOneF:string;
     ts:TStringList; i:Integer;
+
+    function GetdbFileList(adbLstFile:string):boolean;
+    var fini:TiniFile; sIniFile,sVarFiles,sVarOneF:string;
+        iVar1:integer;
+    begin
+      Result:=false;
+      fini:=nil; ts.Clear;
+      sIniFile:=adbLstFile;
+      if not FileExists(sIniFile) then exit;
+      try
+        fini:=TIniFile.create(sIniFile);
+        sVarFiles:=fini.ReadString('dblst','filename','');
+        sVarFiles:=StringReplace(sVarFiles,',',#13#10,[rfReplaceAll]);
+        ts.text:=sVarFiles;
+        for iVar1:=0 to ts.count-1 do
+        begin
+          sVarOneF:=Trim(ts[iVar1]);
+          if sVarOneF='' then
+            continue;
+          ts[iVar1]:=ExtractFilePath(adbLstFile)+sVarOneF;
+        end;
+      finally
+        try if fini<>nil then FreeAndNil(fini); except end;
+      end;
+      result:=true;
+    end;
+
 begin
   Result:=false;
   sPath:=LowerCase(FTr1DBPath+'CBData\');
@@ -11074,7 +11467,7 @@ begin
   try
     sMkt:='publish_db';
     sPath:=LowerCase(FTr1DBPath+'CBData\publish_db\dblst.lst');
-    GetdbFileList(sPath,ts);
+    GetdbFileList(sPath);
     for i:=0 to ts.count-1 do
     begin
       sOneF:=Trim(ts[i]);
@@ -11086,7 +11479,7 @@ begin
     
     sMkt:='market_db';
     sPath:=LowerCase(FTr1DBPath+'CBData\market_db\dblst2.lst');
-    GetdbFileList(sPath,ts);
+    GetdbFileList(sPath);
     for i:=0 to ts.count-1 do
     begin
       sOneF:=Trim(ts[i]);
@@ -11098,18 +11491,96 @@ begin
     bParam1:=true;
     bParam2:=true;
     ProAfterNodeChanged(bParam1,bParam2,bParam1,bParam2,aOperator,aTimeKey);
-    Strike4ConvToResetLst(aOperator,aTimeKey);
-    ResetLstConvToStrike2(aOperator,aTimeKey);
     result:=True;
   finally
     FreeAndNil(ts);
   end;
 end;
 
+function TCBDataMgr.SetNodeUploadEcb(const aOperator,aTimeKey: String):boolean;
+var bParam1,bParam2:boolean; sMkt,sFileName,sPath,sOneF:string;
+    ts:TStringList; i:Integer;
+
+    function GetdbFileList(adbLstFile:string):boolean;
+    var fini:TiniFile; sIniFile,sVarFiles,sVarOneF:string;
+        iVar1:integer;
+    begin
+      Result:=false;
+      fini:=nil; ts.Clear;
+      sIniFile:=adbLstFile;
+      if not FileExists(sIniFile) then exit;
+      try
+        fini:=TIniFile.create(sIniFile);
+        sVarFiles:=fini.ReadString('dblst','filename','');
+        sVarFiles:=StringReplace(sVarFiles,',',#13#10,[rfReplaceAll]);
+        ts.text:=sVarFiles;
+        for iVar1:=0 to ts.count-1 do
+        begin
+          sVarOneF:=Trim(ts[iVar1]);
+          if sVarOneF='' then
+            continue;
+          ts[iVar1]:=ExtractFilePath(adbLstFile)+sVarOneF;
+        end;
+      finally
+        try if fini<>nil then FreeAndNil(fini); except end;
+      end;
+      result:=true;
+    end;
+
+begin
+  Result:=false;
+  sPath:=LowerCase(FTr1DBPath+'CBData\');
+  ts:=TStringList.Create;
+  try
+    sMkt:='ecbpublish_db';
+    sPath:=LowerCase(FTr1DBPath+'CBData\ecbpublish_db\dblst.lst');
+    GetdbFileList(sPath);
+    for i:=0 to ts.count-1 do
+    begin
+      sOneF:=Trim(ts[i]);
+      if sOneF='' then
+        continue;
+      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+    end;
+
+    sMkt:='ecbmarket_db';
+    sPath:=LowerCase(FTr1DBPath+'CBData\ecbmarket_db\dblst2.lst');
+    GetdbFileList(sPath);
+    for i:=0 to ts.count-1 do
+    begin
+      sOneF:=Trim(ts[i]);
+      if sOneF='' then
+        continue;
+      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+    end;
+
+    bParam1:=true;
+    bParam2:=true;
+    //ProAfterNodeChanged(bParam1,bParam2,bParam1,bParam2,aOperator,aTimeKey);
+    result:=True;
+  finally
+    FreeAndNil(ts);
+  end;
+end;
+
+procedure TCBDataMgr.ChangeDBLstVer(const FileName: String);
+Var
+  f : TiniFile;
+begin
+    if FileExists(FileName) Then
+    Begin
+       f:=TiniFile.Create(FileName);
+       f.WriteString('dblst','Ver',Get_GUID);
+       f.Free;
+    End;
+end;
+
 function TCBDataMgr.GetStopCBText: String;
-var FileName : String;
+Var
+  FileName : String;
   f : TStringList;
 begin
+
     Result := '';
     FileName := FTr1DBPath+'CBData\publish_db\stopissue.txt';
     if FileExists(FileName) Then
@@ -11119,6 +11590,20 @@ begin
        Result := f.Text;
        f.Free;
     End;
+
+end;
+
+
+function TCBDataMgr.CodeInType(aCode:string):integer;
+begin
+  result:=-1;
+  {if FPassHisCodeList.IndexOf(aCode)>=0 then
+    Result:=2
+  else}
+  if FExceptCodeList.IndexOf(aCode)>=0 then
+    Result:=1
+  else if FShangShiCodeList.IndexOf(aCode)>=0 then
+    Result:=0;
 end;
 
 function TCBDataMgr.GetshangguiCBText: String;
@@ -11145,29 +11630,9 @@ begin
 
 end;
 
-Function TCBDataMgr.GetADocRtfFileName(FileName:String):String;
-Var FileName2,sCode : String;
-  F :TextFile;
-begin
-Try
-    result:='';
-    FileName:=StringReplace(FileName,'.rtf','.txt',[rfReplaceAll, rfIgnoreCase]);
-    sCode:=Copy(FileName,1,4);
-    FileName2 := FTr1DBPath+'CBData\Document\'+sCode+'\'+FileName;
-    if  NOT  FileExists(FileName2) Then
-    begin
-     AssignFile(F,FileName2);
-     rewrite(F);  //∩?車???∩∩?“辰??????t
-     closeFile(F)
-    end;
-    if FileExists(FileName2) Then
-     Result := FileName2;
-Except
-End;
-end;
-
 Function TCBDataMgr.GetADoc2TextFileName(FileName:String):String;
-Var FileName2 : String;
+Var
+  FileName2 : String;
   F :TextFile;
 begin
 Try
@@ -11177,7 +11642,7 @@ Try
     if  NOT  FileExists(FileName2) Then
     begin
      AssignFile(F,FileName2);
-     rewrite(F);  
+     rewrite(F);  //森逄曆斐膘珨跺恅璃
      closeFile(F)
     end;
     if FileExists(FileName2) Then
@@ -11187,21 +11652,19 @@ End;
 end;
 
 Function TCBDataMgr.GetADocTextFileName(FileName:String):String;
-var FileName2,sDir : String;
+Var
+  FileName2 : String;
   F :TextFile;
 begin
 Try
     result:='';
     FileName:=StringReplace(FileName,'DOC_','',[rfReplaceAll, rfIgnoreCase]);
     FileName2 := FTr1DBPath+'CBData\Document\ShenBaoDoc\'+FileName;
-    sDir:=ExtractFilePath(FileName2);
-    if not DirectoryExists(sDir) then
-      Mkdir_Directory(sDir);
     if  NOT  FileExists(FileName2) Then
     begin
-       AssignFile(F,FileName2);
-       rewrite(F);  
-       closeFile(F)
+     AssignFile(F,FileName2);
+     rewrite(F);  //森逄曆斐膘珨跺恅璃
+     closeFile(F)
     end;
     if FileExists(FileName2) Then
      Result := FileName2;
@@ -11230,217 +11693,6 @@ Try
 Except
 End;
 end;
-
-function MyRplStr(aInput,aTo,aRpl:string):string;
-begin
-  result:=Q_ReplaceStr(aInput,aTo,aRpl);
-  //result:=FastAnsiReplace(aInput,aTo,aRpl,[rfReplaceAll]);
-  //result:=FastReplace(aInput,aTo,aRpl,True);
-end;
-
-Function TCBDataMgr.closeidlistComapre(aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile:String):string;
-var ts,ts1,ts2,tsCode:TStringList;
-    i,j,k,iPos,iIdx1,iIdx2: Integer;
-    sField,sValue,s0,s1,s2,sCode,sNewFile:string;
-begin
-  result:='';
-  sNewFile:=ExtractFilePath(aCloseidListFile)+'~'+ExtractFileName(aCloseidListFile);
-  if FileExists(sNewFile) then
-     DeleteFile(sNewFile);
-  if not FileExists(aCloseidListFile) then
-  begin
-    result:=aCloseidListFile;
-    exit;
-  end;
-  ts:=nil; ts1:=nil; ts2:=nil; tsCode:=nil; 
-try
-  ts:=TStringList.create;
-  ts1:=TStringList.create;
-  ts2:=TStringList.create;
-  tsCode:=TStringList.create;
-  ts.LoadFromFile(aCloseidListFile);
-  if FileExists(aDateBaseInfoFile) then
-    ts1.LoadFromFile(aDateBaseInfoFile);
-  if ts1.Count>0 then
-  begin
-    For i:=0 to ts1.count-1 do
-    begin
-      if IsSecLine(ts1[i]) then
-        ts1[i]:='#enter#'+ts1[i];
-    end;
-    ts1.text:=MyRplStr(ts1.text,#13#10,'');
-    ts1.text:=MyRplStr(ts1.text,'#enter#[',#13#10+'[');
-  end;
-  {if ts1.Count>0 then
-  begin
-    ts1.text:=MyRplStr(ts1.text,#13#10,'');
-    ts1.text:=MyRplStr(ts1.text,'[MktClass]',#13#10+'[MktClass]');
-    ts1.text:=MyRplStr(ts1.text,'[CYB2]',#13#10+'[CYB2]');
-    ts1.text:=MyRplStr(ts1.text,'[Fields]',#13#10+'[Fields]');
-
-    //ts1.text:=MyRplStr(ts1.text,'[',#13#10+'[');
-  end;}
-
-
-  if FileExists(aTr1BaseInfoFile) then
-    ts2.LoadFromFile(aTr1BaseInfoFile);
-  if ts2.Count>0 then
-  begin
-    For i:=0 to ts2.count-1 do
-    begin
-      if IsSecLine(ts2[i]) then
-        ts2[i]:='#enter#'+ts2[i];
-    end;
-    ts2.text:=MyRplStr(ts2.text,#13#10,'');
-    ts2.text:=MyRplStr(ts2.text,'#enter#[',#13#10+'[');
-  end;
-  {if ts2.Count>0 then
-  begin
-    ts2.text:=MyRplStr(ts2.text,#13#10,'');
-    ts2.text:=MyRplStr(ts2.text,'[MktClass]',#13#10+'[MktClass]');
-    ts2.text:=MyRplStr(ts2.text,'[CYB2]',#13#10+'[CYB2]');
-    ts2.text:=MyRplStr(ts2.text,'[Fields]',#13#10+'[Fields]');
-    //ts2.text:=MyRplStr(ts2.text,'[',#13#10+'[');
-  end;}
-
-
-  For i:=0 to ts.count-1 do
-  begin
-    if SameText('[list]',ts[i]) then
-    begin
-      For k:=i+1 to ts.count-1 do
-      begin
-        iPos:=Pos('=',ts[k]);
-        if iPos<=0 then
-          Break;
-        if GetFieldValue(ts[k],sField,sValue) then
-        begin
-          //if (sValue='2') and (sField<>'') then
-          if (sField<>'') then
-          begin
-            {if ts1.Count>0 then
-            begin
-              ts1.text:=MyRplStr(ts1.text,'['+sField+']',#13#10+'['+sField+']');
-            end;
-            if ts2.Count>0 then
-              ts2.text:=MyRplStr(ts2.text,'['+sField+']',#13#10+'['+sField+']');}
-            tsCode.Add(sField+'='+sValue);
-          end;
-        end;
-      end;
-    end;
-  end;
-  tsCode.sort;
-  ts1.sort;
-  //ts1.SaveToFile('E:\Apps\Bak183Doc\TestLog\20161109\1.txt');
-  ts2.sort;
-  //ts2.SaveToFile('E:\Apps\Bak183Doc\TestLog\20161109\2.txt');
-  iIdx1:=0; iIdx2:=0;
-  for i:=0 to tsCode.Count-1 do
-  begin
-    sCode:=Copy(tsCode[i],1,4);
-    if sCode='' then
-      Continue;
-    sField:='['+sCode+']';
-    s1:='';
-    s2:='';
-    for j:=iIdx1 to ts1.count-1 do
-    begin
-      s0:=Copy(ts1[j],1,6);
-      if s0=sField then
-      begin
-        s1:=ts1[j];
-        iIdx1:=j+1;
-        break;
-      end
-      else if s0>sField then
-        break;
-    end;
-    if s1<>'' then
-    begin
-      for j:=iIdx2 to ts2.count-1 do
-      begin
-        s0:=Copy(ts2[j],1,6);
-        if s0=sField then
-        begin
-          s2:=ts2[j];
-          iIdx2:=j+1;
-          break;
-        end
-        else if s0>sField then
-          break;
-      end;
-      {if sCode='8261' then
-      begin
-        WriteLineForApp(s1,'');
-        WriteLineForApp(s2,'');
-      end;}
-      if not (sametext(s1,s2)) then
-      begin
-        tsCode[i]:=sCode+'='+_CXiaOK;
-      end
-      else begin
-        if (sametext(tsCode[i],sCode+'='+_CXiaOK)) then
-          tsCode[i]:=sCode+'='+_CNoNeedShen;
-      end;
-    end;
-  end;
-  tsCode.Insert(0,'[list]');
-  tsCode.SaveToFile(sNewFile);
-  result:=sNewFile;
-finally
-  try if Assigned(ts) then FreeAndNil(ts); except end;
-  try if Assigned(ts1) then FreeAndNil(ts1); except end;
-  try if Assigned(ts2) then FreeAndNil(ts2); except end;
-  try if Assigned(tsCode) then FreeAndNil(tsCode); except end;
-end;
-end;
-
-Function TCBDataMgr.GetDatecloseidlistEx(FileName:String):String;
-var aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile:String;
-begin
-  result:='';
-  aCloseidListFile:=GetDatecloseidlist(FileName);
-  aDateBaseInfoFile:=GetDatecbbaseinfo(FileName);
-  aTr1BaseInfoFile:=FTr1DBPath+'CBData\data\cbbaseinfo.dat';
-  result:=closeidlistComapre(aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile);
-end;
-
-Function TCBDataMgr.GetWeekOfcloseidlistEx(FileName:String):String;
-var aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile:String;
-begin
-  result:='';
-  aCloseidListFile:=GetWeekOfcloseidlist(FileName);
-  aDateBaseInfoFile:=GetDatecbbaseinfoOfWeek(FileName);
-  aTr1BaseInfoFile:=FTr1DBPath+'CBData\data\cbbaseinfo.dat';
-  result:=closeidlistComapre(aCloseidListFile,aDateBaseInfoFile,aTr1BaseInfoFile);
-end;
-
-Function TCBDataMgr.GetWeekOfcloseidlist(FileName:String):String;
-var FileName2,sPath,sDate8 : String;
-  F :TextFile;
-begin
-Try
-    result:='';
-    sDate8:=Copy(FileName,1,8);
-    if Length(sDate8)<>8 then
-      exit; 
-    FileName2 := FTr1DBPath+'CBData\TCRI\CloseIdList\ForWeekDay\'+sDate8+'.lst';
-     sPath:=ExtractFilePath(FileName2);
-     if not DirectoryExists(sPath) then
-       Mkdir_Directory(sPath);
-     if  NOT  FileExists(FileName2) Then
-     begin
-       AssignFile(F,FileName2);
-       rewrite(F);
-       closeFile(F)
-     end;
-     if FileExists(FileName2) Then
-       Result := FileName2;
-Except
-End;
-end;
-
 
 Function TCBDataMgr.GetDatecbbaseinfo(FileName:String):String;
 var FileName2,sPath : String;
@@ -11486,84 +11738,6 @@ Except
 End;
 end;
 
-Function TCBDataMgr.GetLogStockweight(FileName:String):String;
-var FileName2,sPath,sDate8,sText,sTextAll,sOneFileName : String;
-  F :TextFile;  aFiles :_cStrLst; i:integer;
-begin
-Try
-  result:='';
-  sDate8:=Copy(FileName,1,8);
-  if Length(sDate8)<>8 then
-    exit;
-  FileName2 := ExtractFilePath(ParamStr(0))+'Data\Industry\Audit\stockweight\'+sDate8+'\stockweightlog.log';
-  sPath:=ExtractFilePath(FileName2);
-   if not DirectoryExists(sPath) then
-     Mkdir_Directory(sPath);
-  FolderAllFiles(sPath,'.dat',aFiles,false);
-  for i:=0 to High(aFiles) do
-  begin
-    sOneFileName:=ExtractFileName(aFiles[i]);
-    GetTextByTs(aFiles[i],sText);
-    sText:='<'+sOneFileName+'>'+#13#10+sText+#13#10+'</'+sOneFileName+'>';
-    if sTextAll='' then
-      sTextAll:=sText
-    else
-      sTextAll:=sTextAll+#13#10+sText;
-  end;
-  SetLength(aFiles,0);
-  SetTextByTs(FileName2,sTextAll);
-  
-  if  NOT  FileExists(FileName2) Then
-  begin
-    AssignFile(F,FileName2);
-    rewrite(F);
-    closeFile(F);
-  end;
-  if FileExists(FileName2) Then
-   Result := FileName2;
-Except
-End;
-end;
-
-Function TCBDataMgr.GetLogcbbaseinfo(FileName:String):String;
-var FileName2,sPath,sDate8,sText,sTextAll,sOneFileName : String;
-  F :TextFile;  aFiles :_cStrLst; i:integer;
-begin
-Try
-  result:='';
-  sDate8:=Copy(FileName,1,8);
-  if Length(sDate8)<>8 then
-    exit;
-  FileName2 := ExtractFilePath(ParamStr(0))+'Data\Industry\Audit\cbbaseinfo\'+sDate8+'\cbbaseinfolog.log';
-  sPath:=ExtractFilePath(FileName2);
-  if not DirectoryExists(sPath) then
-    Mkdir_Directory(sPath);
-  FolderAllFiles(sPath,'.dat',aFiles,false);
-  for i:=0 to High(aFiles) do
-  begin
-    sOneFileName:=ExtractFileName(aFiles[i]);
-    GetTextByTs(aFiles[i],sText);
-    sText:='<'+sOneFileName+'>'+#13#10+sText+#13#10+'</'+sOneFileName+'>';
-    if sTextAll='' then
-      sTextAll:=sText
-    else
-      sTextAll:=sTextAll+#13#10+sText;
-  end;
-  SetLength(aFiles,0);
-  SetTextByTs(FileName2,sTextAll);
-  
-  if not FileExists(FileName2) Then
-  begin
-    AssignFile(F,FileName2);
-    rewrite(F);
-    closeFile(F);
-  end;
-  if FileExists(FileName2) Then
-   Result := FileName2;
-Except
-End;
-end;
-
 Function TCBDataMgr.GetDateStkBase1TFN(FileName:String):String;
 var FileName2,sPath : String;
   F :TextFile;
@@ -11571,31 +11745,6 @@ begin
 Try
     result:='';
     FileName2 := ExtractFilePath(ParamStr(0))+'Data\Industry\'+FmtDt8(Date)+'\StkBase1.dat';
-     sPath:=ExtractFilePath(FileName2);
-     if not DirectoryExists(sPath) then
-       Mkdir_Directory(sPath);
-     if  NOT  FileExists(FileName2) Then
-     begin
-       AssignFile(F,FileName2);
-       rewrite(F);
-       closeFile(F)
-     end;
-     if FileExists(FileName2) Then
-       Result := FileName2;
-Except
-End;
-end;
-
-Function TCBDataMgr.GetDatecbbaseinfoOfWeek(FileName:String):String;
-var FileName2,sPath,sDate8 : String;
-  F :TextFile;
-begin
-Try
-    result:='';
-    sDate8:=Copy(FileName,1,8);
-    if Length(sDate8)<>8 then
-      exit;              
-    FileName2 := ExtractFilePath(ParamStr(0))+'Data\Industry\CompanyInfoDownWeekDay\'+sDate8+'cbbaseinfo.dat';
      sPath:=ExtractFilePath(FileName2);
      if not DirectoryExists(sPath) then
        Mkdir_Directory(sPath);
@@ -11680,6 +11829,114 @@ Except
 End;
 end;
 
+Function TCBDataMgr.GetCBData_FullPath():String;
+begin
+  result := FTr1DBPath+'CBData\Data\';
+end;
+
+Function TCBDataMgr.GetCBDB_FullPath():String;
+begin
+  result := FTr1DBPath+'CBData\cbdb\';
+end;
+
+Function TCBDataMgr.GetCBDataFile_FullPath(FileName:String):String;
+begin
+  result := GetCBData_FullPath+FileName;
+end;
+
+function TCBDataMgr.GetCBDataTextFileName(FileName: String): String;
+Var
+  FileName2,sPath : String;
+  F :TextFile;
+begin
+Try
+    result:='';
+    if lowercase(FileName)='shenbaoset.dat' Then
+       FileName2 := FTr1DBPath+'CBData\Document\'+FileName
+    else if lowercase(FileName)='shenbaoset4.dat' Then
+       FileName2 := FTr1DBPath+'CBData\Document\'+FileName
+    else if (pos('shenbaocase',lowercase(FileName))>0) Then
+       FileName2 := FTr1DBPath+'CBData\ShenBaoCase\'+FileName
+    else if lowercase(FileName)=lowercase('tcridata.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('StkIndustry.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('TcriComClassCode.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('TcriComCode.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('stkbase1.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('bankplevel.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+    else if lowercase(FileName)=lowercase('plevelcomcode.dat') Then
+       FileName2 := FTr1DBPath+'CBData\tcri\'+FileName
+
+    else if lowercase(FileName)=lowercase('fed.dat') Then
+       FileName2 := FTr1DBPath+'RateData\'+FileName
+    else if lowercase(FileName)=lowercase('ntd2usd.dat') Then
+       FileName2 := FTr1DBPath+'RateData\'+FileName
+       
+    else if lowercase(FileName)='doclst.dat' Then
+       FileName2 := FTr1DBPath+'CBData\Document\'+FileName
+    else if lowercase(FileName)='zz_cbtodayhint.dat' Then
+       FileName2 := FTr1DBPath+'CBData\TodayHint\'+'zz_'+
+                         FormatDateTime('yyyymmdd',Date)+'.DAT'
+    else if lowercase(FileName)='zz_todayhintidlst.dat' Then
+       FileName2 := FTr1DBPath+'CBData\TodayHint\'+fileName
+    else if lowercase(FileName)='sz_cbtodayhint.dat' Then
+       FileName2 := FTr1DBPath+'CBData\TodayHint\'+'sz_'+
+                         FormatDateTime('yyyymmdd',Date)+'.DAT'
+    else if lowercase(FileName)='sz_todayhintidlst.dat' Then
+       FileName2 := FTr1DBPath+'CBData\TodayHint\'+fileName
+    else if (Pos('cbdealer@',lowercase(FileName))=1) Then
+       FileName2 := FTr1DBPath+'CBData\Dealer\'+Copy(FileName,10,12)
+    else if lowercase(FileName)='cbdealerindex.dat' Then
+       FileName2 := FTr1DBPath+'CBData\Dealer\'+fileName
+    else if lowercase(FileName)='secindex.dat' Then
+       FileName2 := FTr1DBPath+'CBData\Dealer\'+fileName
+    else if (Pos('threetrader@',lowercase(FileName))=1) Then
+       FileName2 := FTr1DBPath+'CBData\ThreeTrader\'+Copy(FileName,Length('threetrader@') + 1,12)
+    else if (Pos('balancedat@',lowercase(FileName))=1) Then
+    begin
+       FileName2 := FTr1DBPath+'CBData\balancedat\'+Copy(FileName,Length('balancedat@') + 1,Length(FileName));
+       if not DirectoryExists(ExtractFilePath(FileName2)) then
+       begin
+         ForceDirectories(ExtractFilePath(FileName2));
+       end;
+    end
+    else if lowercase(FileName)='threetraderlst.dat' Then
+       FileName2 := FTr1DBPath+'CBData\ThreeTrader\'+fileName
+    else if lowercase(FileName)='stkindex.dat' Then
+       FileName2 := FTr1DBPath+'CBData\ThreeTrader\'+fileName
+    else if (pos('shenbao',lowercase(FileName))>0) and
+            (pos('_doclst.dat',lowercase(FileName))>0)then
+    begin
+       FileName:=StringReplace(FileName,'shenbao','',[rfReplaceAll, rfIgnoreCase]);
+       FileName2 := FTr1DBPath+'CBData\Document\ShenBaoDoc\'+FileName;
+    end
+    else if pos('_doclst.dat',lowercase(FileName))>0 then
+       FileName2 := FTr1DBPath+'CBData\Document\StockDocIdxLst\'+FileName
+    else
+       FileName2 := FTr1DBPath+'CBData\Data\'+FileName;
+       
+     sPath:=ExtractFilePath(FileName2);
+     if not DirectoryExists(sPath) then
+       Mkdir_Directory(sPath);
+     if  NOT  FileExists(FileName2) Then
+     begin
+       AssignFile(F,FileName2);
+       rewrite(F);  //此語句創建一個文件
+       closeFile(F)
+     end;
+
+     if FileExists(FileName2) Then
+       Result := FileName2;
+Except
+End;
+end;
+
+
 Function TCBDataMgr.Setstockweight(aUptFiles:TStringList;aDstDatPath,aOperator,aTimeKey:string):Boolean;
 var sListFile,sGuid,sUploadFile:string; i:integer;
 begin
@@ -11697,6 +11954,29 @@ begin
   result:=true;
 end;
 
+Function TCBDataMgr.SetECBRate(aEcbRatePath,aOperator,aTimeKey,sCmd:string):Boolean;
+var sListFile,sGuid,sUploadFile:string;
+begin
+  result:=false;
+  sListFile:=aEcbRatePath+'ecbrate.lst';
+  sGuid:=Get_GUID8;
+  SaveIniFile(PChar('list'),PChar('guid'),PChar(sGuid),PChar(sListFile));
+
+  if sCmd[1]='1' then
+  begin
+    sUploadFile:=aEcbRatePath+'ntd2usd.dat';
+    SaveCBTxtToUpLoad('ratedata',sUploadFile,aOperator,aTimeKey,'ecbrate');
+  end;
+
+  if sCmd[2]='1' then
+  begin
+    sUploadFile:=aEcbRatePath+'fed.dat';
+    SaveCBTxtToUpLoad('ratedata',sUploadFile,aOperator,aTimeKey,'ecbrate');
+  end;
+
+  SaveCBTxtToUpLoad9('lst','ratedata',sListFile,aOperator,aTimeKey,'ecbrate');
+  result:=true;
+end;
 
 Function TCBDataMgr.SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey:string):Boolean;
 Var
@@ -11813,11 +12093,11 @@ begin
     if FileExists(FileName2) then
     begin
       sBakDatFile:='Bak'+FormatDateTime('yyyymmddhhmmss',now)+'_'+ExtractFileName(FileName2);
-      TrytoCopyFile((FileName2),(sPath+'Bak\'+sBakDatFile),3);
+      CopyFile(PChar(FileName2),PChar(sPath+'Bak\'+sBakDatFile),false);
     end;
-
+      
     f1 := FileAge(FileName2);
-    TrytoCopyFile((SrcFileName),(FileName2),3);
+    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
 
     if f1=FileAge(FileName2) Then
        Exit;
@@ -11881,7 +12161,7 @@ begin
     sListFile := LowerCase(FTr1DBPath+'CBData\Data\'+'cbdataguid.lst');
     sDstName := LowerCase(ExtractFileName(DstFileName));
     sPath:=ExtractFilePath(FileName2);
-    if not DirectoryExists(sPath) then 
+    if not DirectoryExists(sPath) then //--DOC4.0.0—N002 huangcq081223 add
       Raise Exception.Create('Cannot find Directory '+sPath);
 
       
@@ -11890,11 +12170,11 @@ begin
     if FileExists(FileName2) then
     begin
       sBakDatFile:='Bak'+FormatDateTime('yyyymmddhhmmss',now)+'_'+ExtractFileName(FileName2);
-      TryToCopyFile((FileName2),(sPath+'Bak\'+sBakDatFile),3);
+      CopyFile(PChar(FileName2),PChar(sPath+'Bak\'+sBakDatFile),false);
     end;
 
     f1 := FileAge(FileName2);
-    TryToCopyFile((SrcFileName),(FileName2),3);
+    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
     if f1=FileAge(FileName2) Then
        Exit;
     sTemp:=Get_GUID8;
@@ -11917,7 +12197,7 @@ begin
     if not DirectoryExists(ExtractFilePath(FileName2)) then
       Raise Exception.Create('Cannot find Directory '+ExtractFilePath(FileName2));
 
-    //if(DstFileName='STRIKE2.DAT')then
+    //if(DstFileName='STRIKE2.DAT')then //--DOC4.0.0—N004 huangcq090317 del
     //if(DstFileName='RESETLST.DAT') or
     if SameText(DstFileName,'STRIKE4.DAT') or  //--DOC4.4.0.0 pqx 20120207
        SameText(DstFileName,'CBREDEEMDATE.DAT') or
@@ -11926,7 +12206,7 @@ begin
       sTemp:=Get_GUID8;
       SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sTemp),PChar(FileName2));
       //if (DstFileName='RESETLST.DAT') then //--Doc4.0.0 需求3 huangcq090209 add 轉換生成strike2.dat
-      if SameText(DstFileName,'STRIKE4.DAT') then  //--DOC4.4.0.0 新增需求7 pqx 20120207
+      if (DstFileName='STRIKE4.DAT') then   //--DOC4.4.0.0 新增需求7 pqx 20120207
       begin
         Strike4ConvToResetLst(aOperator,aTimeKey);
         ResetLstConvToStrike2(aOperator,aTimeKey);
@@ -12070,7 +12350,7 @@ begin
     end;
 
     f1 := FileAge(FileName2);
-    TryToCopyFile((SrcFileName),(FileName2),3);
+    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
     if f1=FileAge(FileName2) Then
        Exit;
     sTemp:=Get_GUID8;
@@ -12093,7 +12373,7 @@ begin
   if not FileExists(aSrcFileName) then exit;
   aTmpFile := GetWinTempPath + '~Strike2.dat';
   if FileExists(aTmpFile) then DeleteFile(aTmpFile);
-  TryToCopyFile((aSrcFileName),(aTmpFile),_TryCpyTimes);
+  CopyFile(PChar(aSrcFileName),PChar(aTmpFile),False);
   try
      f := TIniFile.Create(aTmpFile);
      SectionLst := TStringList.Create;
@@ -12126,7 +12406,7 @@ begin
          ValueLst.Delete(0);
        end; //end while valueLst.count>0
      end; //end for i:=0
-     TryToCopyFile((aTmpFile),(aDstFileName),_TryCpyTimes);
+     CopyFile(Pchar(aTmpFile),Pchar(aDstFileName),False);
      SaveCBTxtToUpLoad('data',aDstFileName,aOperator,aTimeKey);
      DeleteFile(aTmpFile);
   finally
@@ -12259,7 +12539,7 @@ begin
       Raise Exception.Create('Cannot find Directory '+ExtractFilePath(FileName2));
 
     f1 := FileAge(FileName2);
-    TryToCopyFile((SrcFileName),(FileName2),3);
+    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
     if f1=FileAge(FileName2) Then
        Exit;
     //Upl cbThreeTrader
@@ -12295,11 +12575,11 @@ begin
     if FileExists(FileName2) then
     begin
       sBakDatFile:='Bak'+FormatDateTime('yyyymmddhhmmss',now)+'_'+ExtractFileName(FileName2);
-      TryToCopyFile((FileName2),(sPath+'Bak\'+sBakDatFile),3);
+      CopyFile(PChar(FileName2),PChar(sPath+'Bak\'+sBakDatFile),false);
     end;
 
     f1 := FileAge(FileName2);
-    TryToCopyFile((SrcFileName),(FileName2),3);
+    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
     f2 :=FileAge(FileName2);
     if f1=f2 Then
        Exit;
@@ -12337,6 +12617,8 @@ begin
     f.Free;
     result:=true;
 end;
+
+
 
 //add by wangjinhua ThreeTrader 091015
 procedure TCBDataMgr.ModifyThreeTraderLst(aFileName,aDate:String);
@@ -12436,7 +12718,7 @@ begin
   if not FileExists(aSrcFileName) then exit;
   aTmpFile := GetWinTempPath + '~ResetLst.dat';
   if FileExists(aTmpFile) then DeleteFile(aTmpFile);
-  TryToCopyFile((aSrcFileName),(aTmpFile),_TryCpyTimes);
+  CopyFile(PChar(aSrcFileName),PChar(aTmpFile),False);
   try
      f := TIniFile.Create(aTmpFile);
      SectionLst := TStringList.Create;
@@ -12466,7 +12748,7 @@ begin
          ValueLst.Delete(0);
        end; //end while valueLst.count>0
      end; //end for i:=0
-     TryToCopyFile((aTmpFile),(aDstFileName),_TryCpyTimes);
+     CopyFile(Pchar(aTmpFile),Pchar(aDstFileName),False);
      SaveCBTxtToUpLoad('data',aDstFileName,aOperator,aTimeKey);
      DeleteFile(aTmpFile);
   finally
@@ -12475,6 +12757,211 @@ begin
      if Assigned(ValueLst) then  ValueLst.Free;
   end;
 end;
+function TCBDataMgr.GetNewDatFile(aSrcFile:string):string;
+var spath,sname,sext:string;
+begin
+  result:='';
+  spath:=ExtractFilePath(aSrcFile);
+  sname:=ExtractFileName(aSrcFile);
+  sname:=ChangeFileExt(sname,'');
+  sext:=ExtractFileExt(aSrcFile);
+  Result:=sPath+sname+CNew+sext;
+end;
+
+function TCBDataMgr.GetNewStopDatFile(aSrcFile:string):string;
+var spath,sname,sext:string;
+begin
+  result:='';
+  spath:=ExtractFilePath(aSrcFile);
+  sname:=ExtractFileName(aSrcFile);
+  sname:=ChangeFileExt(sname,'');
+  sext:=ExtractFileExt(aSrcFile);
+  Result:=sPath+sname+CNewStop+sext;
+end;
+{
+function TCBDataMgr.GetPassHisDatFile(aSrcFile,aExtractYear:string):string;
+var spath,sname,sext:string;
+begin
+  result:='';
+  spath:=ExtractFilePath(aSrcFile)+aExtractYear+'\';
+  sname:=ExtractFileName(aSrcFile);
+  sname:=ChangeFileExt(sname,'');
+  sext:=ExtractFileExt(aSrcFile);
+  Result:=sPath+sname+sext;
+end;
+
+procedure TCBDataMgr.RefreshPassHisList(aSrcText:string);
+var i,j:integer;
+    sFile,sLine,sName:string;
+    ts:TStringList;
+begin
+  try
+    FPassHisCodeList.clear;
+    ts:=TStringList.create;
+      ts.Clear;
+      ts.Text:=aSrcText;
+      for j:=0 to ts.Count-1 do
+      begin
+        sLine:=Trim(ts[j]);
+          if Pos('TradeCode=',sLine)=1 then
+          begin
+            ReplaceSubString('TradeCode=','',sLine);
+            sLine:=Trim(sLine);
+            if (sLine<>'') and
+               (FPassHisCodeList.IndexOf(sLine)=-1) then
+              FPassHisCodeList.Add(sLine);
+          end
+          else if Pos('BID=',sLine)=1 then
+          begin
+            ReplaceSubString('BID=','',sLine);
+            sLine:=Trim(sLine);
+            if (sLine<>'') and
+               (FPassHisCodeList.IndexOf(sLine)=-1) then
+              FPassHisCodeList.Add(sLine);
+          end;
+      end;
+  finally
+    FreeAndNil(ts);
+  end;
+end; }
+
+procedure TCBDataMgr.RefreshExceptList;
+var sAryCodeFile:array of string;
+    i,j:integer;
+    sFile,sLine,sName:string;
+    ts:TStringList;
+    bIsPassWay:boolean;
+begin
+  //RefreshPassHisList('');
+  try
+    FExceptCodeList.clear;
+    ts:=TStringList.create;
+    SetLength(sAryCodeFile,2);
+    sAryCodeFile[0]:=FTr1DBPath+'CBData\market_db\'+_PasswayTxt;
+    sAryCodeFile[1]:=FTr1DBPath+'CBData\ecbmarket_db\'+_PasswayTxt;
+    
+    for i:=0 to High(sAryCodeFile) do
+    begin
+      ts.Clear;
+      if FileExists(sAryCodeFile[i]) then
+        ts.LoadFromFile(sAryCodeFile[i])
+      else Continue;
+      sname:=ExtractFileName(sAryCodeFile[i]);
+      bIsPassWay:=SameText('passaway.txt',sname);
+      for j:=0 to ts.Count-1 do
+      begin
+        sLine:=Trim(ts[j]);
+          if Pos('TradeCode=',sLine)=1 then
+          begin
+            ReplaceSubString('TradeCode=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FExceptCodeList.Add(sLine);
+          end
+          else if Pos('TraderCodeEcb=',sLine)=1 then
+          begin
+            ReplaceSubString('TraderCodeEcb=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FExceptCodeList.Add(sLine);
+          end
+          else if Pos('BID=',sLine)=1 then
+          begin
+            ReplaceSubString('BID=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FExceptCodeList.Add(sLine);
+          end;
+      end;
+    end;
+  finally
+    SetLength(sAryCodeFile,0);
+    FreeAndNil(ts);
+  end;
+end;
+
+procedure TCBDataMgr.RefreshShangShiCodeList;
+var sAryCodeFile:array of string;
+    i,j:integer;
+    sFile,sLine,sName:string;
+    ts:TStringList;
+
+    function Getmarket_dbFileList(sIniFile:string):boolean;
+    var fini:TiniFile; sVarFiles:string;
+        tsVar:TStringList; iVar1,iVar2,iVar3:integer;
+    begin
+      Result:=false;
+      fini:=nil; tsVar:=nil;
+      if not FileExists(sIniFile) then exit;
+      try
+        fini:=TIniFile.create(sIniFile);
+        tsVar:=TStringList.create;
+        sVarFiles:=fini.ReadString('dblst','filename','');
+        sVarFiles:=StringReplace(sVarFiles,',',#13#10,[rfReplaceAll]);
+        tsVar.text:=sVarFiles;
+        if tsVar.Count>0 then
+        begin
+          iVar1:=Length(sAryCodeFile);
+          iVar2:=iVar1+tsVar.Count;
+          SetLength(sAryCodeFile,iVar2);
+          for iVar3:=0 to tsVar.Count-1 do
+          begin
+            sAryCodeFile[iVar1+iVar3]:='';
+            if SameText('passaway.txt',tsVar[iVar3]) then continue;
+            sAryCodeFile[iVar1+iVar3]:=ExtractFilePath(sIniFile)+tsVar[iVar3];
+          end;
+        end;
+      finally
+        try if fini<>nil then FreeAndNil(fini); except end;
+        try if tsVar<>nil then FreeAndNil(tsVar); except end;
+      end;
+      result:=true;
+    end;
+
+begin
+  try
+    FShangShiCodeList.clear;
+    ts:=TStringList.create;
+    SetLength(sAryCodeFile,0);
+    Getmarket_dbFileList(FTr1DBPath+'CBData\publish_db\dblst.lst');
+    Getmarket_dbFileList(FTr1DBPath+'CBData\market_db\dblst2.lst');
+    Getmarket_dbFileList(FTr1DBPath+'CBData\ecbpublish_db\dblst.lst');
+    Getmarket_dbFileList(FTr1DBPath+'CBData\ecbmarket_db\dblst2.lst');
+
+    for i:=0 to High(sAryCodeFile) do
+    begin
+      ts.Clear;
+      if sAryCodeFile[i]='' then continue;
+      if FileExists(sAryCodeFile[i]) then
+        ts.LoadFromFile(sAryCodeFile[i])
+      else continue;
+      sname:=ExtractFileName(sAryCodeFile[i]);
+      for j:=0 to ts.Count-1 do
+      begin
+          sLine:=Trim(ts[j]);
+          if Pos('TradeCode=',sLine)=1 then
+          begin
+            ReplaceSubString('TradeCode=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FShangShiCodeList.Add(sLine);
+          end
+          else if Pos('TraderCodeEcb=',sLine)=1 then
+          begin
+            ReplaceSubString('TraderCodeEcb=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FShangShiCodeList.Add(sLine);
+          end
+          else if Pos('BID=',sLine)=1 then
+          begin
+            ReplaceSubString('BID=','',sLine);
+            sLine:=Trim(sLine);
+            if sLine<>'' then FShangShiCodeList.Add(sLine);
+          end;
+      end;
+    end;
+  finally
+    SetLength(sAryCodeFile,0);
+    FreeAndNil(ts);
+  end;
+end;
+
 
 function TCBDataMgr.ConvertcbidxTocbidx3:string;
 var sFile1,sFile11,sTagFile,Str,strJoin,sPath:string; ts1:TStringList;
@@ -12576,6 +13063,1662 @@ begin
   result:=true;
 end;
 
+function TCBDataMgr.ProSep_Cbidx2OrCbidx(sTagFile:string;aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=1 then
+               ts3.Add(ts4.text)
+             else if iCodeType=0 then 
+               ts2.Add(ts4.text);
+               
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=1 then
+     ts3.Add(ts4.text)
+    else if iCodeType=0 then 
+     ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  if aFtpNotXiaShi then
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbidx(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+begin
+  result:=ProSep_Cbidx2OrCbidx('cbidx.dat',aFtpXiaShi,aFtpNotXiaShi);
+end;
+
+function TCBDataMgr.ProSep_cbidx2(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+begin
+  result:=ProSep_Cbidx2OrCbidx('cbidx2.dat',aFtpXiaShi,aFtpNotXiaShi);
+end;
+
+function TCBDataMgr.ProSepPassHis_cbidx(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbidx.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=2 then
+               ts2.Add(ts4.text);
+
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=2 then 
+     ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbissue2(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,sLine:string;
+    i,j,k,index,i2,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbissue2.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+  
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  i2:=0;
+  ts2.Add('[ISSUE]');
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    k:=Pos('=',str);
+    if k<=0 then Continue;
+    sTemp1:=Copy(Str,1,k-1);
+    sTemp2:=Copy(Str,k+1,Length(str));
+    j:=Pos(',',sTemp2);
+    if j<=0 then Continue;
+    sTemp3:=Copy(sTemp2,1,j-1);
+    ID:=Trim(sTemp3);
+    if Length(ID)>0 Then
+    Begin
+       iCodeType:=CodeInType(ID);
+       if iCodeType=2 then
+       begin
+         Inc(i2);
+         sLine:=inttostr(i2)+'='+sTemp2;
+         ts2.Add(sLine);
+       end;
+    End;
+
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbissue2(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,sLine:string;
+    i,j,k,index,i2,i3,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbissue2.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  i2:=0; i3:=0;
+  ts2.Add('[ISSUE]');
+  ts3.Add('[ISSUE]');
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    k:=Pos('=',str);
+    if k<=0 then Continue;
+    sTemp1:=Copy(Str,1,k-1);
+    sTemp2:=Copy(Str,k+1,Length(str));
+    j:=Pos(',',sTemp2);
+    if j<=0 then Continue;
+    sTemp3:=Copy(sTemp2,1,j-1);
+    ID:=Trim(sTemp3);
+    if Length(ID)>0 Then
+    Begin
+       iCodeType:=CodeInType(ID);
+       if iCodeType=1 then
+       begin
+         Inc(i3);
+         sLine:=inttostr(i3)+'='+sTemp2;
+         ts3.Add(sLine);
+       end
+       else if iCodeType=0 then
+       begin
+         Inc(i2);
+         sLine:=inttostr(i2)+'='+sTemp2;
+         ts2.Add(sLine);
+       end;
+    End;
+
+  End;
+  if aFtpNotXiaShi then 
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbpurpose(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbpurpose.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+  
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('<ID=',Str)=1) and
+       (Pos('>',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('<ID=','',Str);
+        ReplaceSubString('>','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=2 then
+               ts2.Add(ts4.text);
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('<ID='+ID+'>');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=2 then
+     ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbpurpose(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbpurpose.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('<ID=',Str)=1) and
+       (Pos('>',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('<ID=','',Str);
+        ReplaceSubString('>','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=1 then
+               ts3.Add(ts4.text)
+             else if iCodeType=0 then
+               ts2.Add(ts4.text);
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('<ID='+ID+'>');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=1 then
+     ts3.Add(ts4.text)
+    else if iCodeType=0 then
+     ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  if aFtpNotXiaShi then 
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+
+function TCBDataMgr.ProSepPassHis_cbdoc(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbdoc.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('<ID=',Str)=1) and
+       (Pos('>',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('<ID=','',Str);
+        ReplaceSubString('>','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=2 then
+               ts2.Add(ts4.text);
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('<ID='+ID+'>');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=2 then
+      ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbdoc(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbdoc.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('<ID=',Str)=1) and
+       (Pos('>',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('<ID=','',Str);
+        ReplaceSubString('>','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             iCodeType:=CodeInType(ID);
+             if iCodeType=1 then
+               ts3.Add(ts4.text)
+             else if iCodeType=0 then 
+               ts2.Add(ts4.text);
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('<ID='+ID+'>');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+    iCodeType:=CodeInType(ID);
+    if iCodeType=1 then
+     ts3.Add(ts4.text)
+    else if iCodeType=0 then 
+     ts2.Add(ts4.text);
+    ts4.Clear;
+    ID := '';
+  End;
+  if aFtpNotXiaShi then 
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbstockholder(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,ID2:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstockholder.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+		sametext(ID,'GUID') then
+             begin
+               ts2.Add(ts4.text);
+             end
+             else begin
+               ID2:=ID;
+               if (Pos('D',ID2)=1) and (Pos('_',ID2)>0) then
+                 ID2:=GetStrOnly2('D','_',ID2,false);
+               iCodeType:=CodeInType(ID2);
+               if iCodeType=2 then
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+      sametext(ID,'GUID') then
+   begin
+     ts2.Add(ts4.text);
+   end
+   else begin
+     ID2:=ID;
+     if (Pos('D',ID2)=1) and (Pos('_',ID2)>0) then
+       ID2:=GetStrOnly2('D','_',ID2,false);
+     iCodeType:=CodeInType(ID2);
+     if iCodeType=2 then
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbstockholder(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,ID2:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstockholder.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+			    sametext(ID,'GUID') then
+             begin
+               ts3.Add(ts4.text);
+               ts2.Add(ts4.text);
+             end
+             else begin
+               ID2:=ID;
+               if (Pos('D',ID2)=1) and (Pos('_',ID2)>0) then
+                 ID2:=GetStrOnly2('D','_',ID2,false);
+               iCodeType:=CodeInType(ID2);
+               if iCodeType=1 then
+                 ts3.Add(ts4.text)
+               else if iCodeType=0 then
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+                  sametext(ID,'GUID') then
+   begin
+     ts3.Add(ts4.text);
+     ts2.Add(ts4.text);
+   end
+   else begin
+     ID2:=ID;
+     if (Pos('D',ID2)=1) and (Pos('_',ID2)>0) then
+       ID2:=GetStrOnly2('D','_',ID2,false);
+     iCodeType:=CodeInType(ID2);
+     if iCodeType=1 then
+       ts3.Add(ts4.text)
+     else if iCodeType=0 then
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  if  aFtpNotXiaShi then 
+  ts2.SaveToFile(sFile2);
+  if  aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbredeemdate(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbredeemdate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+                sametext(ID,'GUID') then
+             begin
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=2 then
+                 ts2.Add(ts4.text);
+             end;
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+      sametext(ID,'GUID') then
+   begin
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=2 then
+       ts2.Add(ts4.text);
+   end;
+    ts4.Clear;
+    ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbredeemdate(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbredeemdate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+
+  
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+                sametext(ID,'GUID') then
+             begin
+               ts3.Add(ts4.text);
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=1 then
+                 ts3.Add(ts4.text)
+               else if iCodeType=0 then 
+                 ts2.Add(ts4.text);
+             end;
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+      sametext(ID,'GUID') then
+   begin
+     ts3.Add(ts4.text);
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=1 then
+       ts3.Add(ts4.text)
+     else if iCodeType=0 then 
+       ts2.Add(ts4.text);
+   end;
+    ts4.Clear;
+    ID := '';
+  End;
+  if aFtpNotXiaShi then
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbsaledate(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbsaledate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+                sametext(ID,'GUID') then
+             begin
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=2 then
+                 ts2.Add(ts4.text);
+             end;
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+      sametext(ID,'GUID') then
+   begin
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=2 then
+       ts2.Add(ts4.text);
+   end;
+    ts4.Clear;
+    ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbsaledate(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbsaledate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+                sametext(ID,'GUID') then
+             begin
+               ts3.Add(ts4.text);
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=1 then
+                 ts3.Add(ts4.text)
+               else if iCodeType=0 then 
+                 ts2.Add(ts4.text);
+             end;
+              ts4.Clear;
+              ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+      sametext(ID,'GUID') then
+   begin
+     ts3.Add(ts4.text);
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=1 then
+       ts3.Add(ts4.text)
+     else if iCodeType=0 then 
+       ts2.Add(ts4.text);
+   end;
+    ts4.Clear;
+    ID := '';
+  End;
+  if aFtpNotXiaShi then 
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbstopconv(aExtractYear:string):string;
+var
+  Rec :TSTOPCONV_PERIOD_RPT;
+  f1,f2 : File Of TSTOPCONV_PERIOD_RPT;
+  sFile1,sFile2:string;
+  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
+  i,iCount,iCodeType: Integer;
+Begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstopconv.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+try
+  AssignFile(f1,sFile1);
+  AssignFile(f2,sFile2);
+
+  FileMode := 2;
+  ReSet(f1);
+  ReWrite(f2);
+
+  iCount:=FileSize(f1);
+  For i:=0 To iCount-1 Do
+  Begin
+    Seek(f1,i);
+    Read(f1,Rec);
+    iCodeType:=CodeInType(Rec.ID);
+    if iCodeType=2 then
+    begin
+      Write(f2,Rec);
+    end;
+  End;
+  result:=sFile1;
+  try CloseFile(f1); except Result:=''; end;
+  try CloseFile(f2); except result:=''; end;
+Except
+  On E:Exception Do
+  begin
+    e:=nil;
+  end;
+End;
+End;
+
+function TCBDataMgr.ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var
+  Rec :TSTOPCONV_PERIOD_RPT;
+  f1,f2,f3 : File Of TSTOPCONV_PERIOD_RPT;
+  sFile1,sFile2,sFile3:string;
+  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
+  i,iCount,iCodeType: Integer;
+Begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbstopconv.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+try
+  AssignFile(f1,sFile1);
+  if aFtpNotXiaShi then AssignFile(f2,sFile2);
+  if aFtpXiaShi then AssignFile(f3,sFile3);
+  FileMode := 2;
+  ReSet(f1);
+  if aFtpNotXiaShi then ReWrite(f2);
+  if aFtpXiaShi then ReWrite(f3);
+  iCount:=FileSize(f1);
+  For i:=0 To iCount-1 Do
+  Begin
+    Seek(f1,i);
+    Read(f1,Rec);
+    iCodeType:=CodeInType(Rec.ID);
+    if iCodeType=1 then
+    begin
+      if aFtpXiaShi then Write(f3,Rec);
+    end
+    else if iCodeType=0 then
+    begin
+      if aFtpNotXiaShi then Write(f2,Rec);
+    end;
+  End;
+  result:=sFile1;
+  try CloseFile(f1); except Result:=''; end;
+  if aFtpNotXiaShi then try CloseFile(f2); except result:=''; end;
+  if aFtpXiaShi then try CloseFile(f3); except Result:=''; end;
+Except
+  On E:Exception Do
+  begin
+    e:=nil;
+  end;
+End;
+End;
+
+
+function TCBDataMgr.ProSepPassHis_strike2(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='strike4.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+  
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+  
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+			    sametext(ID,'GUID') then
+             begin
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=2 then
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+                  sametext(ID,'GUID') then
+   begin
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=2 then
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_strike2(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+const
+  _TempFlag='temp_';
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,sTempID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='strike4.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sNewGuid:=Get_GUID8;
+  SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sNewGuid),PChar(sFile1));
+  
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+                sametext(ID,'ReasonList2') or
+		sametext(ID,'GUID') then
+             begin
+               ts3.Add(ts4.text);
+               ts2.Add(ts4.text);
+             end
+             else begin
+               sTempID:=ID;
+               if Pos(_TempFlag,sTempID)>0 then
+               begin
+                 ReplaceSubString(_TempFlag,'',sTempID);
+               end;
+               iCodeType:=CodeInType(sTempID);
+               if iCodeType=1 then
+                 ts3.Add(ts4.text)
+               else if iCodeType=0 then 
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+                  sametext(ID,'GUID') then
+   begin
+     ts3.Add(ts4.text);
+     ts2.Add(ts4.text);
+   end
+   else begin
+     sTempID:=ID;
+     if Pos(_TempFlag,sTempID)>0 then
+     begin
+       ReplaceSubString(_TempFlag,'',sTempID);
+     end;
+     iCodeType:=CodeInType(sTempID);
+     if iCodeType=1 then
+       ts3.Add(ts4.text)
+     else if iCodeType=0 then 
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  if aFtpNotXiaShi then
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_strike3(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID,sLine:string;
+    i,j,k,index,i2,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='strike3.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  i2:=0;
+  ts2.Add('[STRIKE]');
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    k:=Pos('=',str);
+    if k<=0 then Continue;
+    sTemp1:=Copy(Str,1,k-1);
+    sTemp2:=Copy(Str,k+1,Length(str));
+    j:=Pos(',',sTemp2);
+    if j<=0 then Continue;
+    sTemp3:=Copy(sTemp2,1,j-1);
+    ID:=Trim(sTemp3);
+    if Length(ID)>0 Then
+    Begin
+       iCodeType:=CodeInType(ID);
+       if iCodeType=2 then begin
+         Inc(i2);
+         sLine:=inttostr(i2)+'='+sTemp2;
+         ts2.Add(sLine);
+       end;
+    End;
+  End;
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+
 function TCBDataMgr.ConvertStrike32ToStrike3():Boolean;
 var sPath,sFile1,sFile2,sLine:string;
    i,j:integer; f1,f2:Double;
@@ -12616,6 +14759,309 @@ begin
     FreeAndNil(ts);
   end;
   result:=true;
+end;
+
+function TCBDataMgr.ProSep_strike32(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+begin
+  result:=ProSep_strike32Orstrike3('strike32.dat',aFtpXiaShi,aFtpNotXiaShi);
+end;
+
+function TCBDataMgr.ProSep_strike3(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+begin
+  result:=ProSep_strike32Orstrike3('strike3.dat',aFtpXiaShi,aFtpNotXiaShi);
+end;
+
+function TCBDataMgr.ProSep_strike32Orstrike3(sTagFile:string;aFtpXiaShi,aFtpNotXiaShi:boolean): string;
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4:TStringList;
+    sTemp1,sTemp2,sTemp3,sPath,Str,ID,sLine:string; 
+    i,j,k,index,i2,i3,iCodeType:integer;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  i2:=0; i3:=0;
+  ts2.Add('[STRIKE]');
+  ts3.Add('[STRIKE]');
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    k:=Pos('=',str);
+    if k<=0 then Continue;
+    sTemp1:=Copy(Str,1,k-1);
+    sTemp2:=Copy(Str,k+1,Length(str));
+    j:=Pos(',',sTemp2);
+    if j<=0 then Continue;
+    sTemp3:=Copy(sTemp2,1,j-1);
+    ID:=Trim(sTemp3);
+    if Length(ID)>0 Then
+    Begin
+       iCodeType:=CodeInType(ID);
+       if iCodeType=1 then
+       begin
+         Inc(i3);
+         sLine:=inttostr(i3)+'='+sTemp2;
+         ts3.Add(sLine);
+       end
+       else if iCodeType=0 then begin
+         Inc(i2);
+         sLine:=inttostr(i2)+'='+sTemp2;
+         ts2.Add(sLine);
+       end;
+    End;
+  End;
+  if aFtpNotXiaShi then
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+End;
+end;
+
+function TCBDataMgr.ProSepPassHis_cbdate(aExtractYear:string):string;
+var sFile1,sFile2:string;
+    ts1,ts2,ts4,ts5:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbdate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+
+  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
+  Mkdir_Directory(sPath);
+  sFile2:=sPath+sTagFile;
+
+  ts1:=nil; ts2:=nil; ts4:=nil; ts5:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts4 := TStringList.Create;
+  ts5 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if pos('-->',str)>0 then
+    begin
+      ts5.Add(str);
+      continue;
+    end;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+			    sametext(ID,'GUID') then
+             begin
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=2 then
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+                  sametext(ID,'GUID') then
+   begin
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=2 then
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  ts2.Insert(0,ts5.text);
+  ts2.SaveToFile(sFile2);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+  if Assigned(ts5) Then
+     ts5.Free;
+End;
+end;
+
+function TCBDataMgr.ProSep_cbdate(aFtpXiaShi,aFtpNotXiaShi:boolean):string;  //笭猁�梪�
+var sFile1,sFile2,sFile3:string;
+    ts1,ts2,ts3,ts4,ts5:TStringList;
+    sTagFile,sTemp1,sTemp2,sTemp3,sPath,Str,ID:string;
+    i,j,k,index,iCodeType:integer;
+    sNewGuid:string;
+begin
+  Result:='';
+  sPath:=FTr1DBPath+'CBData\data\';
+  sTagFile:='cbdate.dat';
+  sFile1:=sPath+sTagFile;
+  if not FileExists(sFile1) then
+  begin
+    exit;
+  end;
+  
+  sFile2:=GetNewDatFile(sFile1);
+  sFile3:=GetNewStopDatFile(sFile1);
+  ts1:=nil; ts2:=nil; ts3:=nil;ts4:=nil;
+Try
+Try
+  ts1 := TStringList.Create;
+  ts2 := TStringList.Create;
+  ts3 := TStringList.Create;
+  ts4 := TStringList.Create;
+  ts5 := TStringList.Create;
+
+  ts1.LoadFromFile(sFile1);
+  ID := '';
+  for index:=0 to ts1.Count-1 do
+  Begin
+    Str := ts1.Strings[index];
+    if Trim(str)='' then Continue;
+    if pos('-->',str)>0 then
+    begin
+      ts5.Add(str);
+      continue;
+    end;
+    if (Pos('[',Str)=1) and
+       (Pos(']',Str)=Length(Str)) Then
+    Begin
+        ReplaceSubString('[','',Str);
+        ReplaceSubString(']','',Str);
+        if ID<>Str Then
+        Begin
+           if Length(ID)>0 Then
+           Begin
+             if sametext(ID,'ReasonList') or
+			    sametext(ID,'GUID') then
+             begin
+               ts3.Add(ts4.text);
+               ts2.Add(ts4.text);
+             end
+             else begin
+               iCodeType:=CodeInType(ID);
+               if iCodeType=1 then
+                 ts3.Add(ts4.text)
+               else if iCodeType=0 then 
+                 ts2.Add(ts4.text);
+             end;
+             ts4.Clear;
+             ID := '';
+           End;
+           ID := Str;
+           ts4.Add('['+ID+']');
+           Continue;
+        End;
+    End;
+    if Length(ID)>0 Then
+    Begin
+        ts4.Add(Str);
+    End;
+  End;
+  if Length(ID)>0 Then
+  Begin
+   if sametext(ID,'ReasonList') or
+                  sametext(ID,'GUID') then
+   begin
+     ts3.Add(ts4.text);
+     ts2.Add(ts4.text);
+   end
+   else begin
+     iCodeType:=CodeInType(ID);
+     if iCodeType=1 then
+       ts3.Add(ts4.text)
+     else if iCodeType=0 then 
+       ts2.Add(ts4.text);
+   end;
+   ts4.Clear;
+   ID := '';
+  End;
+  ts2.Insert(0,ts5.text);
+  ts3.Insert(0,ts5.text);
+  if aFtpNotXiaShi then
+  ts2.SaveToFile(sFile2);
+  if aFtpXiaShi then 
+  ts3.SaveToFile(sFile3);
+  result:=sFile1;
+Except
+End;
+Finally
+  if Assigned(ts1) Then
+     ts1.Free;
+  if Assigned(ts2) Then
+     ts2.Free;
+  if Assigned(ts3) Then
+     ts3.Free;
+  if Assigned(ts4) Then
+     ts4.Free;
+  if Assigned(ts5) Then
+     ts5.Free;
+End;
 end;
 
 function  TCBDataMgr.ProAfterNodeChanged(aRefreshExceptList,aRefreshShangShiCodeList:boolean;
@@ -12734,822 +15180,5 @@ begin
 
   SaveCBTxtToUpLoad3('lst','data',sListFile,aOperator,aTimeKey);
 end;
-
-{TCBDataMgrEcb}
- function TCBDataMgrEcb.CreateEmptycbstopconvdat(aInputFile:string):Boolean;
-var xPath:string; f1 : File Of TSTOPCONV_PERIOD_RPTEcb;
-begin
-  result:=false;
-  xPath:=ExtractFilePath(aInputFile);
-  if not DirectoryExists(xPath) then
-    exit;
-  AssignFile(f1,aInputFile);
-  try
-    ReWrite(f1);
-    result:=true;
-  finally
-    try CloseFile(f1); except end;
-  end;
-end;
-
-function TCBDataMgrEcb.ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi:boolean): string;
-var
-  Rec :TSTOPCONV_PERIOD_RPTEcb;
-  f1,f2,f3 : File Of TSTOPCONV_PERIOD_RPTEcb;
-  sFile1,sFile2,sFile3:string;
-  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
-  i,iCount,iCodeType: Integer;
-Begin
-  Result:='';
-  sPath:=FTr1DBPath+'CBData\data\';
-  sTagFile:='cbstopconv.dat';
-  sFile1:=sPath+sTagFile;
-  if not FileExists(sFile1) then
-  begin
-    exit;
-  end;
-  sFile2:=GetNewDatFile(sFile1);
-  sFile3:=GetNewStopDatFile(sFile1);
-try
-  AssignFile(f1,sFile1);
-  if aFtpNotXiaShi then AssignFile(f2,sFile2);
-  if aFtpXiaShi then AssignFile(f3,sFile3);
-  FileMode := 2;
-  ReSet(f1);
-  if aFtpNotXiaShi then ReWrite(f2);
-  if aFtpXiaShi then ReWrite(f3);
-  iCount:=FileSize(f1);
-  For i:=0 To iCount-1 Do
-  Begin
-    Seek(f1,i);
-    Read(f1,Rec);
-    iCodeType:=CodeInType(Rec.ID);
-    if iCodeType=1 then
-    begin
-      if aFtpXiaShi then Write(f3,Rec);
-    end
-    else if iCodeType=0 then
-    begin
-      if aFtpNotXiaShi then Write(f2,Rec);
-    end;
-  End;
-  result:=sFile1;
-  try CloseFile(f1); except Result:=''; end;
-  if aFtpNotXiaShi then try CloseFile(f2); except result:=''; end;
-  if aFtpXiaShi then try CloseFile(f3); except Result:=''; end;
-Except
-  On E:Exception Do
-  begin
-    e:=nil;
-  end;
-End;
-End;
-
-function TCBDataMgrEcb.ProSepPassHis_cbstopconv(aExtractYear:string):string;
-var
-  Rec :TSTOPCONV_PERIOD_RPT;
-  f1,f2 : File Of TSTOPCONV_PERIOD_RPT;
-  sFile1,sFile2:string;
-  sTagFile,sTemp1,sTemp2,sTemp3,sPath:string;
-  i,iCount,iCodeType: Integer;
-Begin
-  Result:='';
-  sPath:=FTr1DBPath+'CBData\data\';
-  sTagFile:='cbstopconv.dat';
-  sFile1:=sPath+sTagFile;
-  if not FileExists(sFile1) then
-  begin
-    exit;
-  end;
-
-  sPath:=FTr1DBPath+'CBData\data\'+aExtractYear+'\';
-  Mkdir_Directory(sPath);
-  sFile2:=sPath+sTagFile;
-try
-  AssignFile(f1,sFile1);
-  AssignFile(f2,sFile2);
-
-  FileMode := 2;
-  ReSet(f1);
-  ReWrite(f2);
-
-  iCount:=FileSize(f1);
-  For i:=0 To iCount-1 Do
-  Begin
-    Seek(f1,i);
-    Read(f1,Rec);
-    iCodeType:=CodeInType(Rec.ID);
-    if iCodeType=2 then
-    begin
-      Write(f2,Rec);
-    end;
-  End;
-  result:=sFile1;
-  try CloseFile(f1); except Result:=''; end;
-  try CloseFile(f2); except result:=''; end;
-Except
-  On E:Exception Do
-  begin
-    e:=nil;
-  end;
-End;
-End;
-
-function TCBDataMgrEcb.LoaclDatDir():string;
-begin
-  result:=ExtractFilePath(Application.ExeName)+'DataEcb\';
-end;
-
-procedure TCBDataMgrEcb.SaveCBTxtToUpLoad(FileFolder,FileName,aOperator,aTimeKey:String;TypeFlag: String ='');  //Doc091120-sun
-Var
-  f : TStringList;
-  aCBFileName:string;
-begin
-   f := TStringList.Create;
-   f.Add('[FILE]');
-   f.Add('Folder='+FileFolder);
-   f.Add('FileName='+FileName);
-   aCBFileName := GetUploadLogFile;
-   f.SaveToFile(aCBFileName); //--DOC4.0.0〞N002 huangcq081223 add
-   f.Free;
-  //Doc091120-sun------------------------------------------------
-   if (TypeFlag = '')  then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey)
-   else if TypeFlag = 'ecbrate' then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
-   else if SameText(TypeFlag,'publish_db') or  SameText(TypeFlag,'market_db') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
-  //-----------------------------------------------------------------------------------
-end;
-
-procedure TCBDataMgrEcb.SaveCBTxtToUpLoadRateData(FileFolder,FileName,aOperator,aTimeKey:String;TypeFlag: String ='');
-var f : TStringList;
-  aCBFileName,sPath:string;
-begin
-   f := TStringList.Create;
-   f.Add('[FILE]');
-   f.Add('Folder='+FileFolder);
-   f.Add('FileName='+FileName);
-   aCBFileName := GetUploadLogFileRateData;
-   sPath:=ExtractFilePath(aCBFileName);
-   if not DirectoryExists(sPath) then
-     Mkdir_Directory(sPath);
-   f.SaveToFile(aCBFileName); //--DOC4.0.0〞N002 huangcq081223 add
-   f.Free;
-  //Doc091120-sun------------------------------------------------
-   if (TypeFlag = '')  then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey)
-   else if TypeFlag = 'ecbrate' then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
-   else if SameText(TypeFlag,'publish_db') or  SameText(TypeFlag,'market_db') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,aOperator,aTimeKey,1,'',TypeFlag)
-  //-----------------------------------------------------------------------------------
-end;
-
-procedure TCBDataMgrEcb.SaveCBTxtToUpLoad3(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-var f : TStringList;
-  aCBFileName:string;
-begin
-   f := TStringList.Create;
-   f.Add('[FILE]');
-   f.Add('Folder='+FileFolder);
-   f.Add('FileName='+FileName);
-   aCBFileName := GetUploadLogFile3();
-   f.SaveToFile(aCBFileName); 
-   f.Free;
-   if TypeFlag = '' then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey);
-end;
-
-procedure TCBDataMgrEcb.SaveCBTxtToUpLoad9(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-Var
-  f : TStringList;
-  aCBFileName:string;
-begin
-   f := TStringList.Create;
-   f.Add('[FILE]');
-   f.Add('Folder='+FileFolder);
-   f.Add('FileName='+FileName);
-   aCBFileName := GetUploadLogFile7();
-   f.SaveToFile(aCBFileName);
-   f.Free;
-   if (TypeFlag = '') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey)
-   else if (TypeFlag = 'ecbrate') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'',TypeFlag)
-end;
-
-procedure TCBDataMgrEcb.SaveCBTxtToUpLoad9RateData(Const aTag,FileFolder,FileName,Operator,aTimeKey:String;TypeFlag:String='');
-var f : TStringList;
-  aCBFileName,sPath:string;
-begin
-   f := TStringList.Create;
-   f.Add('[FILE]');
-   f.Add('Folder='+FileFolder);
-   f.Add('FileName='+FileName);
-   aCBFileName := GetUploadLogFile7RateData();
-   sPath:=ExtractFilePath(aCBFileName);
-   if not DirectoryExists(sPath) then
-     Mkdir_Directory(sPath);
-   f.SaveToFile(aCBFileName);
-   f.Free;
-   if (TypeFlag = '') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey)
-   else if (TypeFlag = 'ecbrate') then
-     SetCBDataLog('DocCenter',FileName,aCBFileName,Operator,aTimeKey,1,'',TypeFlag)
-end;
-
-{ For Example: SetCBDataLog('DocCenter','guapai.txt','..\upload_1.cb',FtpCount,FtpServerName)   }
-procedure TCBDataMgrEcb.SetCBDataLog(Const AppName,FileName,UpLoadCBFileName,aOperator,aTimeKey:String;
-  FtpServerCount:Integer=1;FtpServerName:String='';TypeFlag:string ='');
-var aLogFileName,FileNameEN,FileNameCN,CBFileName,aLogPath:String;
-  aF:TIniFile; aDt:TDateTime;
-  function TimeKey2TimeStr():string;
-  var xstr1,xstr2:string;
-  begin
-    //xstr1:=Copy(aTimeKey,Length(aTimeKey)-9,Length(aTimeKey));
-    //result:=Copy(xstr1,1,2)+':'+Copy(xstr1,3,2)+':'+Copy(xstr1,5,2);
-    xstr2:=DateSeparator;
-    xstr1:=aTimeKey;
-    result:=Copy(xstr1,1,4)+xstr2+Copy(xstr1,5,2)+xstr2+Copy(xstr1,7,2)+' '+
-      Copy(xstr1,10,2)+':'+Copy(xstr1,12,2)+':'+Copy(xstr1,14,2)+':'+Copy(xstr1,16,3);
-  end;
-begin
-  FAppParam  := TDocMgrParam.Create(ExtractFilePath(Application.ExeName)+'EcbSetup.ini');
-  try
-    if Length(FileName)<=0 then exit;
-    if not FileExists(UpLoadCBFileName) then exit;
-    aDt:=FileDateToDateTime(FileAge(UpLoadCBFileName));
-    
-    aLogPath:=LoaclDatDir+'DwnDocLog\uploadCBData\';
-    if not DirectoryExists(aLogPath) then 
-      Mkdir_Directory(aLogPath);
-    aLogFileName:=aLogPath+Format('%s.log',[FormatDateTime('yymmdd',aDt)]);
-    try
-      aF := TIniFile.Create(aLogFileName);
-      CBFileName := ExtractFileName(UpLoadCBFileName)+'@'+IntToStr(FileAge(UpLoadCBFileName));
-      FileNameEN:=ExtractFileName(FileName);
-       //--------Doc091120-sun------------------------
-       if  pos('irrate',TypeFlag)>0  then  // 公債利率
-       begin
-         CBFileName:='irrate'+CBFileName;
-         FileNameCN:= FAppParam.TwConvertStr ('公債利率')+ StringReplace(TypeFlag,'irrate','',[rfIgnoreCase]);
-       end
-       else if  pos('ecbrate',TypeFlag)>0  then
-       begin
-         CBFileName:=CBFileName;
-         if SameText(ExtractFileName(FileName),'ntd2usd.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('新臺幣/美元匯率')+ ExtractFileName(FileName)
-         else if SameText(ExtractFileName(FileName),'fed.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('fed利率資料')+ ExtractFileName(FileName)
-         else if SameText(ExtractFileName(FileName),'stockq.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('美國公債殖利率')+ ExtractFileName(FileName)
-         else
-           FileNameCN:= FAppParam.TwConvertStr ('美金匯率利率')+ ExtractFileName(FileName);
-       end
-       else FileNameCN:= GetCBNameFromConfig(FileNameEN);
-      //---------------------------------------------
-
-      if UpperCase(AppName)='DOCCENTER' then
-      begin
-        //aF.WriteString('DocCenter',FileNameEN,CBFileName);
-        aF.WriteString(CBFileName,'operator',aOperator);
-        aF.WriteString(CBFileName,'timekey',aTimeKey);
-
-        aF.WriteString(CBFileName,'FileNameCN',FileNameCN);
-        aF.WriteString(CBFileName,'FileNameEN',FileNameEN);
-        aF.WriteString(CBFileName,AppName,TimeKey2TimeStr);
-        if SameText(TypeFlag,'publish_db') or  SameText(TypeFlag,'market_db') then
-          aF.WriteString(CBFileName,'node','1');
-      end;//end if DocCenter
-
-      //if  UpperCase(AppName)='DOCFTP' then
-      if PosEx('DOCFTP',UpperCase(AppName))>0 then
-      begin
-        if Length(FtpServerName)<=0 then exit;
-        aF.WriteInteger(CBFileName,'CBFtpServerCount',FtpServerCount);
-        aF.WriteString(CBFileName,AppName,FormatDateTime('hh:mm:ss',Now)+#9+FtpServerName);
-      end;//end if DocFtp
-
-    finally
-      aF.Free;
-    end;
-  except
-    //on E:Exception do
-      //Showmessage(e.Message);
-  end;
-end;
-
-function TCBDataMgrEcb.FinishUploadCBDataByLog(FileName,UpLoadCBFileName:String;FtpServerCount:Integer):Boolean;
-var aLogFileName,FileNameEN,CBFileName:String;
-  aF:TIniFile; ic,i:integer; aDt:TDateTime;
-begin
-  result:=false;
-  if FtpServerCount=0 then
-  begin
-    result:=true;
-    exit;
-  end;
-  if not FileExists(UpLoadCBFileName) then
-  begin
-    result:=true;
-    exit;
-  end;
-  try
-    aDt := FileDateToDateTime(FileAge(UpLoadCBFileName));
-    aLogFileName := LoaclDatDir()+'DwnDocLog\uploadCBData\'+
-                    Format('%s.log',[FormatDateTime('yymmdd',aDt)]);
-    if not FileExists(aLogFileName) then
-      exit;
-    try
-      aF := TIniFile.Create(aLogFileName);
-      CBFileName := ExtractFileName(UpLoadCBFileName)+'@'+IntToStr(FileAge(UpLoadCBFileName));
-      FileNameEN:=ExtractFileName(FileName);
-      for i:=1 to FtpServerCount do
-      begin
-        if aF.ReadString(CBFileName,Format('DocFtp_%d',[i]),'')='' then
-        begin
-          exit;
-        end;
-      end;
-      result:=true;
-    finally
-      aF.Free;
-    end;
-  except
-    //on E:Exception do
-      //Showmessage(e.Message);
-  end;
-end;
-
-
-function TCBDataMgrEcb.SetCBDataText(const FileName,Value,aOperator,aTimeKey : String): String;
-var FileName2 : String;
-  f : TStringList;
-begin
-    FileName2 := LowerCase(FTr1DBPath+'CBData\Data\'+FileName);
-    if not DirectoryExists(ExtractFilePath(FileName2)) then //--DOC4.0.0〞N002 huangcq081223 add
-      Raise Exception.Create('Cannot find Directory '+ExtractFilePath(FileName2));
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName2);
-    f.Free;
-    SaveCBTxtToUpLoad('data',FileName2,aOperator,aTimeKey);
-end;
-
-procedure TCBDataMgrEcb.SetguapaiCBTxt(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\guapai.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetshangguiCBTxt(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\shanggui.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetshangshiCBTxt(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\shangshi.txt');
-    Mkdir_Directory(ExtractFilePath(FileName));
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetPassawayCBText(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Market_db\passaway.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetNifaxingCBText(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Publish_db\nifaxing.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetPassCBText(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\Publish_db\pass.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetSongCBTxt(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\publish_db\song.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetxunquanCBTxt(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\publish_db\xunquan.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-procedure TCBDataMgrEcb.SetStopCBText(const Value: String);
-var FileName : String;
-  f : TStringList;
-begin
-    if Pos('[CLASS]',Value)=0 Then Exit;
-    FileName := LowerCase(FTr1DBPath+'CBData\publish_db\stopissue.txt');
-    f := TStringList.Create;
-    f.Text := Value;
-    f.SaveToFile(FileName);
-    f.Free;
-end;
-
-
-function TCBDataMgrEcb.SetNodeUpload(const aOperator,aTimeKey: String):boolean;
-var bParam1,bParam2:boolean; sMkt,sFileName,sPath,sOneF:string;
-    ts:TStringList; i:Integer;
-begin
-  Result:=false;
-  sPath:=LowerCase(FTr1DBPath+'CBData\');
-  ts:=TStringList.Create;
-  try
-    sMkt:='publish_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\publish_db\dblst.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
-
-    
-    sMkt:='market_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\market_db\dblst2.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
-
-    bParam1:=true;
-    bParam2:=true;
-    ProAfterNodeChanged(bParam1,bParam2,bParam1,bParam2,aOperator,aTimeKey);
-    result:=True;
-  finally
-    FreeAndNil(ts);
-  end;
-end;
-
-function TCBDataMgrEcb.GetStopCBText: String;
-var FileName : String;
-  f : TStringList;
-begin
-    Result := '';
-    FileName := FTr1DBPath+'CBData\publish_db\stopissue.txt';
-    if FileExists(FileName) Then
-    Begin
-       f := TStringList.Create;
-       f.LoadFromFile(FileName);
-       Result := f.Text;
-       f.Free;
-    End;
-end;
-
-
-function TCBDataMgrEcb.GetshangguiCBText: String;
-begin
-end;
-
-function TCBDataMgrEcb.GetshangshiCBText: String;
-begin
-
-end;
-
-function TCBDataMgrEcb.GetSongCBText: String;
-begin
-
-end;
-
-function TCBDataMgrEcb.GetguapaiCBText: String;
-begin
-
-end;
-
-function TCBDataMgrEcb.GetxunquanCBText: String;
-begin
-
-end;
-
-
-Function TCBDataMgrEcb.SetECBRate(aEcbRatePath,aOperator,aTimeKey,sCmd:string):Boolean;
-var sListFile,sGuid,sUploadFile:string;
-begin
-  result:=false;
-  sListFile:=aEcbRatePath+'ecbrate.lst';
-  sGuid:=Get_GUID8;
-  SaveIniFile(PChar('list'),PChar('guid'),PChar(sGuid),PChar(sListFile));
-
-  if sCmd[1]='1' then
-  begin
-    sUploadFile:=aEcbRatePath+'ntd2usd.dat';
-    SaveCBTxtToUpLoadRateData('ratedata',sUploadFile,aOperator,aTimeKey,'ecbrate');
-  end;
-
-  if sCmd[2]='1' then
-  begin
-    sUploadFile:=aEcbRatePath+'fed.dat';
-    SaveCBTxtToUpLoadRateData('ratedata',sUploadFile,aOperator,aTimeKey,'ecbrate');
-  end;
-
-  SaveCBTxtToUpLoad9RateData('lst','ratedata',sListFile,aOperator,aTimeKey,'ecbrate');
-  result:=true;
-end;
-
-
-function TCBDataMgrEcb.SetCBDataTextFileName(const DstFileName,SrcFileName,aOperator,aTimeKey: String): Boolean;
-Var
-  FileName2,sListFile,sDstName,sPath,sBakDatFile,sTemp : String;
-  f1,i : Integer;
-  FileStr : TStringList;
-begin
-    Result := False;
-    FileName2 := LowerCase(FTr1DBPath+'CBData\Data\'+DstFileName);
-    sListFile := LowerCase(FTr1DBPath+'CBData\Data\'+'cbdataguid.lst');
-    sDstName := LowerCase(ExtractFileName(DstFileName));
-    sPath:=ExtractFilePath(FileName2);
-    if not DirectoryExists(sPath) then 
-      Raise Exception.Create('Cannot find Directory '+sPath);
-
-      
-    if not DirectoryExists(sPath+'Bak\') then
-      Mkdir_Directory(sPath+'Bak\');
-    if FileExists(FileName2) then
-    begin
-      sBakDatFile:='Bak'+FormatDateTime('yyyymmddhhmmss',now)+'_'+ExtractFileName(FileName2);
-      CopyFile(PChar(FileName2),PChar(sPath+'Bak\'+sBakDatFile),false);
-    end;
-
-    f1 := FileAge(FileName2);
-    CopyFile(PChar(SrcFileName),PChar(FileName2),False);
-    if f1=FileAge(FileName2) Then
-       Exit;
-    sTemp:=Get_GUID8;
-    SaveIniFile(PChar(sDstName),PChar('guid'),PChar(sTemp),PChar(sListFile));
-
-    SaveCBTxtToUpLoad('data',FileName2,aOperator,aTimeKey);
-    SaveCBTxtToUpLoad3('lst','data',sListFile,aOperator,aTimeKey);
-    Result := True;
-end;
-
-
-Function TCBDataMgrEcb.SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
-Var
-  FileName2,sListFile,sDstName,sTemp,sTemp1,sTemp11,sTemp2,sTemp3,sGuid : String;
-  i : Integer;
-begin
-    Result := False;
-    FileName2 := LowerCase(FTr1DBPath+'CBData\Data\'+DstFileName);
-    sListFile := LowerCase(FTr1DBPath+'CBData\Data\'+'cbdataguid.lst');
-    sDstName := LowerCase(ExtractFileName(DstFileName));
-    if not DirectoryExists(ExtractFilePath(FileName2)) then
-      Raise Exception.Create('Cannot find Directory '+ExtractFilePath(FileName2));
-
-    if SameText(DstFileName,'STRIKE4.DAT') or  //--DOC4.4.0.0 pqx 20120207
-       SameText(DstFileName,'CBREDEEMDATE.DAT') or
-       SameText(DstFileName,'CBSALEDATE.DAT') then 
-    begin
-      sTemp:=Get_GUID8;
-      SaveIniFile(PChar('GUID'),PChar('GUID'),PChar(sTemp),PChar(FileName2));
-    end;
-
-    sGuid:=Get_GUID8;
-    SaveIniFile(PChar(sDstName),PChar('guid'),PChar(sGuid),PChar(sListFile));
-      
-    sTemp:=LowerCase(DstFileName);
-    sTemp1:='';sTemp2:='';sTemp3:='';
-    if SameText(sTemp,'cbidx2.dat') then
-    begin
-      sTemp1:=ProSep_cbidx2(true,true);
-      SaveIniFile(PChar('cbidx.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
-    end
-    else if SameText(sTemp,'strike2.dat') or SameText(sTemp,'strike4.dat') then
-      sTemp1:=ProSep_strike2(true,true)
-    else if SameText(sTemp,'strike32.dat') then
-    begin
-      sTemp1:=ProSep_strike32(true,true);
-      SaveIniFile(PChar('strike3.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
-    end
-    else if SameText(sTemp,'cbissue2.dat') then
-      sTemp1:=ProSep_cbissue2(true,true)
-    else if SameText(sTemp,'cbpurpose.dat') then
-      sTemp1:=ProSep_cbpurpose(true,true)
-    else if SameText(sTemp,'cbstopconv.dat') then
-      sTemp1:=ProSep_cbstopconv(true,true)
-    else if SameText(sTemp,'cbredeemdate.dat') then
-      sTemp1:=ProSep_cbredeemdate(true,true)
-    else if SameText(sTemp,'cbsaledate.dat') then
-      sTemp1:=ProSep_cbsaledate(true,true)
-    else if SameText(sTemp,'cbdoc.dat') then
-      sTemp1:=ProSep_cbdoc(true,true)
-    else if SameText(sTemp,'cbstockholder.dat') then
-      sTemp1:=ProSep_cbstockholder(true,true)
-    else if SameText(sTemp,'cbdate.dat') then
-      sTemp1:=ProSep_cbdate(true,true);
-    if sTemp1<>'' then
-    begin
-      sTemp2:=GetNewDatFile(sTemp1);
-      sTemp3:=GetNewStopDatFile(sTemp1);
-      if (sTemp2<>'') and (FileExists(sTemp2)) then
-        SaveCBTxtToUpLoad('data',sTemp2,aOperator,aTimeKey);
-      if (sTemp3<>'') and (FileExists(sTemp3)) then
-        SaveCBTxtToUpLoad('data',sTemp3,aOperator,aTimeKey);
-    end;
-
-    SaveCBTxtToUpLoad3('lst','data',sListFile,aOperator,aTimeKey);
-    Result := True;
-end;
-
-
-function  TCBDataMgrEcb.ProAfterNodeChanged(aRefreshExceptList,aRefreshShangShiCodeList:boolean;
-  aFtpXiaShi,aFtpNotXiaShi:boolean;aOperator,aTimeKey:string):boolean;
-var sListFile,sFileName,sTemp,sTemp1,sTemp2,sTemp3,sGuid,sPath:string;
-  procedure DoSomeChange;
-  begin
-    if (sTemp1<>'') and (FileExists(sTemp1)) then
-    begin
-        sTemp2:=GetNewDatFile(sTemp1);
-        sTemp3:=GetNewStopDatFile(sTemp1);
-        if aFtpNotXiaShi then 
-        if (sTemp2<>'') and (FileExists(sTemp2)) then
-          SaveCBTxtToUpLoad('data',sTemp2,aOperator,aTimeKey);
-        if aFtpXiaShi then 
-        if (sTemp3<>'') and (FileExists(sTemp3)) then
-          SaveCBTxtToUpLoad('data',sTemp3,aOperator,aTimeKey);
-        sGuid:=Get_GUID8;
-        SaveIniFile(PChar(sFileName),PChar('guid'),PChar(sGuid),PChar(sListFile));
-        if SameText(sFileName,'cbidx2.dat') then
-           SaveIniFile(PChar('cbidx.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile))
-        else if SameText(sFileName,'strike32.dat') then
-           SaveIniFile(PChar('strike3.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
-    end;
-  end;
-begin
-  Result:=false;
-  //if aRefreshExceptList then RefreshExceptList;
-  //if aRefreshShangShiCodeList then RefreshShangShiCodeList;
-  RefreshExceptList;
-  RefreshShangShiCodeList;
-
-  sPath:=FTr1DBPath+'CBData\Data\';
-  sListFile := LowerCase(sPath+'cbdataguid.lst');
-
-  sFileName:='cbidx2.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbidx2(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='strike2.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_strike2(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='strike32.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_strike32(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbissue2.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbissue2(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbpurpose.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbpurpose(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbdoc.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbdoc(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbstopconv.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbstopconv(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbstockholder.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbstockholder(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbredeemdate.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbredeemdate(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbsaledate.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbsaledate(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  sFileName:='cbdate.dat';
-  sTemp1:='';sTemp2:='';sTemp3:='';
-  sTemp1:=ProSep_cbdate(aFtpXiaShi,aFtpNotXiaShi);
-  DoSomeChange;
-
-  SaveCBTxtToUpLoad3('lst','data',sListFile,aOperator,aTimeKey);
-end;
-
-
-function TCBDataMgrEcb.GetNifaxingCBText: String;
-var FileName : String;  f : TStringList;
-begin
-    Result := '';
-    FileName := FTr1DBPath+'CBData\Publish_db\nifaxing.txt';
-    if FileExists(FileName) Then
-    Begin
-       f := TStringList.Create;
-       f.LoadFromFile(FileName);
-       Result := f.Text;
-       f.Free;
-    End;
-end;
-
-function TCBDataMgrEcb.GetPassawayCBText: String;
-var FileName : String;  f : TStringList;
-begin
-    Result := '';
-    FileName := FTr1DBPath+'CBData\Market_db\'+_PasswayTxt;
-    if FileExists(FileName) Then
-    Begin
-       f := TStringList.Create;
-       f.LoadFromFile(FileName);
-       Result := f.Text;
-       f.Free;
-    End;
-end;
-
-function TCBDataMgrEcb.GetPassCBText: String;
-var FileName : String;  f : TStringList;
-begin
-    Result := '';
-    FileName := FTr1DBPath+'CBData\Publish_db\pass.txt';
-    if FileExists(FileName) Then
-    Begin
-       f := TStringList.Create;
-       f.LoadFromFile(FileName);
-       Result := f.Text;
-       f.Free;
-    End;
-end;
-
 
 end.

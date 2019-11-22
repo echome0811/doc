@@ -20,8 +20,8 @@ uses
   ComObj, Menus,uFuncFileCodeDecode,zlib,
   uLevelDataDefine,uLevelDataFun,DateUtils,
   uCBDataTokenMng,uLogHandleThread,uForUserMoudule,uThreeTraderPro,
-  uForCBOpCom,uCBPARateData; //TWarningServer,FastStrings
-const 
+  uForCBOpCom,uCBPARateData,uFuncThread; //TWarningServer,FastStrings
+const
 //-----------------------
   _CBDBUplFile='cbdb.upl';
   _LogSep=';sep;';
@@ -87,7 +87,6 @@ _stockweightMCaption='嘖瞳煦饜揃蹋鋤荾';
   _OpDataOp='DataOp';
   _OpDel='Del';
   _OpDelCB='DelCB';
-  _OpReBack='ReBack';
   _OpAutoAudit='AutoAudit';
   _OpManulAudit='ManulAudit';
   _OpSaveStr='保存';
@@ -97,7 +96,6 @@ _stockweightMCaption='嘖瞳煦饜揃蹋鋤荾';
   _OpUptStr='修改';
   _OpAddStr='新增';
   _OpDelStr='刪除';
-  _OpReBackStr='復原刪除';
   _OpAutoAuditStr='自動審核';
   _OpManulAuditStr='人工審核';
   _OpUptSubStr='修改子項';
@@ -177,43 +175,6 @@ type
     Count:integer;
   end;
 
-  TCBDataWorkHandleThread=class(TThread)
-  private
-    FCBDataAll_PackFile,FCBDataExceptCbdocAll_PackFile:string;
-    FCBDataAry_PackFile:array of string;
-    FCBNodeDat_PackFile,FCBNodeDat_PackFileEcb:string;
-
-    FCBDataAll_PackTag,FCBDataExceptCbdocAll_PackTag:Boolean;
-    FCBDataAry_PackTag:array of Boolean;
-    FCBNodeDat_PackTag:Boolean;
-    
-    FGUIDOfCBData,FGUIDOfNodeData,FGUIDOfIFRSData:string;
-    FLastGUIDOfCBData,FLastGUIDOfNodeData,FLastGUIDOfIFRSData:string;
-    procedure ProExecute;
-  protected
-    procedure Execute; override;
-  public
-     procedure UptGUIDOfCBData;
-     procedure UptGUIDOfNodeData;
-     procedure UptGUIDOfIFRSData;
-     procedure PackCBDataFile(aFileName:string);
-     procedure PackCBNodeFile();
-     procedure PackCBNodeFileEcb();
-
-     constructor Create();
-     destructor  Destroy; override;
-  end;
-
-  TClsBakDataThread=class(TThread)
-  private
-  protected
-    procedure Execute; override;
-  public
-     constructor Create();
-     destructor  Destroy; override;
-  end;
-
-  
   TAMainFrm = class(TForm)
     TCPServer: TIdTCPServer;
     StatusBar1: TStatusBar;
@@ -243,6 +204,8 @@ type
     TCPServer2: TIdTCPServer;
     TimerInitObj: TTimer;
     btn1: TButton;
+    TCPServerEcb: TIdTCPServer;
+    TCPServer2Ecb: TIdTCPServer;
     procedure FormCreate(Sender: TObject);
     procedure TCPServerExecute(AThread: TIdPeerThread);
     procedure Timer1Timer(Sender: TObject);
@@ -260,6 +223,8 @@ type
     procedure TCPServer2Execute(AThread: TIdPeerThread);
     procedure TimerInitObjTimer(Sender: TObject);
     procedure btn1Click(Sender: TObject);
+    procedure TCPServerEcbExecute(AThread: TIdPeerThread);
+    procedure TCPServer2EcbExecute(AThread: TIdPeerThread);
     //--
   private
     { Private declarations }
@@ -275,16 +240,12 @@ type
     FSocketSvrFrm : TASocketSvrFrm;
     FSocketClientFrm : TASocketClientFrm;
     FSocketClient_MonitorFrm : TASocketClientFrm;//--DOC4.0.0〞N001 huangcq090407 add
-    FStopRunning: Boolean;
-    //<---DOC4.0.0〞N002 huangcq081223 add--
-    FBakDataSaveDays:integer;
-    FCBDataLockTimeOut:integer;
 
     FBC14Path,FBC2Path,FBC3Path,FBC5Path,FBC6Path,
     FSwapOptionPath,FSwapYieldPath,FRateLogPath:string;
     FIRSavePathList:TStringList;
-    FRateDatUploadWorkDir,FSendMailOfOpLogFlag:string; FSendMailOfOpLogTime:TTime;  
-
+    FIRSavePathListEcb:TStringList;
+    FRateDatUploadWorkDir:string;
 
     FLoadCountOfIFRS:integer;
     FDataPath : String;
@@ -294,11 +255,10 @@ type
     FTempDocFile_3:String;
     NowIsRunning : Boolean;
     NowIsLoading : Boolean;
-    CBDataMgr : TCBDataMgr;
     FIDLstMgr : TIDLstMgr;
     FLog1,FLog2:TLogHandleThread;
-    FCBDataTokenMng:TCBDataTokenMng;
-    FCBDataWorkHandle:TCBDataWorkHandleThread;
+
+    FCBDataWorkHandle:TCBDataWorkHandleThread; FCBDataWorkHandleEcb:TCBDataWorkHandleThreadEcb;
     FClsBakDataThread:TClsBakDataThread;
 
 
@@ -306,8 +266,11 @@ type
     Procedure InitObj();
     function UpdateGuidOfWorkList_CBData(aTrl:boolean;aCBDataFile:string;
         aVisible:Boolean;aOperator,aTimeKey:string):boolean;
+    function UpdateGuidOfWorkList_CBDataEcb(aTrl:boolean;aCBDataFile:string;
+        aVisible:Boolean;aOperator,aTimeKey:string):boolean;
     function UpdateGuidOfWorkList_IFRS(aOperator,aTimeKey,aCode,aYear,aQ,aIDName,aOp,aMName,aMNameEn:string):boolean;
     function UpdateGuidOfWorkList_NodeData(aTrl:boolean;aCBDataFile:string;aOperator,aTimeKey:string):boolean;
+    function UpdateGuidOfWorkList_NodeDataEcb(aTrl:boolean;aCBDataFile:string;aOperator,aTimeKey:string):boolean;
     //DOC4.0.0〞N002 huangcq081223 add---->
     procedure SendDocMonitorStatusMsg;
     function SendDocMonitorWarningMsg(const Str: String): boolean;
@@ -321,7 +284,8 @@ type
     function Pro_RequestListIFRS(aConnect:TIdTCPConnection):Integer;
     function Pro_RequestUserVlidate(aConnect:TIdTCPConnection):Integer;
     function Pro_RequestUPTLOGRECSFILE(SRequest,sTimeKey:string):Integer;
-    function Pro_RequestUPTOPLOGRECS(aConnect:TIdTCPConnection;SRequest:string):Integer;
+    function Pro_RequestUPTLOGRECSFILEEcb(SRequest,sTimeKey:string):Integer;
+    function Pro_RequestUPTOPLOGRECS(aConnect:TIdTCPConnection;SRequest:string;aEcb:boolean):Integer;
 
     function Pro_RequestMANUALDOCREADDELTMPLOG(aConnect:TIdTCPConnection):Integer;
     function Pro_RequestMANUALDOCDELBACKUPTMP(aConnect:TIdTCPConnection):Integer;
@@ -349,6 +313,7 @@ type
     function Pro_RequestREADCancelLOGDOC_02(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestREADLOGDOC_03(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestGETCBDATAOPLOG(aConnect:TIdTCPConnection;SRequest:string):Integer;
+    function Pro_RequestGETCBDATAOPLOGEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestGETIFRSOPLOG(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestGETIFRSTr1dbData(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestAuditIFRSData(aConnect:TIdTCPConnection;SRequest:string):Integer;
@@ -360,15 +325,14 @@ type
     function Pro_RequestGetShenBaoDoc2Text(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestGetNodeText(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestSetCBDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
+    function Pro_RequestSetCBDatEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestSetcbinfoDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestSetCBTxt(aConnect:TIdTCPConnection;SRequest:string):Integer;
+    function Pro_RequestSetCBTxtEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_Request_Dat(aConnect:TIdTCPConnection;SRequest:string):Integer;
+    function Pro_Request_DatEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
 
     function Pro_Request_RecvFile(aConnect:TIdTCPConnection;SRequest:string):Integer;
-    
-    function ColloectUploadLog:boolean;
-    function CreateAMail(AWarn: Boolean; AEvent,ABody: String): Boolean;
-
     function NodeText2BinDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function NodeText2BinDatEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
 
@@ -382,14 +346,16 @@ type
     function Pro_RequestSetEcbRateFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestSetStockWeightFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestTr1dbStockWeightFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
-    function Pro_RequestTr1dbStockWeightDelFile(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestDelOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
-    function Pro_RequestReBackOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
-
+    
     function Pro_RequestReadNodeFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     //function Pro_RequestSetCBDBFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestReadCBDataFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestSetCBDataFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+
+    function Pro_RequestReadNodeFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+    function Pro_RequestReadCBDataFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+    function Pro_RequestSetCBDataFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     
     function Pro_RecvFile_CBDataFiles(sFileName:string;aConnect:TIdTCPConnection;aShow2Tw:boolean=true):Integer;
     function Pro_TransferFile_ForCBDataFiles(aConnect:TIdTCPConnection;aSrc:string;aShow2Tw:boolean=true):boolean;
@@ -399,10 +365,23 @@ type
     procedure AppExcept(Sender: TObject; E: Exception);
   public
     { Public declarations }
+    FStopRunning: Boolean;
+    FBakDataSaveDays:integer;
+    FCBDataLockTimeOut:integer;
+    FCBDataTokenMng:TCBDataTokenMng;  FCBDataTokenMngEcb:TCBDataTokenMngEcb;
+    CBDataMgr:TCBDataMgr; CBDataMgrEcb:TCBDataMgrEcb; 
+    FSendMailOfOpLogFlag:string; FSendMailOfOpLogTime:TTime;
+    //FSendMailOfOpLogFlagEcb:string; FSendMailOfOpLogTimeEcb:TTime;
+    
     procedure ShowMsg(const Msg:String;AutoConvert:Boolean=true);
     procedure ShowMsgTw(const Msg:String;AutoConvert:Boolean=true);
+    procedure ShowMsgTwEcb(const Msg:String;AutoConvert:Boolean=true);
     procedure ShowMsg2(const Msg:String;AutoConvert:Boolean=true);
     procedure ShowMsg2Tw(const Msg:String;AutoConvert:Boolean=true);
+    procedure ShowMsg2TwEcb(const Msg:String;AutoConvert:Boolean=true);
+
+    function ColloectUploadLog:boolean;
+    function CreateAMail(AWarn: Boolean; AEvent,ABody: String): Boolean;
   end;
 
 var
@@ -490,89 +469,6 @@ begin
   end;
 end;
 
-function GetCbpaOpDataPath:string;
-begin
-  result:=ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\CbpaOpData\';
-end;
-
-function GetAnUploadOpFile(NodeOp:boolean): String;
-var sPath,FileName,FileName2,FileExt : String; Index : Integer;
-begin
-   result:='';
-   sPath:=GetCbpaOpDataPath;
-   if not DirectoryExists(sPath) then
-     Mkdir_Directory(sPath);
-
-   FileName := 'cbpa';
-   if NodeOp then 
-     FileExt  := '.nodeop'
-   else
-     FileExt  := '.cbop';
-   FileName2 := sPath+FileName+'_'+Get_GUID8+FileExt;
-   Result := FileName2;
-end;
-
-function GetAnIFRSUploadOpFile(): String;
-var sPath,FileName,FileName2,FileExt : String; Index : Integer;
-begin
-   result:='';
-   sPath:=GetCbpaOpDataPath;
-   if not DirectoryExists(sPath) then
-     Mkdir_Directory(sPath);
-
-   FileName := 'cbpa';
-   FileExt  := '.ifrsop';
-   FileName2 := sPath+FileName+'_'+Get_GUID8+FileExt;
-   Result := FileName2;
-end;
-
-function CpyDatF(aDatFS,aDatFD:ShortString):boolean;
-var i:integer;
-begin
-  result := false;
-  if not FileExists(aDatFS) then
-  begin
-    result := true;
-    exit;
-  end;
-  for i:=1 to 5 do
-  begin
-    if CopyFile(PChar(String(aDatFS)),PChar(String(aDatFD)),false ) then
-    if FileExists(aDatFD) then
-    begin
-      result := true;
-      exit;
-    end;
-    Sleep(500);
-  end;
-end;
-
-
-function DelDatF(aDatF:ShortString):boolean;
-var i:integer;
-begin
-  result := false;
-  for i:=1 to 5 do
-  begin
-    if FileExists(aDatF) then
-    begin
-      if DeleteFile(aDatF) then
-      begin
-        result := true;
-        exit;
-      end;
-    end
-    else begin
-      result := true;
-      exit;
-    end;
-
-    Sleep(50);
-  end;
-end;
-
-
-
 function TAMainFrm.UpdateGuidOfWorkList_CBData(aTrl:boolean;aCBDataFile:string;
   aVisible:Boolean;aOperator,aTimeKey:string):boolean;
   procedure CreateAnUplaodFlag;
@@ -592,12 +488,38 @@ function TAMainFrm.UpdateGuidOfWorkList_CBData(aTrl:boolean;aCBDataFile:string;
     end;
   end;
 begin
-  //result:=UpdateGuidOfWorkList(aTrl,_Section_CBData,aCBDataFile);
-  //if result then
   CreateAnUplaodFlag;
   begin
     if Assigned(FCBDataWorkHandle) then
       FCBDataWorkHandle.UptGUIDOfCBData;
+  end;
+  result:=true;
+end;
+
+
+function TAMainFrm.UpdateGuidOfWorkList_CBDataEcb(aTrl:boolean;aCBDataFile:string;
+  aVisible:Boolean;aOperator,aTimeKey:string):boolean;
+  procedure CreateAnUplaodFlag;
+  var sFile:string; ts:TStringList;
+  begin
+    sFile:=GetAnUploadOpFileEcb(false);
+    ts:=TStringList.create;
+    try
+      ts.Add('[data]');
+      ts.Add('operator='+aOperator);
+      ts.Add('timekey='+aTimeKey);
+      ts.Add('uptfile='+aCBDataFile);
+      ts.Add('visible='+IntToStr(BoolToInt(aVisible)));
+      ts.SaveToFile(sFile); 
+    finally
+      FreeAndNil(ts);
+    end;
+  end;
+begin
+  CreateAnUplaodFlag;
+  begin
+    if Assigned(FCBDataWorkHandleEcb) then
+      FCBDataWorkHandleEcb.UptGUIDOfCBData;
   end;
   result:=true;
 end;
@@ -716,9 +638,9 @@ function NodeTag2NodeStr(NodeTag:string):string;
     end;
   end;
 }
+
 function TAMainFrm.UpdateGuidOfWorkList_NodeData(aTrl:boolean;aCBDataFile:string;
   aOperator,aTimeKey:string):boolean;
-
   procedure CreateAnUplaodFlag;
   var sFile:string; ts:TStringList;
   begin
@@ -737,8 +659,6 @@ function TAMainFrm.UpdateGuidOfWorkList_NodeData(aTrl:boolean;aCBDataFile:string
   end;
 var sLogOpLst:String;
 begin
-  //result:=UpdateGuidOfWorkList(aTrl,_Section_NodeData,aCBDataFile);
-  //if result then
   CreateAnUplaodFlag;
   sLogOpLst:=''+_LogSep+''+_LogSep+_OpNodeUpload+_LogSep+''+_LogSep+aOperator+_LogSep+
              ''+_LogSep+''+_LogSep+'0';
@@ -747,6 +667,38 @@ begin
   begin
     if Assigned(FCBDataWorkHandle) then
       FCBDataWorkHandle.UptGUIDOfNodeData;
+  end;
+  result:=true;
+end;
+
+function TAMainFrm.UpdateGuidOfWorkList_NodeDataEcb(aTrl:boolean;aCBDataFile:string;
+  aOperator,aTimeKey:string):boolean;
+  procedure CreateAnUplaodFlag;
+  var sFile:string; ts:TStringList;
+  begin
+    sFile:=GetAnUploadOpFileEcb(true);
+    ts:=TStringList.create;
+    try
+      ts.Add('[data]');
+      ts.Add('operator='+aOperator);
+      ts.Add('timekey='+aTimeKey);
+      ts.Add('uptfile='+aCBDataFile);
+      ts.Add('visible=1');
+      ts.SaveToFile(sFile);
+    finally
+      FreeAndNil(ts);
+    end;
+  end;
+var sLogOpLst:String;
+begin
+  CreateAnUplaodFlag;
+  sLogOpLst:=''+_LogSep+''+_LogSep+_OpNodeUpload+_LogSep+''+_LogSep+aOperator+_LogSep+
+             ''+_LogSep+''+_LogSep+'0';
+             //NodeTag2NodeStr(aCBDataFile)+_LogSep+NodeTag2FileName(aCBDataFile)+_LogSep+'0';
+  Pro_RequestUPTLOGRECSFILEEcb(sLogOpLst,aTimeKey);
+  begin
+    if Assigned(FCBDataWorkHandleEcb) then
+      FCBDataWorkHandleEcb.UptGUIDOfNodeData;
   end;
   result:=true;
 end;
@@ -763,14 +715,25 @@ begin
   FLog2.Resume;
 
   FAppParam := TDocMgrParam.Create;
+  FAppParamEcb := TDocMgrParam.Create(ExtractFilePath(Application.ExeName)+'ecbsetup.ini');
   FCBDataTokenMng:=TCBDataTokenMng.Create(FCBDataLockTimeOut,True,FAppParam.IsTwSys);
+  FCBDataTokenMngEcb:=TCBDataTokenMngEcb.Create(FCBDataLockTimeOut,True,FAppParamEcb.IsTwSys);
   FLoadCountOfIFRS:=StrToInt( GetIniFileEx('DownIFRS','LoadCount','20',
     ExtractFilePath(Application.ExeName)+'setup.ini') );
   FClsBakDataThread:=TClsBakDataThread.Create;
   FClsBakDataThread.Resume;
 
-  FDataPath := ExtractFilePath(Application.ExeName)+'Data\';
-  FDocPath := FAppParam.Tr1DBPath  + 'CBData\Document\';
+
+  CBDataMgr := TCBDataMgr.Create(FAppParam.IsTwSys,FAppParam.Tr1DBPath);
+  CBDataMgrEcb := TCBDataMgrEcb.Create(FAppParamEcb.IsTwSys,FAppParamEcb.Tr1DBPath);
+  FDataPath:=CBDataMgrEcb.LoaclDatDir;
+  if (FDataPath<>'') and (not DirectoryExists(FDataPath)) then
+    Mkdir_Directory(FDataPath);
+  FDataPath:=CBDataMgr.LoaclDatDir;
+  if (FDataPath<>'') and (not DirectoryExists(FDataPath)) then
+    Mkdir_Directory(FDataPath);
+
+  FDocPath := FAppParam.Tr1DBPath+'CBData\Document\';
   Mkdir_Directory(FDataPath);
   Mkdir_Directory(FDocPath);
   FTempDocFile_1 := FDataPath+'Doc_01.tmp';
@@ -784,9 +747,8 @@ begin
   DocDataMgr_3 := TDocDataMgr.Create(FTempDocFile_3,FDocPath);
   DocDataMgr_3.SetCheckDocLogSaveDays(FAppParam.CheckDocLogSaveDays_GuoHui);
 
-  DocManualMgr_2 := TDocManualMgr.Create(FTempDocFile_2,FDataPath);//--Doc3.2.0剒⑴3 huangcq080928 add--
-  CBDataMgr := TCBDataMgr.Create(FAppParam.IsTwSys,FAppParam.Tr1DBPath);
-  FIDLstMgr := TIDLstMgr.Create3(FAppParam.Tr1DBPath,M_OutPassaway_P_All); //---Doc3.2.0剒⑴1 huangcq080923 modify
+  DocManualMgr_2 := TDocManualMgr.Create(FTempDocFile_2,FDataPath);//--Doc3.2.0需求3 huangcq080928 add--
+  FIDLstMgr := TIDLstMgr.Create3(FAppParam.Tr1DBPath,M_OutPassaway_P_All); //---Doc3.2.0需求1 huangcq080923 modify
   ProgressBar1.Parent := StatusBar1;
   ProgressBar1.Top := 2;
   ProgressBar1.Left := 1;
@@ -796,6 +758,7 @@ procedure TAMainFrm.FormCreate(Sender: TObject);
 var sFile,sTemp:String; fini:TIniFile; j,jc,iPort,iPort2,aSaveDays:integer;
 begin
   Application.OnException := AppExcept;
+    
   FIRSavePathList:=TStringList.Create;
   sFile:=ExtractFilePath(ParamStr(0))+'setup.ini';
   try
@@ -843,8 +806,39 @@ begin
     TCPServer2.DefaultPort:=iPort2;
     //showMessage(IntToStr(TCPServer2.DefaultPort))) ;
   finally
-    fini.Free;
+    FreeAndNil(fini);
   end;
+
+  FIRSavePathListEcb:=TStringList.Create;
+  sFile:=ExtractFilePath(ParamStr(0))+'ecbsetup.ini';
+  try
+    fini:=TIniFile.create(sFile);
+    jc:= fini.Readinteger('Examine','Count',0);
+    for j:=1 to jc do
+    begin
+      sTemp:= fini.ReadString('Examine',IntToStr(j),'');
+      if Trim(sTemp)<>'' then
+      begin
+        FIRSavePathListEcb.Add(sTemp);
+      end;
+    end;
+
+    //FSendMailOfOpLogTimeEcb:= StrToTime(fini.ReadString('doccenter','SendMailOfOpLogTime','17:00:00'));
+    //FSendMailOfOpLogFlagEcb:= fini.ReadString('doccenter','SendMailDate','');
+    
+    iPort:=fini.ReadInteger('doccenter','DocServerPort',8102);
+    iPort2:=fini.ReadInteger('doccenter','CBDataServerPort',8103);
+    //TCPServerEcb.Active:=false;
+    TCPServerEcb.Bindings.Clear;
+    TCPServerEcb.DefaultPort:=iPort;
+
+    //TCPServer2Ecb.Active:=false;
+    TCPServer2Ecb.Bindings.Clear;
+    TCPServer2Ecb.DefaultPort:=iPort2;
+  finally
+    FreeAndNil(fini);
+  end;
+  
   Caption :=('Doc Center Ver['+GetFileVer(Application.ExeName)+']');
   ClearSysLog(aSaveDays);
   InitObj;
@@ -860,8 +854,15 @@ try
   FCBDataWorkHandle:=TCBDataWorkHandleThread.Create;
   FCBDataWorkHandle.PackCBDataFile('');
   FCBDataWorkHandle.PackCBNodeFile;
-  FCBDataWorkHandle.PackCBNodeFileEcb;
   FCBDataWorkHandle.Resume;
+
+  FCBDataWorkHandleEcb:=TCBDataWorkHandleThreadEcb.Create;
+  if FAppParam.IsTwSys then
+  begin
+    FCBDataWorkHandleEcb.PackCBDataFile('');
+    FCBDataWorkHandleEcb.PackCBNodeFile;
+  end;
+  FCBDataWorkHandleEcb.Resume;
 
   //--DOC4.0.0〞N002 huangcq090617 add----->
   FStopRunning := False;
@@ -885,10 +886,16 @@ try
 
   FIndustryWorkLstTick:=0; FIndustryWorkLstTime:=GetTickCount;  
   FIFRSWorkLstTime:=0; FIFRSWorkLstTick:=GetTickCount;
-  Timer1.Enabled := True;
+  Timer1.Enabled:=true;
   Timer2.Enabled:=true;
+  
   TCPServer.Active := True;
   TCPServer2.Active := True;
+  if FAppParam.IsTwSys then
+  begin
+    TCPServerEcb.Active := True;
+    TCPServer2Ecb.Active := True;
+  end;
   ShowMsg2Tw('服務端偵聽已經開啟.');
 finally
 end;
@@ -926,43 +933,43 @@ begin
           SRequest := CompressOutPutFile(OutPutTradeAndStockCode(FAppParam.Tr1DBPath))
         else if (SRequest = UpperCase('Date@StkIndustry.dat')) Then
         begin
-            sTEMP:=CBDataMgr.GetDateStkIndustryTFN(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDateStkIndustryTFN(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (SRequest = UpperCase('Date@StkIndustryDif.dat')) Then
         begin
-            sTEMP:=CBDataMgr.GetDateStkIndustryDifTFN(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDateStkIndustryDifTFN(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (SRequest = UpperCase('Date@StkBase1.dat')) Then
         begin
-            sTEMP:=CBDataMgr.GetDateStkBase1TFN(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDateStkBase1TFN(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (SRequest = UpperCase('Date@StkBase1Dif.dat')) Then
         begin
-            sTEMP:=CBDataMgr.GetDateStkBase1DifTFN(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDateStkBase1DifTFN(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (PosEx('WeekOf@cbbaseinfo.dat',SRequest)>0) Then
         begin
@@ -976,23 +983,23 @@ begin
         end
         else if (SRequest = UpperCase('Date@cbbaseinfo.dat')) Then
         begin
-            sTEMP:=CBDataMgr.GetDatecbbaseinfo(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDatecbbaseinfo(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (SRequest = UpperCase('Date@closeidlist.lst')) Then
         begin
-            sTEMP:=CBDataMgr.GetDatecloseidlist(SRequest);
-            ShowMsg('f:'+sTEMP);
-            SRequest := CompressOutPutFile(sTEMP);
-            if GetFileSize(sTEMP)=0 then
-            begin
-              if FileExists(sTemp) then DeleteFile(sTEMP);
-            end;
+          sTEMP:=CBDataMgr.GetDatecloseidlist(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
         end
         else if (PosEx('WeekOf@closeidlist.lst',SRequest)>0) Then
         begin
@@ -1035,8 +1042,8 @@ begin
               if FileExists(sTemp) then DeleteFile(sTEMP);
             end;
         end
-
-        Else begin
+        
+        else begin
           sTEMP:=CBDataMgr.GetCBDataTextFileName(SRequest);
           ShowMsg('f:'+sTEMP);
           SRequest := CompressOutPutFile(sTEMP);
@@ -1058,6 +1065,55 @@ begin
         ACompressFile := nil;
         DeleteFile(SRequest);
         ShowMsgTw('完成傳輸資料');
+    finally
+      try
+        if Assigned(AMemoryStream) then
+          FreeAndNil(AMemoryStream);
+      except
+      end;
+      try
+        if Assigned(AStream) then
+          FreeAndNil(AStream);
+      except
+      end;
+      try
+        if Assigned(ACompressFile) then
+          FreeAndNil(ACompressFile);
+      except
+      end;
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_Request_DatEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var AMemoryStream:TMemoryStream; AStream: TStringStream; ACompressFile:TFileStream; sTEMP:string;
+begin
+  with aConnect do
+  begin
+    AMemoryStream:=nil; AStream:=nil; ACompressFile:=nil;
+    try
+        ShowMsgTwEcb('準備傳輸資料');
+
+          sTEMP:=CBDataMgrEcb.GetCBDataTextFileName(SRequest);
+          ShowMsg('f:'+sTEMP);
+          SRequest := CompressOutPutFile(sTEMP);
+          if GetFileSize(sTEMP)=0 then
+          begin
+            if FileExists(sTemp) then DeleteFile(sTEMP);
+          end;
+
+        if FileExists(SRequest) Then
+        Begin
+          ACompressFile := TFileStream.Create(SRequest,fmOpenRead);
+          OpenWriteBuffer;
+          WriteStream(ACompressFile);
+          CloseWriteBuffer;
+        End;
+        if Assigned(ACompressFile) Then
+           ACompressFile.Free;
+        ACompressFile := nil;
+        DeleteFile(SRequest);
+        ShowMsgTwEcb('完成傳輸資料');
     finally
       try
         if Assigned(AMemoryStream) then
@@ -1217,7 +1273,7 @@ begin
   DefCRPremium:=NoneNum;
   DefLRisk:=NoneNum;
   try
-     sTemp:=FAppParam.Tr1DBPath+'CBData\ecbmarket_db\dblst2.lst';
+     sTemp:=FAppParamEcb.Tr1DBPath+'CBData\market_db\dblst2.lst';
      ts.clear;
      GetFileListByDBLstFile(sTemp,ts);
      for i:=0 to ts.count-1 do
@@ -1231,7 +1287,7 @@ begin
             Err,nil);
         end;
      end;
-     sTemp:=FAppParam.Tr1DBPath+'CBData\ecbpublish_db\dblst.lst';
+     sTemp:=FAppParamEcb.Tr1DBPath+'CBData\publish_db\dblst.lst';
      ts.clear;
      GetFileListByDBLstFile(sTemp,ts);
      for i:=0 to ts.count-1 do
@@ -1245,24 +1301,19 @@ begin
             Err,nil);
         end;
      end;
-     sTemp:=FAppParam.Tr1DBPath+'CBData\ecbnodetextforcbpa\';
+     sTemp:=FAppParamEcb.Tr1DBPath+'CBData\nodetextforcbpa\';
      if not DirectoryExists(sTemp) then
        Mkdir_Directory(sTemp);
      SaveFClassAllDat(sTemp,MyCLassLst);
-     FCBDataWorkHandle.PackCBNodeFileEcb();
+     if Assigned(FCBDataWorkHandleEcb) then 
+       FCBDataWorkHandleEcb.PackCBNodeFile();
   finally
     if Assigned(ts) then FreeAndNil(ts);
     FreeCBClass(MyCLassLst);
   end;
 end;
 
-
-function TAMainFrm.Pro_RequestSetCBTxt(aConnect:TIdTCPConnection;SRequest:string):Integer;
-var AMemoryStream:TMemoryStream; AStream: TStringStream; ts,ts2:TStringList;
-   DocTag,sTemp,aNodeText,sDatText,aNodeTextForCBPA,sLogOpCur,sTimeKey:string;
-   bToBin,bEcb:boolean;
-
-   function GetMySectionDat(aInputSrc,aSecBegin,sSecEnd:string):string;
+function GetMySectionDat(aInputSrc,aSecBegin,sSecEnd:string;var ts:TStringList; var ts2:TStringList):string;
    var x1,x2:integer;
    begin
      result:='';
@@ -1285,125 +1336,6 @@ var AMemoryStream:TMemoryStream; AStream: TStringStream; ts,ts2:TStringList;
      end;
      result:=Trim(ts2.text);
    end;
-begin
-  with aConnect do
-  begin
-    bEcb:=false;
-    AMemoryStream:=nil; AStream:=nil; ts:=nil; ts2:=nil;
-    try
-        sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-        WriteLn('HELLO');
-        DocTag := UpperCase(ReadLn);
-        WriteLn('HELLO');
-
-        ShowMsgTw('準備接收資料');
-        AStream := TStringStream.Create('');
-        AMemoryStream := TMemoryStream.Create();
-        //ReadStream(AMemoryStream, -1, True); //--DOC4.0.0—N002 huangcq081223 del
-        ReadStream(AMemoryStream, -1, False); //--DOC4.0.0—N002 huangcq081223 add
-        AMemoryStream.Position := 0;
-        DeCompressStream(AMemoryStream);
-        AMemoryStream.SaveToStream(AStream);
-        AMemoryStream.Free;
-        AMemoryStream := nil;
-        sTemp:=AStream.DataString;
-        aNodeText:=sTemp;
-        sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,aNodeText,true);
-        //aNodeText:=StringReplace(aNodeText,sLogOpCur,'',[rfReplaceAll]);
-        sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
-        sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
-        //--
-        //SetTextByTs('d:\123.txt',aNodeText);
-
-        ts:=TStringList.create;
-        ts2:=TStringList.create;
-        ShowMsgTw('完成接收資料');
-        if not FAppParam.IsTwSys then
-        begin
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Announce>','</CBDB_Announce>');
-          CBDataMgr.NifaxingCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Pass>','</CBDB_Pass>');
-          CBDataMgr.PassCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_market_sh>','</CBDB_market_sh>');
-          CBDataMgr.hushiCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_market_sz>','</CBDB_market_sz>');
-          CBDataMgr.shenshiCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_passaway>','</CBDB_passaway>');
-          CBDataMgr.PassawayCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Stop_Issue>','</CBDB_Stop_Issue>');
-          CBDataMgr.stopCBText := sDatText;
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Prepare_List_china>','</CBDB_Prepare_List_china>');
-          CBDataMgr.guapaiCBText := sDatText;
-        end
-        else begin
-          sDatText:=GetMySectionDat(aNodeText,'<CBDB_ECB_Market>','</CBDB_ECB_Market>');
-          CBDataMgr.SetshangshiCBTxtEcb(sDatText);
-
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_Announce_tw>','</CBDB_Announce_tw>');
-            CBDataMgr.NifaxingCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_Send_tw>','</CBDB_Send_tw>');
-            CBDataMgr.songCBText  := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_Pass_tw>','</CBDB_Pass_tw>');
-            CBDataMgr.PassCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_OTC>','</CBDB_TW_OTC>');
-            CBDataMgr.shangguiCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_Market>','</CBDB_TW_Market>');
-            CBDataMgr.shangshiCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_Stop>','</CBDB_TW_Stop>');
-            CBDataMgr.PassawayCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_StopIssue_tw>','</CBDB_StopIssue_tw>');
-            CBDataMgr.stopCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_Prepare_List_tw>','</CBDB_Prepare_List_tw>');
-            CBDataMgr.guapaiCBText := sDatText;
-            sDatText:=GetMySectionDat(aNodeText,'<CBDB_QueryList_tw>','</CBDB_QueryList_tw>');
-            CBDataMgr.xunquanCBText := sDatText;
-        end;
-        
-        ShowMsg2Tw('執行nodetext2bindat...');
-        NodeText2BinDat(aConnect,SRequest);
-        NodeText2BinDatEcb(aConnect,SRequest);
-        ShowMsg2Tw('nodetext2bindat 執行完畢.');
-
-        if (not UpdateGuidOfWorkList_NodeData(True,'passaway',sLogOpCur,sTimeKey)) or
-           (not UpdateGuidOfWorkList_NodeData(True,'ecbpassaway',sLogOpCur,sTimeKey)) then //DocTag,
-        begin
-          ShowMsg2Tw('產生上傳任務清單失敗.'+DocTag);
-        end;
-        WriteLn('SAVEOK'); //--DOC4.0.0〞N002 huangcq081223 add
-
-        AStream.Free;
-        AStream := nil;
-    finally
-      try
-        if Assigned(AMemoryStream) then
-          FreeAndNil(AMemoryStream);
-      except
-      end;
-      try
-        if Assigned(AStream) then
-          FreeAndNil(AStream);
-      except
-      end;
-      try
-        if Assigned(ts) then
-          FreeAndNil(ts);
-      except
-      end;
-      try
-        if Assigned(ts2) then
-          FreeAndNil(ts2);
-      except
-      end;
-    end;
-  end;
-end;
-
-function TAMainFrm.Pro_RequestSetcbinfoDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
-var AMemoryStream:TMemoryStream; DocTag,DstFile1:string;
-begin
-  
-end;
-
 
 function SetLogOfCBBaseInfoDat(aInputFile:string):boolean;
 var sPath,sLogFile,sLine:string; ts,ts2:TStringList; i,j,iBegin,iEnd:integer;
@@ -1448,6 +1380,202 @@ begin
     FreeAndNil(ts);
     FreeAndNil(ts2);
   end;
+end;
+
+function TAMainFrm.Pro_RequestSetCBTxt(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var AMemoryStream:TMemoryStream; AStream: TStringStream; ts,ts2:TStringList;
+   DocTag,sTemp,aNodeText,sDatText,aNodeTextForCBPA,sLogOpCur,sTimeKey:string;
+   bToBin,bEcb:boolean;
+begin
+  with aConnect do
+  begin
+    bEcb:=false;
+    AMemoryStream:=nil; AStream:=nil; ts:=nil; ts2:=nil;
+    try
+        sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+        WriteLn('HELLO');
+        DocTag := UpperCase(ReadLn);
+        WriteLn('HELLO');
+
+        ShowMsgTw('準備接收資料');
+        AStream := TStringStream.Create('');
+        AMemoryStream := TMemoryStream.Create();
+        //ReadStream(AMemoryStream, -1, True); //--DOC4.0.0—N002 huangcq081223 del
+        ReadStream(AMemoryStream, -1, False); //--DOC4.0.0—N002 huangcq081223 add
+        AMemoryStream.Position := 0;
+        DeCompressStream(AMemoryStream);
+        AMemoryStream.SaveToStream(AStream);
+        AMemoryStream.Free;
+        AMemoryStream := nil;
+        sTemp:=AStream.DataString;
+        aNodeText:=sTemp;
+        sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,aNodeText,true);
+        //aNodeText:=StringReplace(aNodeText,sLogOpCur,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
+        //--
+        //SetTextByTs('d:\123.txt',aNodeText);
+
+        ts:=TStringList.create;
+        ts2:=TStringList.create;
+        ShowMsgTw('完成接收資料');
+        if not FAppParam.IsTwSys then
+        begin
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Announce>','</CBDB_Announce>',ts,ts2);
+          CBDataMgr.NifaxingCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Pass>','</CBDB_Pass>',ts,ts2);
+          CBDataMgr.PassCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_market_sh>','</CBDB_market_sh>',ts,ts2);
+          CBDataMgr.hushiCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_market_sz>','</CBDB_market_sz>',ts,ts2);
+          CBDataMgr.shenshiCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_passaway>','</CBDB_passaway>',ts,ts2);
+          CBDataMgr.PassawayCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Stop_Issue>','</CBDB_Stop_Issue>',ts,ts2);
+          CBDataMgr.stopCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Prepare_List_china>','</CBDB_Prepare_List_china>',ts,ts2);
+          CBDataMgr.guapaiCBText := sDatText;
+        end
+        else begin
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Announce_tw>','</CBDB_Announce_tw>',ts,ts2);
+          CBDataMgr.NifaxingCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Send_tw>','</CBDB_Send_tw>',ts,ts2);
+          CBDataMgr.songCBText  := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Pass_tw>','</CBDB_Pass_tw>',ts,ts2);
+          CBDataMgr.PassCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_OTC>','</CBDB_TW_OTC>',ts,ts2);
+          CBDataMgr.shangguiCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_Market>','</CBDB_TW_Market>',ts,ts2);
+          CBDataMgr.shangshiCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_TW_Stop>','</CBDB_TW_Stop>',ts,ts2);
+          CBDataMgr.PassawayCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_StopIssue_tw>','</CBDB_StopIssue_tw>',ts,ts2);
+          CBDataMgr.stopCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_Prepare_List_tw>','</CBDB_Prepare_List_tw>',ts,ts2);
+          CBDataMgr.guapaiCBText := sDatText;
+          sDatText:=GetMySectionDat(aNodeText,'<CBDB_QueryList_tw>','</CBDB_QueryList_tw>',ts,ts2);
+          CBDataMgr.xunquanCBText := sDatText;
+        end;
+        
+        ShowMsg2Tw('執行nodetext2bindat...');
+        NodeText2BinDat(aConnect,SRequest);
+        ShowMsg2Tw('nodetext2bindat 執行完畢.');
+
+        if (not UpdateGuidOfWorkList_NodeData(True,'passaway',sLogOpCur,sTimeKey)) then //DocTag,
+        begin
+          ShowMsg2Tw('產生上傳任務清單失敗.'+DocTag);
+        end;
+        WriteLn('SAVEOK'); //--DOC4.0.0〞N002 huangcq081223 add
+
+        AStream.Free;
+        AStream := nil;
+    finally
+      try
+        if Assigned(AMemoryStream) then
+          FreeAndNil(AMemoryStream);
+      except
+      end;
+      try
+        if Assigned(AStream) then
+          FreeAndNil(AStream);
+      except
+      end;
+      try
+        if Assigned(ts) then
+          FreeAndNil(ts);
+      except
+      end;
+      try
+        if Assigned(ts2) then
+          FreeAndNil(ts2);
+      except
+      end;
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_RequestSetCBTxtEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var AMemoryStream:TMemoryStream; AStream: TStringStream; ts,ts2:TStringList;
+   DocTag,sTemp,aNodeText,sDatText,aNodeTextForCBPA,sLogOpCur,sTimeKey:string;
+   bToBin,bEcb:boolean;
+begin
+  with aConnect do
+  begin
+    bEcb:=false;
+    AMemoryStream:=nil; AStream:=nil; ts:=nil; ts2:=nil;
+    try
+        sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+        WriteLn('HELLO');
+        DocTag := UpperCase(ReadLn);
+        WriteLn('HELLO');
+
+        ShowMsgTwEcb('準備接收資料');
+        AStream := TStringStream.Create('');
+        AMemoryStream := TMemoryStream.Create();
+        //ReadStream(AMemoryStream, -1, True); //--DOC4.0.0—N002 huangcq081223 del
+        ReadStream(AMemoryStream, -1, False); //--DOC4.0.0—N002 huangcq081223 add
+        AMemoryStream.Position := 0;
+        DeCompressStream(AMemoryStream);
+        AMemoryStream.SaveToStream(AStream);
+        AMemoryStream.Free;
+        AMemoryStream := nil;
+        sTemp:=AStream.DataString;
+        aNodeText:=sTemp;
+        sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,aNodeText,true);
+        //aNodeText:=StringReplace(aNodeText,sLogOpCur,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
+        //--
+        //SetTextByTs('d:\123.txt',aNodeText);
+
+        ts:=TStringList.create;
+        ts2:=TStringList.create;
+        ShowMsgTwEcb('完成接收資料');
+        sDatText:=GetMySectionDat(aNodeText,'<CBDB_ECB_Market>','</CBDB_ECB_Market>',ts,ts2);
+        if sDatText<>'' then 
+          CBDataMgrEcb.SetshangshiCBTxt(sDatText);
+
+        ShowMsg2TwEcb('執行ecbnodetext2bindat...');
+        NodeText2BinDatEcb(aConnect,SRequest);
+        ShowMsg2TwEcb('ecbnodetext2bindat 執行完畢.');
+
+        if (not UpdateGuidOfWorkList_NodeDataEcb(True,'ecbpassaway',sLogOpCur,sTimeKey)) then //DocTag,
+        begin
+          ShowMsg2TwEcb('產生上傳任務清單失敗.'+DocTag);
+        end;
+        WriteLn('SAVEOK'); //--DOC4.0.0〞N002 huangcq081223 add
+
+        AStream.Free;
+        AStream := nil;
+    finally
+      try
+        if Assigned(AMemoryStream) then
+          FreeAndNil(AMemoryStream);
+      except
+      end;
+      try
+        if Assigned(AStream) then
+          FreeAndNil(AStream);
+      except
+      end;
+      try
+        if Assigned(ts) then
+          FreeAndNil(ts);
+      except
+      end;
+      try
+        if Assigned(ts2) then
+          FreeAndNil(ts2);
+      except
+      end;
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_RequestSetcbinfoDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var AMemoryStream:TMemoryStream; DocTag,DstFile1:string;
+begin
+  
 end;
 
 function TAMainFrm.Pro_RequestSetCBDat(aConnect:TIdTCPConnection;SRequest:string):Integer;
@@ -1609,6 +1737,59 @@ begin
   end;
 end;
 
+function TAMainFrm.Pro_RequestSetCBDatEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var AMemoryStream:TMemoryStream; DocTag,DstFile1,sLogOpCur,sTimeKey,sLogOpLst,sLine :string;
+begin
+  with aConnect do
+  begin
+    AMemoryStream:=nil;
+    try
+        sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+        WriteLn('HELLO');
+        DocTag := UpperCase(ReadLn);
+        ShowMsgTwEcb(DocTag);
+        WriteLn('HELLO');
+        sLine :=(ReadLn);
+        ShowMsgTwEcb(sLine);
+        
+        sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,sLine,true);
+        sLine:=StringReplace(sLine,sLogOpCur,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
+        sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
+        
+        sLogOpLst:=GetStrOnly2(_LogSecBegin,_LogSecEnd,sLine,false);
+        if sLogOpLst<>'' then
+        begin
+          sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+          Pro_RequestUPTLOGRECSFILEEcb(sLogOpLst,sTimeKey);
+        end;
+        
+        WriteLn('HELLO');
+        ShowMsgTwEcb('準備接收資料');
+        DstFile1 := GetWinTempPath+Get_GUID8+'.dat';
+
+        AMemoryStream := TMemoryStream.Create();
+        //ReadStream(AMemoryStream, -1, True); //--DOC4.0.0〞N002 huangcq081223 del
+        ReadStream(AMemoryStream, -1, False); //--DOC4.0.0〞N002 huangcq081223 add
+        AMemoryStream.Position := 0;
+        DeCompressStream(AMemoryStream);
+        AMemoryStream.SaveToFile(DstFile1);
+        AMemoryStream.Free;
+        AMemoryStream := nil;
+
+        raise Exception.Create(DocTag+'SetCBDatEcb can not be dealwith.');
+        ShowMsgTwEcb('完成接收資料');
+        WriteLn('SAVEOK');
+    finally
+      try
+        if Assigned(AMemoryStream) then
+          FreeAndNil(AMemoryStream);
+      except
+      end;
+    end;
+  end;
+end;
+
 function TAMainFrm.Pro_RequestGetNodeText(aConnect:TIdTCPConnection;SRequest:string):Integer;
 var ACompressFile:TFileStream; sTEMP:string;
 begin
@@ -1617,25 +1798,20 @@ begin
     ACompressFile:=nil;
     try
         ShowMsgTw('準備傳輸資料');
-         if  OutPutDBFile(FAppParam.Tr1DBPath,SRequest) then
-      //    For i:=0 to High(FileLst) do                  //by leon 080901
-          //  begin
-          //    if  pos(lowercase(SRequest),FileLst[i])>0 then
-                SRequest := CompressOutPutFile(SRequest); //CompressOutPutFile(CBDataMgr.GetCBDataTextFileName(SRequest));
-                if FileExists(SRequest) Then
-                Begin
-                  ACompressFile := TFileStream.Create(SRequest,fmOpenRead);
-                  OpenWriteBuffer;
-                  WriteStream(ACompressFile);
-                  CloseWriteBuffer;
-                End;
-                if Assigned(ACompressFile) Then
-                 ACompressFile.Free;
-                ACompressFile := nil;
-                DeleteFile(SRequest);
-               // ShowMsgTw('完成傳輸資料');
-           //   end;
-              ShowMsgTw('完成傳輸資料');
+        if  OutPutDBFile(FAppParam.Tr1DBPath,SRequest) then
+        SRequest := CompressOutPutFile(SRequest); //CompressOutPutFile(CBDataMgr.GetCBDataTextFileName(SRequest));
+        if FileExists(SRequest) Then
+        Begin
+          ACompressFile := TFileStream.Create(SRequest,fmOpenRead);
+          OpenWriteBuffer;
+          WriteStream(ACompressFile);
+          CloseWriteBuffer;
+        End;
+        if Assigned(ACompressFile) Then
+         ACompressFile.Free;
+        ACompressFile := nil;
+        DeleteFile(SRequest);
+        ShowMsgTw('完成傳輸資料');
     finally
       try
         if Assigned(ACompressFile) then
@@ -1953,6 +2129,70 @@ begin
           try if Assigned(AMemoryStream) then FreeAndNil(AMemoryStream); except end;
         end;
         ShowMsgTw('GETCBDATAOPLOG完成傳送');
+    finally
+      try
+        if Assigned(AMemoryStream) then
+          FreeAndNil(AMemoryStream);
+      except
+      end;
+      try
+        if Assigned(tsNeedTransfer) then
+          FreeAndNil(tsNeedTransfer);
+      except
+      end;
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_RequestGETCBDATAOPLOGEcb(aConnect:TIdTCPConnection;SRequest:string):Integer;
+var vInfo,DstFile1,DstFile2,sUplFile,sTemp:string;  vInfoLst : _CstrLst;
+  AMemoryStream:TMemoryStream;tsNeedTransfer:TStringList;
+begin
+  with aConnect do
+  begin
+    AMemoryStream:=nil; tsNeedTransfer:=nil;
+    try
+        WriteLn('HELLO');
+        vInfo:=ReadLn;
+        ShowMsgTwEcb('CBDATAOPLOGEcb準備傳送'+vInfo);
+        vInfoLst:=DoStrArray(vInfo,',');
+        AMemoryStream:=nil;
+        try
+          DstFile1:=GetWinTempPath+'CBDATAOPLOGEcb'+'.log';
+          DstFile2:=GetWinTempPath+'CBDATALOGEcb'+'.log';
+          sUplFile:=GetWinTempPath+Get_GUID8+'.upl';
+
+          if Length(vInfoLst)>=2 then
+          begin
+            CBDataMgrEcb.GetCBDataOpLog(vInfoLst[0],vInfoLst[1],DstFile1);
+            CBDataMgrEcb.GetCBDataLog(vInfoLst[0],vInfoLst[1],DstFile2);
+          end;
+          if not FileExists(DstFile1) then
+            CreateAnEmptFile(DstFile1);
+          if not FileExists(DstFile2) then
+            CreateAnEmptFile(DstFile2);
+          tsNeedTransfer:=TStringList.create;
+          tsNeedTransfer.add(DstFile1);
+          tsNeedTransfer.add(DstFile2);
+          sUplFile:=ComparessFileListToFile(tsNeedTransfer,sUplFile,'ecb',sTemp);
+
+          AMemoryStream := TMemoryStream.Create();
+          AMemoryStream.LoadFromFile(sUplFile);
+          CompressStream(AMemoryStream);
+          OpenWriteBuffer;
+          WriteStream(AMemoryStream);
+          CloseWriteBuffer;
+        finally
+          if FileExists(DstFile1) then
+             DeleteFile(DstFile1);
+          if FileExists(DstFile2) then
+             DeleteFile(DstFile2);
+          if FileExists(sUplFile) then
+             DeleteFile(sUplFile);
+          SetLength(vInfoLst,0);
+          try if Assigned(AMemoryStream) then FreeAndNil(AMemoryStream); except end;
+        end;
+        ShowMsgTwEcb('GETCBDATAOPLOGEcb完成傳送');
     finally
       try
         if Assigned(AMemoryStream) then
@@ -3174,7 +3414,7 @@ begin
   end;
 end;
 
-function TAMainFrm.Pro_RequestUPTOPLOGRECS(aConnect:TIdTCPConnection;SRequest:string):Integer;
+function TAMainFrm.Pro_RequestUPTOPLOGRECS(aConnect:TIdTCPConnection;SRequest:string;aEcb:boolean):Integer;
 var sLogOpLst,sLogOpCur,sTimeKey:string;
 begin
   result:=0;
@@ -3184,7 +3424,10 @@ begin
   sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
   sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
   sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-  Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
+  if aEcb then
+    Pro_RequestUPTLOGRECSFILEEcb(sLogOpLst,sTimeKey)
+  else 
+    Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
   aConnect.WriteLn('HELLO');
   result:=1;
 end;
@@ -3217,6 +3460,52 @@ begin
            else
              ARec.BeSave := False;
             WriteARec(ARec);
+        end;
+      end;
+    finally
+      try
+        if Assigned(ts) then
+          FreeAndNil(ts);
+      except
+      end;
+      try
+        SetLength(StrLst,0);
+      except
+      end;
+    end;
+end;
+
+function TAMainFrm.Pro_RequestUPTLOGRECSFILEEcb(SRequest,sTimeKey:string):Integer;
+var ts:TStringList; StrLst: _cStrLst;
+    i:integer; sLine,sTheSep:string; ARec:TTrancsationRec;
+begin
+    try
+      ts := TStringList.Create;
+      SRequest:=StringReplace(SRequest,'#13#10',#13#10,[rfReplaceAll]);
+      ts.text:=SRequest;
+      for i:=0 to ts.count-1 do
+      begin
+        sLine:=trim(ts[i]);
+        if sLine='' then
+          continue;
+        if Pos(_LogSep,sLine)>0 then sTheSep:=_LogSep
+        else if Pos(UpperCase(_LogSep),sLine)>0 then sTheSep:=UpperCase(_LogSep)
+        else exit;
+        StrLst:=DoStrArray(sLine,sTheSep);
+        if (Length(StrLst)>=8) then
+        begin
+           ARec.ID := StrLst[0];
+           ARec.IDName := StrLst[1];
+           ARec.Op := StrLst[2];
+           ARec.OpTime := sTimeKey;
+           ARec.Operator := StrLst[4];
+           ARec.ModouleName := StrLst[5];
+           ARec.ModouleNameEn := StrLst[6];
+           if StrLst[7]='1' then
+             ARec.BeSave := True
+           else
+             ARec.BeSave := False;
+            WriteARecEcb(ARec);
         end;
       end;
     finally
@@ -3579,6 +3868,62 @@ finally
 end;
 end;
 
+procedure TAMainFrm.TCPServerEcbExecute(AThread: TIdPeerThread);
+var SRequest,SRequestInit,ReadStr,ErrMsg: string;
+begin
+  EnterCriticalSection(CriticalSection);
+  NowIsRunning := True;
+Try
+try
+  with AThread.Connection do
+  begin
+      ShowMsgTwEcb('有人要求聯機.');
+      //AThread.Connection.MaxLineLength:=FIndyMaxLineLength;
+      WriteLn('ConnectOk');
+      ReadStr := ReadLn;
+      SRequestInit:=ReadStr;
+      if (PosEx('<Cmd>',ReadStr)>0) and
+         (PosEx('</Cmd>',ReadStr)>0) then
+        SRequest:=GetStrOnly2('<Cmd>','</Cmd>',ReadStr,false)
+      else if SameText(ReadStr,Cmd_RcvFile) Then
+        SRequest := ReadStr
+      else if PosEx('DelOfTr1dbStockWeight', ReadStr)=1 then
+         SRequest := ReadStr
+      else
+        SRequest := UpperCase(ReadStr);
+        
+      ShowMsgTWEcb('要做的動作是 ' + SRequest);
+      if (Pos('.DAT',SRequest)>0)  Then
+        Pro_Request_DatEcb(AThread.Connection,SRequest)
+      else if (SRequest = UpperCase('SetCBDat')) Then
+        Pro_RequestSetCBDatEcb(AThread.Connection,SRequest)
+      else if (SRequest = UpperCase('SetCBTxt')) Then
+        Pro_RequestSetCBTxtEcb(AThread.Connection,SRequest)
+      else if SameText(SRequest,'GETCBDATAOPLOG') then
+        Pro_RequestGETCBDATAOPLOGEcb(AThread.Connection,SRequest)
+      else if (PosEx('EcbRateDateDatWrite',SRequest)=1) then
+         Pro_RequestSetEcbRateFiles(AThread.Connection,SRequest,ReadStr);
+  end;
+Except
+   On E : Exception do
+   Begin
+      ErrMsg := E.Message;
+      SendDocMonitorWarningMsg('DocCenter Error'+'('+E.Message+')$E004');//--DOC4.0.0—N001 huangcq090407 add
+      ShowMsgTwEcb('發生錯誤ecb '+ ErrMsg);
+   End;
+End;
+Finally
+   Try
+      AThread.Connection.Disconnect;
+   Except
+   end;
+   ShowMsgTwEcb('切斷聯機');
+   LeaveCriticalSection(CriticalSection);
+   NowIsRunning := false;
+End;
+end;
+
+
 procedure TAMainFrm.TCPServerExecute(AThread: TIdPeerThread);
 var SRequest,SRequestInit,ReadStr,ErrMsg: string;
 begin
@@ -3598,27 +3943,26 @@ try
         SRequest:=GetStrOnly2('<Cmd>','</Cmd>',ReadStr,false)
       else if Pos('UPTLOGRECSFILE:', ReadStr)>0 then //現在應該不再用了
          SRequest := ReadStr
-      else if Pos('UPTOPLOGRECS:', ReadStr)=1 then
+      else if (Pos('UPTOPLOGRECS:', ReadStr)=1) or (Pos('ECBUPTOPLOGRECS:', ReadStr)=1) then
          SRequest := ReadStr
       else if SameText(ReadStr,Cmd_RcvFile) Then
         SRequest := ReadStr
-      else if (PosEx('DelOfTr1dbStockWeight', ReadStr)=1) or
-              (PosEx('ReBackOfTr1dbStockWeight', ReadStr)=1) then
-         SRequest := ReadStr
       else
         SRequest := UpperCase(ReadStr);
       ShowMsgTW('要做的動作是 ' + SRequest);
-      if Pos('UPTOPLOGRECS:', SRequest)=1  Then
-        Pro_RequestUPTOPLOGRECS(AThread.Connection,SRequest)
+      if (Pos('UPTOPLOGRECS:', SRequest)=1) then
+        Pro_RequestUPTOPLOGRECS(AThread.Connection,SRequest,false)
+      else if (Pos('ECBUPTOPLOGRECS:', SRequest)=1) then
+        Pro_RequestUPTOPLOGRECS(AThread.Connection,SRequest,true)
       else if SameText(SRequest,'UserMng') Then
         Pro_RequestUserVlidate(AThread.Connection)
       else if (Pos('.DAT',SRequest)>0) or (SRequest = UpperCase('Date@closeidlist.lst')) or (PosEx('weekof@closeidlist.lst',SRequest)>0)  Then
         Pro_Request_Dat(AThread.Connection,SRequest)
       else if SameText(Cmd_RcvFile,SRequest) Then
         Pro_Request_RecvFile(AThread.Connection,SRequest)
-      //CBDatEdit-DOC3.0.0需求2-leon-08/8/18-add;
       else if (Pos('.RTF',SRequest)>0) Then
          Pro_RequestGetDocRtf(AThread.Connection,SRequest)
+      //CBDatEdit-DOC3.0.0需求2-leon-08/8/18-add;
       else if (Pos('.TXT',SRequest)>0) and ((Pos('DOC_',SRequest)>0) ) Then
          Pro_RequestGetShenBaoDocText(AThread.Connection,SRequest)
       else if (Pos('.TXT',SRequest)>0) and ((Pos('DOC2_',SRequest)>0) ) Then
@@ -3712,8 +4056,6 @@ try
          Pro_RequestIRRateFiles(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('Tr1dbStockWeightRead',SRequest)=1)  then
          Pro_RequestTr1dbStockWeightFiles(AThread.Connection,SRequest,ReadStr)
-      else if (PosEx('Tr1dbDelStockWeightRead',SRequest)=1)  then
-         Pro_RequestTr1dbStockWeightDelFile(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('IRRateDateDatWrite',SRequest)=1) then
          Pro_RequestSetIRRateFiles(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('EcbRateDateDatWrite',SRequest)=1) then
@@ -3721,9 +4063,7 @@ try
       else if (PosEx('StockWeightDateDatWrite',SRequest)=1) then
          Pro_RequestSetStockWeightFiles(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('DelOfTr1dbStockWeight',SRequest)=1) then
-         Pro_RequestDelOfTr1dbStockWeight(AThread.Connection,SRequest)
-      else if (PosEx('ReBackOfTr1dbStockWeight',SRequest)=1) then
-         Pro_RequestReBackOfTr1dbStockWeight(AThread.Connection,SRequest);
+         Pro_RequestDelOfTr1dbStockWeight(AThread.Connection,SRequest);
   end;
 Except
    On E : Exception do
@@ -3743,6 +4083,156 @@ Finally
    LeaveCriticalSection(CriticalSection);
    NowIsRunning := false;
 End;
+end;
+
+
+function TAMainFrm.Pro_RequestDelOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+var sData,sLogOpCur,sTimeKey,sDstPath,sErr,sLogOpLst:string;
+    StrLst2:_cStrLst2; bPro:boolean; ts:TStringList;
+begin
+  with aConnect do
+  begin
+    try
+      ts:=TStringList.create;
+      sDstPath:=FAppParam.Tr1DBPath+'CBData\stockweight\';
+      if not DirectoryExists(sDstPath) then
+        ForceDirectories(sDstPath);
+
+      sData:=GetStrOnly2('(',')',SRequest,false);
+      sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,SRequest,false);
+      StrLst2:=DoStrArray2_2(sData,',');
+      if length(StrLst2)<>3 then
+      begin
+        WriteLnErrEx('參數錯誤.');
+      end
+      else begin
+        bPro:=true;
+        if not (DelStockWeightData(StrLst2[0],StrLst2[1],StrLst2[2],sDstPath,sErr,ts) and (sErr='')) then
+        begin
+          bPro:=false;
+        end
+        else ShowMsgTw('刪除資料成功');
+
+        if not bPro then
+          WriteLnErrEx('後台處理失敗.'+sErr)
+        else begin
+          sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+          if CBDataMgr.Setstockweight(ts,sDstPath,sLogOpCur,sTimeKey) then
+          begin
+            sLogOpLst:=sData+_LogSep+''+_LogSep+_OpDel+_LogSep+''+_LogSep+sLogOpCur+_LogSep+
+              FAppParam.ConvertString(_stockweightMCaption)+_LogSep+_stockweightM+_LogSep+'0';
+            Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
+            WriteLnEx('ok');
+          end else
+            WriteLnErrEx('產生上傳任務失敗.');
+        end;
+      end;
+    finally
+      SetLength(StrLst2,0);
+      FreeAndNil(ts);
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_RequestTr1dbStockWeightFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var ACompressFile:TFileStream; tsNeedTransfer,ts:TStringList;
+    i:integer;
+    sTemp,sErrMsg,sZearoFiles,sUplFile:string;
+
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+
+begin
+  with aConnect do
+  begin
+    ACompressFile:=nil; tsNeedTransfer:=nil; ts:=nil;
+    try
+      sUplFile:='';
+      tsNeedTransfer:=TStringList.create;
+      ts:=TStringList.create;
+      FolderAllFiles(FAppParam.Tr1DBPath+'CBData\stockweight\','.dat',ts,False);
+
+      for i:=0 to ts.count-1 do
+      begin
+        sTemp:=ExtractFileName(ts[i]);
+        sTemp:=StringReplace(sTemp,'stockweight','',[rfReplaceAll, rfIgnoreCase]);
+        sTemp:=StringReplace(sTemp,'.dat','',[rfReplaceAll, rfIgnoreCase]);
+        if MayBeDigital(sTemp) then
+          tsNeedTransfer.Add(ts[i]);
+      end;
+
+      sUplFile:=GetWinTempPath+sCmd+'.upl';//+Get_GUID8
+      if FileExists(sUplFile) then
+        DeleteFile(sUplFile);
+      sUplFile:=ComparessFileListToFile(tsNeedTransfer,sUplFile,'',sZearoFiles);
+      if sUplFile='' then
+      begin
+        WriteLnErrEx('upl文檔打包失敗.');
+        exit;
+      end;
+
+      WriteLnEx('HELLO');
+      sTemp:=ReadLn;
+      if not SameText(sTemp,'HELLO') then
+      begin
+        WriteLnEx('rsp error.'+sTemp);
+        exit;
+      end;
+
+      ShowMsgTw('準備傳輸資料.');
+      if FileExists(sUplFile) Then
+      begin
+        if not Pro_TransferFile_ForCBDataFiles(aConnect,sUplFile,false) then
+        begin
+          ShowMsgTw('傳輸資料失敗.');
+          exit;
+        end;
+      end
+      else begin
+        ShowMsgTw('傳輸資料失敗,file not exists,'+sUplFile);
+        exit;
+      end;
+      DeleteFile(sUplFile);
+      ShowMsgTw('完成傳輸資料');
+
+    finally
+      try
+        if Assigned(ACompressFile) then
+          FreeAndNil(ACompressFile);
+      except
+      end;
+      try
+        if Assigned(tsNeedTransfer) then
+          FreeAndNil(tsNeedTransfer);
+      except
+      end;
+      try
+        if Assigned(ts) then
+          FreeAndNil(ts);
+      except
+      end;
+    end;
+  end;
 end;
 
 {
@@ -3991,170 +4481,6 @@ begin
 end;
 
 
-function TAMainFrm.Pro_RequestTr1dbStockWeightFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
-var ACompressFile:TFileStream; tsNeedTransfer,ts:TStringList;
-    i:integer;
-    sTemp,sErrMsg,sZearoFiles,sUplFile:string;
-
-  procedure WriteLnEx(amsg:string);
-  begin
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-  procedure WriteLnErrEx(amsg:string);
-  begin
-    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-
-begin
-  with aConnect do
-  begin
-    ACompressFile:=nil; tsNeedTransfer:=nil; ts:=nil;
-    try
-      sUplFile:='';
-      tsNeedTransfer:=TStringList.create;
-      ts:=TStringList.create;
-      FolderAllFiles(FAppParam.Tr1DBPath+'CBData\stockweight\','.dat',ts,False);
-
-      for i:=0 to ts.count-1 do
-      begin
-        sTemp:=ExtractFileName(ts[i]);
-        sTemp:=StringReplace(sTemp,'stockweight','',[rfReplaceAll, rfIgnoreCase]);
-        sTemp:=StringReplace(sTemp,'.dat','',[rfReplaceAll, rfIgnoreCase]);
-        if MayBeDigital(sTemp) then
-          tsNeedTransfer.Add(ts[i]);
-      end;
-
-      sUplFile:=GetWinTempPath+sCmd+'.upl';//+Get_GUID8
-      if FileExists(sUplFile) then
-        DeleteFile(sUplFile);
-      sUplFile:=ComparessFileListToFile(tsNeedTransfer,sUplFile,'',sZearoFiles);
-      if sUplFile='' then
-      begin
-        WriteLnErrEx('upl文檔打包失敗.');
-        exit;
-      end;
-
-      WriteLnEx('HELLO');
-      sTemp:=ReadLn;
-      if not SameText(sTemp,'HELLO') then
-      begin
-        WriteLnEx('rsp error.'+sTemp);
-        exit;
-      end;
-
-      ShowMsgTw('準備傳輸資料.');
-      if FileExists(sUplFile) Then
-      begin
-        if not Pro_TransferFile_ForCBDataFiles(aConnect,sUplFile,false) then
-        begin
-          ShowMsgTw('傳輸資料失敗.');
-          exit;
-        end;
-      end
-      else begin
-        ShowMsgTw('傳輸資料失敗,file not exists,'+sUplFile);
-        exit;
-      end;
-      DeleteFile(sUplFile);
-      ShowMsgTw('完成傳輸資料');
-
-    finally
-      try
-        if Assigned(ACompressFile) then
-          FreeAndNil(ACompressFile);
-      except
-      end;
-      try
-        if Assigned(tsNeedTransfer) then
-          FreeAndNil(tsNeedTransfer);
-      except
-      end;
-      try
-        if Assigned(ts) then
-          FreeAndNil(ts);
-      except
-      end;
-    end;
-  end;
-end;
-
-function TAMainFrm.Pro_RequestTr1dbStockWeightDelFile(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
-var ACompressFile:TFileStream; tsNeedTransfer:TStringList;
-    i:integer;
-    sTemp,sErrMsg,sZearoFiles,sUplFile:string;
-
-  procedure WriteLnEx(amsg:string);
-  begin
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-  procedure WriteLnErrEx(amsg:string);
-  begin
-    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-
-begin
-  with aConnect do
-  begin
-    ACompressFile:=nil; tsNeedTransfer:=nil;
-    try
-      sUplFile:='';
-      tsNeedTransfer:=TStringList.create;
-      tsNeedTransfer.Add(FAppParam.Tr1DBPath+'CBData\stockweight\'+_stockweightDelF);
-      sUplFile:=GetWinTempPath+sCmd+'.upl';//+Get_GUID8
-      if FileExists(sUplFile) then
-        DeleteFile(sUplFile);
-      sUplFile:=ComparessFileListToFile(tsNeedTransfer,sUplFile,'',sZearoFiles);
-      if sUplFile='' then
-      begin
-        WriteLnErrEx('upl文檔打包失敗.');
-        exit;
-      end;
-
-      WriteLnEx('HELLO');
-      sTemp:=ReadLn;
-      if not SameText(sTemp,'HELLO') then
-      begin
-        WriteLnEx('rsp error.'+sTemp);
-        exit;
-      end;
-
-      ShowMsgTw('準備傳輸資料.');
-      if FileExists(sUplFile) Then
-      begin
-        if not Pro_TransferFile_ForCBDataFiles(aConnect,sUplFile,false) then
-        begin
-          ShowMsgTw('傳輸資料失敗.');
-          exit;
-        end;
-      end
-      else begin
-        ShowMsgTw('傳輸資料失敗,file not exists,'+sUplFile);
-        exit;
-      end;
-      DeleteFile(sUplFile);
-      ShowMsgTw('完成傳輸資料');
-
-    finally
-      try
-        if Assigned(ACompressFile) then
-          FreeAndNil(ACompressFile);
-      except
-      end;
-      try
-        if Assigned(tsNeedTransfer) then
-          FreeAndNil(tsNeedTransfer);
-      except
-      end;
-    end;
-  end;
-end;
-
 function TAMainFrm.Pro_RequestIRRateFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
 var ACompressFile:TFileStream; tsNeedTransfer,ts:TStringList;
     i,j:integer;
@@ -4273,7 +4599,6 @@ begin
       end;
     end;
   end;
-
 end;
 
 
@@ -4299,14 +4624,6 @@ begin
     ACompressFile:=nil; tsNeedTransfer:=nil;
     try
       sUplFile:='';
-      {tsNeedTransfer:=TStringList.create;
-      sTemp:=FAppParam.Tr1DBPath+'CBData\nodetextforcbpa\';
-      FolderAllFiles(sTemp,'.dat',tsNeedTransfer,false);
-
-      sUplFile:=GetWinTempPath+sCmd+Get_GUID8+'.upl';
-      if FileExists(sUplFile) then
-        DeleteFile(sUplFile);
-      sUplFile:=ComparessFileListToFile(tsNeedTransfer,sUplFile,'',sZearoFiles);}
       //InputDatFileFmt2(sUplFile,'e:\',sTemp);
       for i:=1 to 3 do
       begin
@@ -4322,9 +4639,13 @@ begin
         exit;
       end;
       if SameText(sCmd,'ReadEcbNodeFiles') then
-        sUplFile:=FCBDataWorkHandle.FCBNodeDat_PackFileEcb
-      else
+      begin
+        if Assigned(FCBDataWorkHandleEcb) then 
+        sUplFile:=FCBDataWorkHandleEcb.FCBNodeDat_PackFile;
+      end
+      else begin
         sUplFile:=FCBDataWorkHandle.FCBNodeDat_PackFile;
+      end;
       if sUplFile='' then
       begin
         WriteLnErrEx('upl文檔打包失敗.');
@@ -4374,6 +4695,90 @@ begin
   end;
 end;
 
+function TAMainFrm.Pro_RequestReadNodeFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var ACompressFile:TFileStream; tsNeedTransfer,ts:TStringList;
+    i,j:integer;
+    sTemp,sUplFile,sOneFile,sTempFile,sZearoFiles:string;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+
+begin
+  with aConnect do
+  begin
+    ACompressFile:=nil; tsNeedTransfer:=nil;
+    try
+      sUplFile:='';
+      for i:=1 to 3 do
+      begin
+        if FCBDataWorkHandleEcb.FCBNodeDat_PackTag then
+        begin
+          Sleep(1000);
+        end
+        else break;
+      end;
+      if FCBDataWorkHandleEcb.FCBNodeDat_PackTag then
+      begin
+        WriteLnErrEx('Tr1db節點資料正在打包更新中.');
+        exit;
+      end;
+      sUplFile:=FCBDataWorkHandleEcb.FCBNodeDat_PackFile;
+      if sUplFile='' then
+      begin
+        WriteLnErrEx('upl文檔打包失敗.');
+        exit;
+      end;
+
+      WriteLnEx('HELLO');
+      sTemp:=ReadLn;
+      if not SameText(sTemp,'HELLO') then
+      begin
+        WriteLnEx('rsp error.'+sTemp);
+        exit;
+      end;
+
+      ShowMsg2TwEcb('準備傳輸資料.');
+      if FileExists(sUplFile) Then
+      begin
+        if not Pro_TransferFile_ForCBDataFiles(aConnect,sUplFile) then
+        begin
+          ShowMsg2TwEcb('傳輸資料失敗.');
+          exit;
+        end;
+      end
+      else begin
+        ShowMsg2TwEcb('傳輸資料失敗,file not exists,'+sUplFile);
+        exit;
+      end;
+      //DeleteFile(sUplFile);
+      ShowMsg2TwEcb('完成傳輸資料');
+    finally
+      try
+        if Assigned(ACompressFile) then
+          FreeAndNil(ACompressFile);
+      except
+      end;
+      try
+        if Assigned(tsNeedTransfer) then
+          FreeAndNil(tsNeedTransfer);
+      except
+      end;
+      try
+        if Assigned(ts) then
+          FreeAndNil(ts);
+      except
+      end;
+    end;
+  end;
+end;
 
 function TAMainFrm.Pro_RequestReadCBDataFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
 var ACompressFile:TFileStream; tsNeedTransfer:TStringList;
@@ -4616,6 +5021,246 @@ begin
     end;
   end;
 end;
+
+function TAMainFrm.Pro_RequestReadCBDataFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var ACompressFile:TFileStream; tsNeedTransfer:TStringList;
+    sTemp,sLock,sLocker:string; DatFileList,GuidList,RspDatFileList,RspGuidList:_cStrLst2;
+    i,j:integer;
+    sUplFile,sOneFile,sTempLock,sTempGuid,sTempFile,sZearoFiles:string;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure AddToRsp(aRspGuid,aRspFileName:string);
+  var x1:integer;
+  begin
+     x1:=Length(RspDatFileList);
+     SetLength(RspDatFileList,x1+1);
+     SetLength(RspGuidList,x1+1);
+     RspDatFileList[x1]:=aRspFileName;
+     RspGuidList[x1]:=aRspGuid;
+  end;
+  function GetRspDatFileListText:string;
+  begin
+    result:=GetStrLst2Text(RspDatFileList);
+  end;
+  function GetRspGUIDListText:string;
+  begin
+    result:=GetStrLst2Text(RspGuidList);
+  end;
+
+  function ProOfWork_1:string;
+  var x1:Integer;
+  begin
+    result:='';
+    tsNeedTransfer.clear;
+    SetLength(RspDatFileList,0);
+    SetLength(RspGuidList,0);
+
+      for x1:=0 to High(DatFileList) do
+      begin
+        sOneFile:=DatFileList[x1];
+        sTempLock:=FCBDataTokenMngEcb.CheckDatLock(sOneFile);
+        if (sTempLock<>'') and (not SameText(sTempLock,sLocker)) then
+        begin
+          result:=(sOneFile+'文檔被其他使用者鎖定.'+sTempLock);
+          exit;
+        end;
+        sTempGuid:=FCBDataTokenMngEcb.GetDatGuid(sOneFile);
+        if (not SameText(sTempGuid,GuidList[x1])) then
+        begin
+          sTempFile:=CBDataMgrEcb.GetCBDataFile_FullPath(sOneFile);
+          if FileExists(sTempFile) then
+          begin
+            AddToRsp(sTempGuid,sOneFile);
+            tsNeedTransfer.Add(sTempFile);
+          end;
+        end;
+      end;
+  end;
+
+  function ProOfWork_2:string;
+  begin
+    result:='';
+    if not FCBDataTokenMngEcb.LockDatFileList(DatFileList,sLocker) then 
+    begin
+      result:=('文檔鎖定失敗.'+sLocker);
+      exit;
+    end;
+  end;
+begin
+  with aConnect do
+  begin
+    ACompressFile:=nil; tsNeedTransfer:=nil;
+    try
+      sLock:=GetStrOnly2('<Lock>','</Lock>',SRequest,false);
+      sLocker:=GetStrOnly2('<Locker>','</Locker>',SRequest,false);
+      sTemp:=GetStrOnly2('<DatFileList>','</DatFileList>',SRequest,false);
+      DatFileList:=DoStrArray2(sTemp,',');
+      sTemp:=GetStrOnly2('<GuidList>','</GuidList>',SRequest,false);
+      GuidList:=DoStrArray2(sTemp,',');
+      if (not SameText(sLock,'0')) and (not SameText(sLock,'1'))  then
+      begin
+        WriteLnErrEx('參數錯誤.Lock='+sLock);
+        exit;
+      end;
+      if sLocker='' then
+      begin
+        WriteLnErrEx('參數錯誤.Locker=null');
+        exit;
+      end;
+      if Length(GuidList)=0 then
+      begin
+        WriteLnErrEx('參數錯誤.Length(GuidList)=0');
+        exit;
+      end;
+      if Length(GuidList)<>Length(DatFileList) then
+      begin
+        WriteLnErrEx('參數錯誤.Length(GuidList)<>Length(DatFileList)');
+        exit;
+      end;
+
+      sUplFile:='';
+      tsNeedTransfer:=TStringList.create;
+      sTemp:='';
+      for i:=1 to 5 do
+      begin
+        sTemp:=ProOfWork_1;
+        if sTemp='' then
+          break;
+        Sleep(2000);
+      end;
+      if sTemp<>'' then
+      begin
+        WriteLnErrEx(sTemp);
+        exit;
+      end;
+        
+      //需要鎖定文檔
+      if SameText(sLock,'1') then
+      begin
+        for i:=1 to 5 do
+        begin
+          sTemp:=ProOfWork_2;
+          if sTemp='' then
+            break;
+          Sleep(2000);
+        end;
+        if sTemp<>'' then
+        begin
+          WriteLnErrEx(sTemp);
+          exit;
+        end;
+      end;
+
+      if tsNeedTransfer.Count=1 then
+      begin
+        j:=FCBDataTokenMngEcb.IndexOfDat(ExtractFileName(tsNeedTransfer[0]));
+        for i:=1 to 3 do
+        begin
+          if FCBDataWorkHandleEcb.FCBDataAry_PackTag[j] then
+          begin
+            Sleep(1000);
+          end
+          else break;
+        end;
+        if FCBDataWorkHandleEcb.FCBDataAry_PackTag[j] then
+        begin
+          WriteLnErrEx(ExtractFileName(tsNeedTransfer[0])+'正在打包更新中.');
+          exit;
+        end;
+        sUplFile:=FCBDataWorkHandleEcb.FCBDataAry_PackFile[j];
+      end
+      else begin
+        for i:=1 to 3 do
+        begin
+          if FCBDataWorkHandleEcb.FCBDataAll_PackTag or
+             FCBDataWorkHandleEcb.FCBDataExceptCbdocAll_PackTag then
+          begin
+            Sleep(1000);
+          end
+          else break;
+        end;
+        if FCBDataWorkHandleEcb.FCBDataAll_PackTag or
+           FCBDataWorkHandleEcb.FCBDataExceptCbdocAll_PackTag then
+        begin
+          WriteLnErrEx('cbdata資料正在打包更新中.');
+          exit;
+        end;
+        j:=-1;
+        for i:=0 to tsNeedTransfer.Count-1 do
+        begin
+          if SameText(ExtractFileName(tsNeedTransfer[i]),'cbdoc.dat') then
+          begin
+            j:=i;
+            break;
+          end;
+        end;
+        if j=-1 then
+          sUplFile:=FCBDataWorkHandleEcb.FCBDataExceptCbdocAll_PackFile
+        else
+          sUplFile:=FCBDataWorkHandleEcb.FCBDataAll_PackFile;
+      end;
+      
+      //InputDatFileFmt2(sUplFile,'e:\',sTemp);
+      if sUplFile='' then
+      begin
+        WriteLnErrEx('upl文檔打包失敗.');
+        exit;
+      end;
+
+      sTemp:='<RspGuidList>'+GetRspGUIDListText+'</RspGuidList>'+
+             '<RspDatFileList>'+GetRspDatFileListText+'</RspDatFileList>';
+      WriteLnEx(sTemp);
+      sTemp:=ReadLn;
+      if not SameText(sTemp,'HELLO') then
+      begin
+        WriteLnEx('rsp error.'+sTemp);
+        exit;
+      end;
+
+      ShowMsg2TwEcb('準備傳輸資料.');
+      if FileExists(sUplFile) Then
+      begin
+        if not Pro_TransferFile_ForCBDataFiles(aConnect,sUplFile) then
+        begin
+          ShowMsg2TwEcb('傳輸資料失敗.');
+          exit;
+        end;
+      end
+      else begin
+        ShowMsg2TwEcb('傳輸資料失敗,file not exists,'+sUplFile);
+        exit;
+      end;
+      //DeleteFile(sUplFile);
+      ShowMsg2TwEcb('完成傳輸資料');
+
+    finally
+      try
+        if Assigned(ACompressFile) then
+          FreeAndNil(ACompressFile);
+      except
+      end;
+      try
+        if Assigned(tsNeedTransfer) then
+          FreeAndNil(tsNeedTransfer);
+      except
+      end;
+      try SetLength(DatFileList,0); except end;
+      try SetLength(GuidList,0); except end;
+      try SetLength(RspDatFileList,0); except end;
+      try SetLength(RspGuidList,0); except end;
+    end;
+  end;
+end;
+
 function TAMainFrm.Pro_TransferFile_ForCBDataFiles(aConnect:TIdTCPConnection;aSrc:string;aShow2Tw:boolean):boolean;
     function StartShow(aMax:integer):Boolean;
     begin
@@ -4631,46 +5276,6 @@ function TAMainFrm.Pro_TransferFile_ForCBDataFiles(aConnect:TIdTCPConnection;aSr
       else ShowMsgTw(amsg);
       aConnect.WriteLn(amsg);
     end;
-{const CBDataFilesPerSize = 8192;
-var iFileHandle,iFileLen,cnt,iSize,iPerSize:integer;
-    buf:array[0..CBDataFilesPerSize-1] of byte;
-    //buf:array of byte;
-    sTemp1,SResponse:string;
-begin
-  result:=false;
-  with aConnect do
-  begin
-        //iPerSize:=FPerSize;
-        iPerSize:=CBDataFilesPerSize;
-        try
-          //setlength(buf,iPerSize);
-          iFileHandle:=FileOpen(aSrc,fmOpenRead);
-          iFileLen:=FileSeek(iFileHandle,0,2);
-          FileSeek(iFileHandle,0,0);
-          sTemp1:='<FileLen>'+ Inttostr(iFileLen) +'</FileLen>'+
-                  '<PerSize>'+ Inttostr(iPerSize) +'</PerSize>';
-          WriteLn(sTemp1);
-          SResponse := (ReadLn);
-          if not sametext('HELLO', SResponse) then exit;
-          cnt:=0;
-          StartShow(iFileLen);
-
-          while true do
-          begin
-            iSize:=FileRead(iFileHandle,buf,iPerSize);
-            if iSize<=0 then break;
-            writeBuffer(buf,iSize);
-            Inc(cnt,iSize);
-            UptShow(cnt,iFileLen);
-          end;
-          result:=true;
-        finally
-          try FileClose(iFileHandle); except end;
-          //try SetLength(buf,0); except end;
-        end;
-  end;
-end;}
-
 const CBDataFilesPerSize = 4096;
 var iFileHandle,iFileLen,cnt,iSize,iPerSize:integer;
     //buf:array[0..CBDataFilesPerSize-1] of byte;
@@ -5020,112 +5625,6 @@ begin
   end;
 end;
 
-function TAMainFrm.Pro_RequestDelOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
-  procedure WriteLnEx(amsg:string);
-  begin
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-  procedure WriteLnErrEx(amsg:string);
-  begin
-    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-var sData,sDelCodeField,sLogOpCur,sTimeKey,sDstPath,sErr,sLogOpLst:string;
-    bPro:boolean; ts:TStringList;
-begin
-  with aConnect do
-  begin
-    try
-      ts:=TStringList.create;
-      sDstPath:=FAppParam.Tr1DBPath+'CBData\stockweight\';
-      if not DirectoryExists(sDstPath) then
-        ForceDirectories(sDstPath);
-
-      sData:=GetStrOnly2('<data>','</data>',SRequest,false);
-      sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,SRequest,false);
-
-        bPro:=true; sDelCodeField:='';
-        if not (DelStockWeightData(sData,sDstPath,sErr,ts,sDelCodeField) and (sErr='')) then
-        begin
-          bPro:=false;
-        end
-        else ShowMsgTw('刪除資料成功');
-
-        if not bPro then
-          WriteLnErrEx('後台處理失敗.'+sErr)
-        else begin
-          sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-          if CBDataMgr.Setstockweight(ts,sDstPath,sLogOpCur,sTimeKey) then
-          begin
-            sLogOpLst:=sDelCodeField+_LogSep+''+_LogSep+_OpDel+_LogSep+''+_LogSep+sLogOpCur+_LogSep+
-              FAppParam.ConvertString(_stockweightMCaption)+_LogSep+_stockweightM+_LogSep+'0';
-            Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
-            WriteLnEx('ok');
-          end else
-            WriteLnErrEx('產生上傳任務失敗.');
-        end;
-
-    finally
-      FreeAndNil(ts);
-    end;
-  end;
-end;
-
-function TAMainFrm.Pro_RequestReBackOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
-  procedure WriteLnEx(amsg:string);
-  begin
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-  procedure WriteLnErrEx(amsg:string);
-  begin
-    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
-    ShowMsgTw(amsg);
-    aConnect.WriteLn(amsg);
-  end;
-var sData,sDelCodeField,sLogOpCur,sTimeKey,sDstPath,sErr,sLogOpLst:string;
-    bPro:boolean; ts:TStringList;
-begin
-  with aConnect do
-  begin
-    try
-      ts:=TStringList.create;
-      sDstPath:=FAppParam.Tr1DBPath+'CBData\stockweight\';
-      if not DirectoryExists(sDstPath) then
-        ForceDirectories(sDstPath);
-
-      sData:=GetStrOnly2('<data>','</data>',SRequest,false);
-      sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,SRequest,false);
-
-
-        bPro:=true; sDelCodeField:='';
-        if not (ReBackStockWeightData(sData,sDstPath,sErr,ts,sDelCodeField) and (sErr='')) then
-        begin
-          bPro:=false;
-        end
-        else ShowMsgTw('復原刪除功');
-
-        if not bPro then
-          WriteLnErrEx('後台處理失敗.'+sErr)
-        else begin
-          sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-          if CBDataMgr.Setstockweight(ts,sDstPath,sLogOpCur,sTimeKey) then
-          begin
-            sLogOpLst:=sDelCodeField+_LogSep+''+_LogSep+_OpReBack+_LogSep+''+_LogSep+sLogOpCur+_LogSep+
-              FAppParam.ConvertString(_stockweightMCaption)+_LogSep+_stockweightM+_LogSep+'0';
-            Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
-            WriteLnEx('ok');
-          end else
-            WriteLnErrEx('產生上傳任務失敗.');
-        end;
-
-    finally
-      FreeAndNil(ts);
-    end;
-  end;
-end;
 
 function TAMainFrm.Pro_RequestSetStockWeightFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
 var sTemp,sOutFile,sLocker,sErr,sUplFile,sDate,sLogOpCur,sCurDataType,sTimeKey,sLogOpLst,sDstPath:string;
@@ -5156,8 +5655,8 @@ begin
       sDstPath:=FAppParam.Tr1DBPath+'CBData\stockweight\';
       if not DirectoryExists(sDstPath) then
         ForceDirectories(sDstPath);
-
-      sUplFile:=ExtractFilePath(ParamStr(0))+'Data\Industry\Audit\stockweight\'+FmtDt8(date)+'\';
+        
+       sUplFile:=ExtractFilePath(ParamStr(0))+'Data\Industry\Audit\stockweight\'+FmtDt8(date)+'\';
       if not DirectoryExists(sUplFile) then
         Mkdir_Directory(sUplFile);
       sUplFile:=sUplFile+FormatDateTime('yyyymmdd_hhmmss',now)+'.upl';
@@ -5178,7 +5677,7 @@ begin
           sCurDataType:=GetStrOnly2('<CurData>','</CurData>',SRequest,false);
 
           bPro:=true;
-          if not (SaveStockWeightData(sOutFile,sDstPath,sErr,ts) and (sErr='')) then
+           if not (SaveStockWeightData(sOutFile,sDstPath,sErr,ts) and (sErr='')) then
           begin
             bPro:=false;
           end
@@ -5255,7 +5754,7 @@ begin
       begin
         sOneCmd:='00';
         sTemp:=doccentertwTempPath;
-        //sTemp:=FIRSavePathList[0];
+        //sTemp:=FIRSavePathListEcb[0];
         if InputDatFileFmt2_ForSetCBData(sUplFile,sTemp,sErr)
            and (sErr='') then
         begin
@@ -5267,13 +5766,13 @@ begin
           bPro:=true;
           if FileExists(sTemp+'ntd2usd.dat') then 
           if bPro then 
-          for j:=0 to FIRSavePathList.Count-1 do
+          for j:=0 to FIRSavePathListEcb.Count-1 do
           begin
-            if not (Saventd2usdData(sTemp,FIRSavePathList[j],sErr) and (sErr='')) then
+            if not (Saventd2usdData(sTemp,FIRSavePathListEcb[j],sErr) and (sErr='')) then
             begin
               bPro:=false;
             end
-            else ShowMsgTw('ntd2us.dat'+'成功更新至'+FIRSavePathList[j]);
+            else ShowMsgTw('ntd2us.dat'+'成功更新至'+FIRSavePathListEcb[j]);
             if not bPro then
               break;
             sOneCmd[1]:='1';
@@ -5281,13 +5780,13 @@ begin
 
           if FileExists(sTemp+'fed.dat') then 
           if bPro then 
-          for j:=0 to FIRSavePathList.Count-1 do
+          for j:=0 to FIRSavePathListEcb.Count-1 do
           begin
-            if not (SavfedData(sTemp,FIRSavePathList[j],sErr) and (sErr='')) then
+            if not (SavfedData(sTemp,FIRSavePathListEcb[j],sErr) and (sErr='')) then
             begin
               bPro:=false;
             end
-            else ShowMsgTw('fed.dat'+'成功更新至'+FIRSavePathList[j]);
+            else ShowMsgTw('fed.dat'+'成功更新至'+FIRSavePathListEcb[j]);
             if not bPro then
               break;
             sOneCmd[2]:='1';
@@ -5297,11 +5796,11 @@ begin
             WriteLnErrEx('更新資料失敗.'+sErr)
           else begin
             sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-            if CBDataMgr.SetECBRate(FIRSavePathList[0],sLogOpCur,sTimeKey,sOneCmd) then
+            if CBDataMgrEcb.SetECBRate(FIRSavePathListEcb[0],sLogOpCur,sTimeKey,sOneCmd) then
             begin
               sLogOpLst:=sDate+_LogSep+''+_LogSep+_OpDataOp+_LogSep+''+_LogSep+sLogOpCur+_LogSep+
                 FAppParam.ConvertString(_EcbRateMCaption)+_LogSep+_EcbRateM+_LogSep+'0';
-              Pro_RequestUPTLOGRECSFILE(sLogOpLst,sTimeKey);
+              Pro_RequestUPTLOGRECSFILEEcb(sLogOpLst,sTimeKey);
               WriteLnEx('HELLO');
             end else
               WriteLnErrEx('產生上傳任務失敗.');
@@ -5311,6 +5810,109 @@ begin
       end;
       ShowMsgTw('完成資料處理');
     finally
+    end;
+  end;
+end;
+
+
+function TAMainFrm.Pro_RequestSetCBDataFilesEcb(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var sTemp,sLocker,sErr,sDatFileLst,sLogOpLst,sLogOpCur,sTimeKey:string; DatFileList,GuidList:_cStrLst2;
+    i,j:integer;
+    sUplFile,sOneFile,sTempLock,sTempGuid,sTempFile:string;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsg2TwEcb(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+begin
+  with aConnect do
+  begin
+    try
+      sLogOpLst:=GetStrOnly2(_LogSecBegin,_LogSecEnd,SRequest,false);
+      sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,sLogOpLst,true);
+      sLogOpLst:=StringReplace(sLogOpLst,sLogOpCur,'',[rfReplaceAll]);
+      sLogOpCur:=StringReplace(sLogOpCur,_OpCurBegin,'',[rfReplaceAll]);
+      sLogOpCur:=StringReplace(sLogOpCur,_OpCurEnd,'',[rfReplaceAll]);
+      sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+      
+      sLocker:=GetStrOnly2('<Locker>','</Locker>',SRequest,false);
+      sTemp:=GetStrOnly2('<DatFileList>','</DatFileList>',SRequest,false);
+      sDatFileLst:=sTemp;
+      DatFileList:=DoStrArray2(sTemp,',');
+      sTemp:=GetStrOnly2('<GuidList>','</GuidList>',SRequest,false);
+      GuidList:=DoStrArray2(sTemp,',');
+      if sLocker='' then
+      begin
+        WriteLnErrEx('參數錯誤.Locker=null');
+        exit;
+      end;
+      if Length(GuidList)=0 then
+      begin
+        WriteLnErrEx('參數錯誤.Length(GuidList)=0');
+        exit;
+      end;
+      if Length(GuidList)<>Length(DatFileList) then
+      begin
+        WriteLnErrEx('參數錯誤.Length(GuidList)<>Length(DatFileList)');
+        exit;
+      end;
+
+      for i:=0 to High(DatFileList) do
+      begin
+        sOneFile:=DatFileList[i];
+        sTempLock:=FCBDataTokenMngEcb.CheckDatLock(sOneFile);
+        if (not SameText(sTempLock,sLocker)) then
+        begin
+          WriteLnErrEx(sOneFile+'文檔鎖定失效.'+sTempLock);
+          exit;
+        end;
+        sTempGuid:=FCBDataTokenMngEcb.GetDatGuid(sOneFile);
+        if (not SameText(sTempGuid,GuidList[i])) then
+        begin
+          WriteLnErrEx(sOneFile+' guid已經改變.'+sTempGuid+';'+GuidList[i]);
+          exit;
+        end;
+      end; 
+
+      WriteLnEx('HELLO');
+      sUplFile:=CBDataMgrEcb.GetCBData_FullPath+Get_GUID8+'.upl';
+      ShowMsg2TwEcb('準備接收資料');
+      Pro_RecvFile_CBDataFiles(sUplFile,aConnect);
+      ShowMsg2TwEcb('完成接收資料');
+      sTemp:=CBDataMgrEcb.GetCBData_FullPath; sErr:='';
+      if InputDatFileFmt2_ForSetCBData(sUplFile,sTemp,sErr) and (sErr='') then
+      begin
+        WriteLnEx('HELLO')
+      end else
+        WriteLnErrEx('資料處理失敗.'+sErr);
+
+      for i:=0 to High(DatFileList) do
+      begin
+        sOneFile:=DatFileList[i];
+        FCBDataTokenMngEcb.SetDatGuid(sOneFile,Get_GUID8,sLocker);
+        if not UpdateGuidOfWorkList_CBDataEcb(True,sOneFile,True,sLogOpCur,sTimeKey) then
+        begin
+          ShowMsg2TwEcb('產生上傳生任務清單失敗.'+sOneFile);
+        end;
+      end;
+      FCBDataWorkHandleEcb.PackCBDataFile(sDatFileLst);
+
+      if FCBDataTokenMngEcb.UnLockDatFileList(DatFileList,sLocker) then
+        ShowMsg2TwEcb('解鎖成功.'+sLocker)
+      else
+        ShowMsg2TwEcb('解鎖失敗.'+sLocker);
+
+      Pro_RequestUPTLOGRECSFILEEcb(sLogOpLst,sTimeKey);
+      ShowMsg2TwEcb('完成資料處理');
+    finally
+      try SetLength(DatFileList,0); except end;
+      try SetLength(GuidList,0); except end;
     end;
   end;
 end;
@@ -5457,6 +6059,48 @@ begin
   end;
 end; }
 
+procedure TAMainFrm.TCPServer2EcbExecute(AThread: TIdPeerThread);
+var ReadStr,ErrMsg,sIp,sCmd: string;
+begin
+  EnterCriticalSection(CriticalSection2);
+  NowIsRunning := True;
+Try
+try
+  with AThread.Connection do
+  begin
+    //AThread.Connection.MaxLineLength:=FIndyMaxLineLength;
+    sIp:=Socket.Binding.PeerIP;
+    ShowMsg2TwEcb('有人要求聯機.'+sIp);
+    WriteLn('ConnectOk');
+    ReadStr := ReadLn;
+    ShowMsg2TwEcb('要做的動作是 ' + ReadStr);
+    sCmd:=GetStrOnly2('<Cmd>','</Cmd>',ReadStr,false);
+
+    if SameText(sCmd,'ReadCBDataFiles') Then
+      Pro_RequestReadCBDataFilesEcb(AThread.Connection,sCmd,ReadStr)
+    else if SameText(sCmd,'SetCBDataFiles') Then
+      Pro_RequestSetCBDataFilesEcb(AThread.Connection,sCmd,ReadStr)
+    else if SameText(sCmd,'ReadNodeFiles') or SameText(sCmd,'ReadEcbNodeFiles') Then
+      Pro_RequestReadNodeFilesEcb(AThread.Connection,sCmd,ReadStr);
+  end;
+Except
+   On E : Exception do
+   Begin
+      ErrMsg := E.Message;
+      ShowMsg2TwEcb('發生錯誤 '+ ErrMsg);
+   End;
+End;
+Finally
+   Try
+      AThread.Connection.Disconnect;
+   Except
+   end;
+   ShowMsg2TwEcb('切斷聯機.'+sIp);
+   LeaveCriticalSection(CriticalSection2);
+   NowIsRunning := false;
+End;
+end;
+
 procedure TAMainFrm.TCPServer2Execute(AThread: TIdPeerThread);
 var ReadStr,ErrMsg,sIp,sCmd: string;
 begin
@@ -5528,6 +6172,16 @@ begin
      FLog1.AddLog(Msg);
 end;
 
+procedure TAMainFrm.ShowMsgTwEcb(const Msg: String;AutoConvert:Boolean=true);
+begin
+   if not Assigned(FLog1) then
+     exit;
+   if AutoConvert Then
+     FLog1.AddLog(TimeMsg+FAppParam.TwConvertStr('(ecb)'+Msg))
+   Else
+     FLog1.AddLog('(ecb)'+Msg);
+end;
+
 procedure TAMainFrm.ShowMsg2(const Msg: String;AutoConvert:Boolean=true);
 begin
   if not Assigned(FLog2) then
@@ -5546,6 +6200,16 @@ begin
      FLog2.AddLog(TimeMsg+FAppParam.TwConvertStr(Msg))
    Else
      FLog2.AddLog(Msg);
+end;
+
+procedure TAMainFrm.ShowMsg2TwEcb(const Msg: String;AutoConvert:Boolean=true);
+begin
+  if not Assigned(FLog2) then
+     exit;
+   if AutoConvert Then
+     FLog2.AddLog(TimeMsg+FAppParam.TwConvertStr('(ecb)'+Msg))
+   Else
+     FLog2.AddLog('(ecb)'+Msg);
 end;
 
 procedure TAMainFrm.Timer1Timer(Sender: TObject);
@@ -5604,9 +6268,6 @@ Finally
     FreeAndNil(AStream);
 End;
 end;
-
-
-
 
 //--DOC4.0.0〞N002 huangcq090407 add--------->
 procedure TAMainFrm.RefreshAppStatus(Const AppDNS,AppID:String; Const AppStatus:TAppStatus);
@@ -5700,7 +6361,6 @@ begin
      End;
   Except
   End;
-
 end;
 
 {ReceiveData From SocketServer--DocCenter}
@@ -5732,7 +6392,6 @@ begin
             End;
         End;
      End;
-
   Except
   end;
 end;
@@ -5894,12 +6553,19 @@ begin
     FAppParam.Free;
     FAppParam :=nil;
   end;
+  if (FAppParamEcb <>nil) then
+  begin
+    FAppParamEcb.Free;
+    FAppParamEcb :=nil;
+  end;
   
   FCBDataWorkHandle.Terminate;
+  FCBDataWorkHandleEcb.Terminate;
 
   FLog1.Terminate;
   FLog2.Terminate;
   FCBDataTokenMng.Destroy;
+  FCBDataTokenMngEcb.Destroy;
 end;
 
 
@@ -6343,532 +7009,57 @@ begin
     exit;
 try
   SetLength(LogFileLst,0);
-  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\doccenter\',
-                 '.log',LogFileLst,false);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\doccenter\','.log',LogFileLst,false);
   For i:=0 To High(LogFileLst)Do
   Begin
-    if(DaysBetween(StrToDate(Copy(ExtractFileName(LogFileLst[i]),1,4)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),5,2)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),7,2)),Date)>aSaveDay)then
-    DeleteFile(LogFileLst[i]);
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
   End;
 
   SetLength(LogFileLst,0);
-  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\Doc_CBDataEdit\',
-                 '.log',LogFileLst,false);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\Doc_CBDataEdit\','.log',LogFileLst,false);
   For i:=0 To High(LogFileLst)Do
   Begin
-    if(DaysBetween(StrToDate(Copy(ExtractFileName(LogFileLst[i]),1,4)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),5,2)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),7,2)),Date)>aSaveDay)then
-    DeleteFile(LogFileLst[i]);
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
   End;
 
   SetLength(LogFileLst,0);
-  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\uploadCBData\',
-                 '.log',LogFileLst,false);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'Data\DwnDocLog\uploadCBData\','.log',LogFileLst,false);
   For i:=0 To High(LogFileLst)Do
   Begin
-    if(DaysBetween(StrToDate('20'+Copy(ExtractFileName(LogFileLst[i]),1,2)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),3,2)+DateSeparator
-             +Copy(ExtractFileName(LogFileLst[i]),5,2)),Date)>aSaveDay)then
-    DeleteFile(LogFileLst[i]);
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
+  End;
+
+  ///---------
+  SetLength(LogFileLst,0);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'DataEcb\DwnDocLog\doccenter\','.log',LogFileLst,false);
+  For i:=0 To High(LogFileLst)Do
+  Begin
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
+  End;
+
+  SetLength(LogFileLst,0);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'DataEcb\DwnDocLog\Doc_CBDataEdit\','.log',LogFileLst,false);
+  For i:=0 To High(LogFileLst)Do
+  Begin
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
+  End;
+
+  SetLength(LogFileLst,0);
+  FolderAllFiles(ExtractFilePath(Application.ExeName)+'DataEcb\DwnDocLog\uploadCBData\','.log',LogFileLst,false);
+  For i:=0 To High(LogFileLst)Do
+  Begin
+    if (DaySpan(now,GetFileDateTimeC(LogFileLst[i]))>aSaveDay) then
+      DeleteFile(LogFileLst[i]);
   End;
 except
 end;
 end;
 
-{ TCBDataWorkHandleThread }
-procedure TCBDataWorkHandleThread.PackCBNodeFile();
-var sNodeDatPath,sZearoFile,sTempUplFile:string; tsNeedTransfer:TStringList;
-begin
-  AMainFrm.ShowMsg2Tw('start PackCBNodeFile ');
-  sNodeDatPath:=FAppParam.Tr1DBPath+'CBData\nodetextforcbpa\';
-  try
-    tsNeedTransfer:=TStringList.create;
-    FolderAllFiles(sNodeDatPath,'.dat',tsNeedTransfer,false);
-    try
-      FCBNodeDat_PackTag:=true;
-      sTempUplFile:=ComparessFileListToFile(tsNeedTransfer,FCBNodeDat_PackFile,'',sZearoFile);
-    finally
-      FCBNodeDat_PackTag:=False;
-    end;
-    if (sTempUplFile='') or (not FileExists(sTempUplFile)) then
-    begin
-      AMainFrm.ShowMsg2Tw('PackCBNodeFile fail.');
-    end;
-  finally
-    try if Assigned(tsNeedTransfer) then FreeAndNil(tsNeedTransfer); except end;
-  end;
-  AMainFrm.ShowMsg2Tw('end PackCBNodeFile ');
-end;
-
-procedure TCBDataWorkHandleThread.PackCBNodeFileEcb();
-var sNodeDatPath,sZearoFile,sTempUplFile:string; tsNeedTransfer:TStringList;
-begin
-  AMainFrm.ShowMsg2Tw('start PackCBNodeFileEcb ');
-  sNodeDatPath:=FAppParam.Tr1DBPath+'CBData\ecbnodetextforcbpa\';
-  try
-    tsNeedTransfer:=TStringList.create;
-    FolderAllFiles(sNodeDatPath,'.dat',tsNeedTransfer,false);
-    try
-      FCBNodeDat_PackTag:=true;
-      sTempUplFile:=ComparessFileListToFile(tsNeedTransfer,FCBNodeDat_PackFileEcb,'',sZearoFile);
-    finally
-      FCBNodeDat_PackTag:=False;
-    end;
-    if (sTempUplFile='') or (not FileExists(sTempUplFile)) then
-    begin
-      AMainFrm.ShowMsg2Tw('PackCBNodeFileEcb fail.');
-    end;
-  finally
-    try if Assigned(tsNeedTransfer) then FreeAndNil(tsNeedTransfer); except end;
-  end;
-  AMainFrm.ShowMsg2Tw('end PackCBNodeFileEcb ');
-end;
-
-procedure TCBDataWorkHandleThread.PackCBDataFile(aFileName:string);
-var sTempName,sTempFile,sZearoFile,sTempUplFile:string;
-  i:integer; ts1,ts2,ts3:TStringList; bFind:Boolean;
-begin
-
-  with AMainFrm do
-  begin
-    ShowMsg2Tw('start PackCBDataFile '+aFileName);
-    if aFileName<>'' then
-    begin
-      bFind:=false;
-      for i:=0 to High(FCBDataTokenMng.FCBDataList) do
-      begin
-        sTempName:=FCBDataTokenMng.FCBDataList[i].FileName;
-        if PosEx(sTempName,aFileName)>0 then
-        begin
-          bFind:=true;
-          break;
-        end;
-      end;
-      if not bFind then
-        Exit;
-    end;
-
-    
-    try
-      ts1:=TStringList.create;
-      ts2:=TStringList.create;
-      ts3:=TStringList.create;
-      
-      for i:=0 to High(FCBDataTokenMng.FCBDataList) do
-      begin
-        sTempName:=FCBDataTokenMng.FCBDataList[i].FileName;
-        sTempFile:=CBDataMgr.GetCBDataFile_FullPath(sTempName);
-        if FileExists(sTempFile) then
-        begin
-          if (aFileName='') or
-             (
-                (aFileName<>'') and
-                (PosEx(sTempName,aFileName)>0)
-             ) then
-          begin
-            //if ts3.count=0 then
-            begin
-              ts3.Clear;
-              ts3.Add(sTempFile);
-              try
-                FCBDataAry_PackTag[i]:=true;
-                sTempUplFile:=ComparessFileListToFile(ts3,FCBDataAry_PackFile[i],'',sZearoFile);
-              finally
-                FCBDataAry_PackTag[i]:=False;
-              end;
-              if (sTempUplFile='') or (not FileExists(sTempUplFile)) then
-              begin
-                ShowMsg2Tw('pack fail.'+sTempName);
-              end;
-            end;
-          end;
-
-          ts1.Add(sTempFile);
-          if not SameText(sTempName,'cbdoc.dat') then
-            ts2.Add(sTempFile);
-        end;
-      end;
-      try
-        FCBDataAll_PackTag:=true;
-        sTempUplFile:=ComparessFileListToFile(ts1,FCBDataAll_PackFile,'',sZearoFile);
-      finally
-        FCBDataAll_PackTag:=False;
-      end;
-      if (sTempUplFile='') or (not FileExists(sTempUplFile)) then
-      begin
-        ShowMsg2Tw('pack1 fail.');
-      end;
-
-      try
-        FCBDataExceptCbdocAll_PackTag:=true;
-        sTempUplFile:=ComparessFileListToFile(ts2,FCBDataExceptCbdocAll_PackFile,'',sZearoFile);
-      finally
-        FCBDataExceptCbdocAll_PackTag:=False;
-      end;
-      if (sTempUplFile='') or (not FileExists(sTempUplFile)) then
-      begin
-        ShowMsg2Tw('pack2 fail.');
-      end;
-
-    finally
-      try if Assigned(ts1) then FreeAndNil(ts1); except end;
-      try if Assigned(ts2) then FreeAndNil(ts2); except end;
-      try if Assigned(ts3) then FreeAndNil(ts3); except end;
-    end;
-    ShowMsg2Tw('end PackCBDataFile '+aFileName);
-  end;
-end;
-
-
-constructor TCBDataWorkHandleThread.Create;
-var sTempPath,sTempName,sLoc:string;
-  i:integer; 
-begin
-  FGUIDOfCBData:='';
-  FGUIDOfNodeData:='';
-  FGUIDOfIFRSData:='';
-  FLastGUIDOfCBData:='';
-  FLastGUIDOfNodeData:='';
-  FLastGUIDOfIFRSData:='';
-
-  with AMainFrm do
-  begin
-    if FCBDataTokenMng.Tw then sLoc:='tw'
-    else sLoc:='cn';
-    sTempPath:=GetWinTempPath+'doccenter'+sLoc+'\';
-    if not DirectoryExists(sTempPath) then
-      ForceDirectories(sTempPath);
-    FCBDataAll_PackFile:=sTempPath+'CBDataAllPack'+'.upl';
-    FCBDataExceptCbdocAll_PackFile:=sTempPath+'CBDataExceptCbdocAllPack'+'.upl';
-    SetLength(FCBDataAry_PackFile,Length(FCBDataTokenMng.FCBDataList));
-    for i:=0 to High(FCBDataTokenMng.FCBDataList) do
-    begin
-      sTempName:=FCBDataTokenMng.FCBDataList[i].FileName;
-      sTempName:=ChangeFileExt(sTempName,'.upl');
-      FCBDataAry_PackFile[i]:=sTempPath+sTempName;
-    end;
-    FCBNodeDat_PackFile:=sTempPath+'CBNodeDatPack'+'.upl';
-    FCBNodeDat_PackFileEcb:=sTempPath+'CBNodeDatPackEcb'+'.upl';
-    
-    FCBDataAll_PackTag:=False;
-    FCBDataExceptCbdocAll_PackTag:=False;
-    SetLength(FCBDataAry_PackTag,Length(FCBDataTokenMng.FCBDataList));
-    for i:=0 to High(FCBDataTokenMng.FCBDataList) do
-    begin
-      FCBDataAry_PackTag[i]:=false;
-    end;
-    FCBNodeDat_PackTag:=false;
-  end;
-  FreeOnTerminate:=True;
-  inherited Create(true);
-end;
-
-destructor TCBDataWorkHandleThread.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TCBDataWorkHandleThread.UptGUIDOfCBData;
-begin
-  FGUIDOfCBData:=Get_GUID8;
-end;
-
-procedure TCBDataWorkHandleThread.UptGUIDOfNodeData;
-begin
-  FGUIDOfNodeData:=Get_GUID8;
-end;
-
-procedure TCBDataWorkHandleThread.UptGUIDOfIFRSData;
-begin
-  FGUIDOfIFRSData:=Get_GUID8;
-end;
-
-procedure TCBDataWorkHandleThread.Execute;
-begin
-  //inherited;
-  ProExecute;
-end;
-
-procedure TCBDataWorkHandleThread.ProExecute;
-
-  procedure SleepWhile;
-  var x1,x1Sleep,x1Per,x1Count:Integer;
-  begin
-    x1Sleep:=5000;
-    x1Per:=50;
-    x1Count:=Trunc(x1Sleep/x1Per);
-    for x1:=1  to x1Count do
-    begin
-      if Self.Terminated then Exit;
-      Sleep(x1Per);
-      if Self.Terminated then Exit;
-    end;
-  end;
-  procedure AddMsg(aMsg:string);
-  begin
-    with AMainFrm do
-    begin
-      ShowMsg2Tw(aMsg);
-    end;
-  end;
-
-var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer;
-    sMsg,sTemp,sOperator,sTimeKey,sUptfile,
-    sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn,sLogFile:string;
-    aLogRec:TTrancsationRec;
-
-    tsCBDataWork,tsNodeWork,tsIFRSWork,tsTemp:TStringList;
-    StrLst:_cStrLst; bOk:Boolean;
-
-    function GetDataWorkList:Boolean;
-    var x1,x2:integer; xstr1,xstr2,xstr3:string;
-    begin
-      result:=false;
-      tsCBDataWork.Clear;
-      tsNodeWork.Clear;
-      xstr1:=GetCbpaOpDataPath;
-      if DirectoryExists(xstr1) then
-      begin
-        FolderAllFiles(xstr1,'.cbop',tsCBDataWork,False);
-        FolderAllFiles(xstr1,'.nodeop',tsNodeWork,False);
-        FolderAllFiles(xstr1,'.ifrsop',tsIFRSWork,False);
-      end;
-      result:=true;
-    end;
-    function GetParamsOfOp(aInputFile:string;var aOperator,aTimeKey,aUptfile:string):boolean;
-    var xfini:TIniFile;
-    begin
-      result:=false;
-      if not FileExists(aInputFile) then
-        exit;
-      xfini:=TIniFile.Create(aInputFile);
-      try
-        aOperator:=xfini.ReadString('data','operator','');
-        aTimeKey:=xfini.ReadString('data','timekey','');
-        aUptfile:=xfini.ReadString('data','uptfile','');
-        if (aOperator<>'') and (aTimeKey<>'') and (aUptfile<>'') then
-          result:=true;
-      finally
-        try if Assigned(xfini) then FreeAndNil(xfini); except end;
-      end;
-    end;
-    function GetIFRSParamsOfOp(aInputFile:string;var aOperator,aTimeKey,aCode,aYear,aQ,aIDName,aOp,aMName,aMNameEn:string):boolean;
-    var xfini:TIniFile;
-    begin
-      result:=false;
-      if not FileExists(aInputFile) then
-      begin
-        Exit;
-      end;
-      xfini:=TIniFile.Create(aInputFile);
-      try
-        aOperator:=xfini.ReadString('data','operator','');
-        aTimeKey:=xfini.ReadString('data','timekey','');
-        aCode:=xfini.ReadString('data','code','');
-        aYear:=xfini.ReadString('data','year','');
-        aQ:=xfini.ReadString('data','q','');
-        aIDName:=xfini.ReadString('data','idname','');
-        aOp:=xfini.ReadString('data','op','');
-        aMName:=xfini.ReadString('data','mname','');
-        aMNameEn:=xfini.ReadString('data','mnameen','');
-        if (aOperator<>'') and (aTimeKey<>'') and
-           (aYear<>'') and (aQ<>'') and (aOp<>'') then
-          result:=true;
-      finally
-        try if Assigned(xfini) then FreeAndNil(xfini); except end;
-      end;
-    end;
-begin
-  //inherited;
-  try
-    tsCBDataWork:=TStringList.create;
-    tsNodeWork:=TStringList.create;
-    tsIFRSWork:=TStringList.create;
-    tsTemp:=TStringList.create;
-    while not Self.Terminated do
-    begin
-        SleepWhile;
-        if (Time>=AMainFrm.FSendMailOfOpLogTime) and
-           (AMainFrm.FSendMailOfOpLogFlag<FmtDt8(date)) then
-        begin
-          if AMainFrm.ColloectUploadLog then
-          begin
-            SaveIniFile(PChar('doccenter'),PChar('SendMailDate'),PChar(FmtDt8(date)),PChar(ExtractFilePath(ParamStr(0))+'setup.ini'));
-            AMainFrm.FSendMailOfOpLogFlag:=FmtDt8(date);
-          end;
-        end;
-
-        if not (
-          ( (FLastGUIDOfCBData<>FGUIDOfCBData) or
-             (FLastGUIDOfCBData='')
-           ) or
-           ( (FLastGUIDOfNodeData<>FGUIDOfNodeData) or
-             (FLastGUIDOfNodeData='')
-           ) or
-           ( (FLastGUIDOfIFRSData<>FGUIDOfIFRSData) or
-             (FLastGUIDOfIFRSData='')
-           )
-           )then
-           Continue;
-        iErrOfProCBData:=0;
-        iErrOfProNodeData:=0;
-        iErrOfProIFRSData:=0;
-        GetDataWorkList;
-        
-        with AMainFrm do
-        begin
-          if tsCBDataWork.Count>0 then
-          begin
-            for i:=0 to tsCBDataWork.Count-1 do
-            begin
-              Sleep(5);
-              if GetParamsOfOp(tsCBDataWork[i],sOperator,sTimeKey,sUptfile) then
-              begin
-                if CBDataMgr.SetCBDataUpload(sOperator,sTimeKey,sUptfile) then
-                begin
-                  if FileExists(tsCBDataWork[i]) then
-                    DeleteFile(tsCBDataWork[i]);
-                  Continue;
-                end
-                else begin
-                  iErrOfProCBData:=1;
-                  AddMsg('生成cb上傳任務失敗.'+tsCBDataWork[i]);
-                end;
-              end
-              else begin
-                iErrOfProCBData:=1;
-                AddMsg('獲取操作記錄參數失敗.'+tsCBDataWork[i]);
-              end;
-            end;
-            if iErrOfProCBData=0 then
-            begin
-              if FGUIDOfCBData='' then
-                UptGUIDOfCBData;
-              FLastGUIDOfCBData:=FGUIDOfCBData;
-            end;
-          end
-          else begin
-            if FGUIDOfCBData='' then
-            begin
-              UptGUIDOfCBData;
-              FLastGUIDOfCBData:=FGUIDOfCBData;
-            end;
-          end;
-
-          if tsNodeWork.Count>0 then
-          begin
-            for i:=0 to tsNodeWork.Count-1 do
-            begin
-              Sleep(5);
-              if GetParamsOfOp(tsNodeWork[i],sOperator,sTimeKey,sUptfile) then
-              begin
-                bOk:=false;
-                if Pos('ecb',sUptfile)>0 then
-                  bOk:=CBDataMgr.SetNodeUploadEcb(sOperator,sTimeKey)
-                else
-                  bOk:=CBDataMgr.SetNodeUpload(sOperator,sTimeKey);
-                
-                if bOk then 
-                begin
-                  if FileExists(tsNodeWork[i]) then
-                    DeleteFile(tsNodeWork[i]);
-                  Continue;
-                end
-                else begin
-                  iErrOfProNodeData:=1;
-                  AddMsg('生成node上傳任務失敗.'+tsNodeWork[i]);
-                end;
-              end
-              else begin
-                iErrOfProCBData:=1;
-                AddMsg('獲取操作記錄參數失敗.'+tsNodeWork[i]);
-              end;
-            end;
-            if iErrOfProNodeData=0 then
-            begin
-              if FGUIDOfNodeData='' then
-                UptGUIDOfNodeData;
-              FLastGUIDOfNodeData:=FGUIDOfNodeData;
-            end;
-          end
-          else begin
-            if FGUIDOfNodeData='' then
-            begin
-              UptGUIDOfNodeData;
-              FLastGUIDOfNodeData:=FGUIDOfNodeData;
-            end;
-          end;
-
-          
-          if tsIFRSWork.Count>0 then
-          begin
-            for i:=0 to tsIFRSWork.Count-1 do
-            begin
-              Sleep(5);
-              if FileExists(tsIFRSWork[i]) then
-              begin
-                if GetIFRSParamsOfOp(tsIFRSWork[i],sOperator,sTimeKey,sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn) then
-                begin
-                  sLogFile:=ExtractFilePath(ParamStr(0))+IFRSOpLogDir+copy(sTimeKey,1,8)+'.log';
-                  if CBDataMgr.SetIFRSTFN(sCode, strtoint(sYear),strtoint(sQ),sOperator,sTimeKey) then
-                  begin
-                    SetStatusOfIFRS(sCode,_CShen);
-                    with aLogRec do
-                    begin
-                       ID := Format('%s,%s',[sYear,sQ]);
-                       IDName := sIDName;
-                       Op := sOp;
-                       OpTime := sTimeKey;
-                       Operator := sOperator;
-                       ModouleName := sMName;
-                       ModouleNameEn := sMNameEn;
-                       BeSave := False;
-                    end;
-                    WriteARecToFile(aLogRec,sLogFile);
-                    if FileExists(tsIFRSWork[i]) then
-                      DeleteFile(tsIFRSWork[i]);
-                    Continue;
-                  end
-                  else begin
-                    iErrOfProIFRSData:=1;
-                    AddMsg('處理IFRS審核資料失敗.'+tsIFRSWork[i]);
-                  end;
-                end
-                else begin
-                  iErrOfProIFRSData:=1;
-                  AddMsg('IFRS獲取操作記錄參數失敗.'+tsIFRSWork[i]);
-                end;
-              end;
-            end;
-            if iErrOfProIFRSData=0 then
-            begin
-              if FGUIDOfIFRSData='' then
-                UptGUIDOfIFRSData;
-              FLastGUIDOfIFRSData:=FGUIDOfIFRSData;
-            end;
-          end
-          else begin
-            if FGUIDOfIFRSData='' then
-            begin
-              UptGUIDOfIFRSData;
-              FLastGUIDOfIFRSData:=FGUIDOfIFRSData;
-            end;
-          end;
-          
-        end;
-
-    end;//---
-  finally
-      try if Assigned(tsTemp) then FreeAndNil(tsTemp); except end;
-      try if Assigned(tsCBDataWork) then FreeAndNil(tsCBDataWork); except end;
-      try if Assigned(tsNodeWork) then FreeAndNil(tsNodeWork); except end;
-      try if Assigned(tsIFRSWork) then FreeAndNil(tsIFRSWork); except end;
-      try setlength(StrLst,0); except end;
-  end;
-end;
 
 procedure TAMainFrm.AppExcept(Sender: TObject; E: Exception);
 var sFile,sPath : string;
@@ -6879,58 +7070,6 @@ begin
     sPath:=CLogPath;
     sFile := sPath+Format('%s_%s.log',[FormatDateTime('yyyymmdd',now),'warn']);
     WriteFileLine(sFile,E.Message);
-end;
-
-
-{ TClsBakDataThread }
-
-constructor TClsBakDataThread.Create;
-begin
-  FreeOnTerminate:=True;
-  inherited Create(true);
-end;
-
-destructor TClsBakDataThread.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TClsBakDataThread.Execute;
-var sTr1dbCBDataPath,sPathBak:string;
-  Procedure ClsFiles();
-  var DirInfo: TSearchRec;
-    r : Integer;
-  begin
-    r := FindFirst(sPathBak+'*.*', FaAnyfile, DirInfo);
-    while r = 0 do
-    begin
-      if AMainFrm.FStopRunning then
-        break;
-      if ((DirInfo.Attr and FaDirectory <> FaDirectory) and
-        (DirInfo.Attr and FaVolumeId <> FaVolumeID)) then
-      Begin
-        if DaySpan(now,GetFileDateTimeC(sPathBak+DirInfo.Name))>AMainFrm.FBakDataSaveDays then
-        begin
-          DeleteFile(sPathBak+DirInfo.Name);
-        end;
-      End;
-      r := FindNext(DirInfo);
-      Sleep(1);
-    end;
-    SysUtils.FindClose(DirInfo);
-  end;
-begin
-  //inherited;
-  if AMainFrm.FBakDataSaveDays<=0 then
-    exit;
-  with AMainFrm do
-   sTr1dbCBDataPath:=FAppParam.Tr1DBPath+'cbdata\';
-  sPathBak:=sTr1dbCBDataPath+'data\bak\';
-  ClsFiles();
-  sPathBak:=sTr1dbCBDataPath+'balancedat\bak\';
-  ClsFiles();
-  sPathBak:=sTr1dbCBDataPath+'tcri\bak\';
-  ClsFiles();
 end;
 
 function TimeKey2TimeStr(aTimeKey:string):string;
@@ -6990,14 +7129,12 @@ function TAMainFrm.ColloectUploadLog:boolean;
     else if SameText(aInput,_OpUptReason) then
       result := FAppParam.TwConvertStr(_OpUptReasonStr)
     else if SameText(aInput,_OpAddSub) then
-      result := FAppParam.TwConvertStr(_OpAddSubStr)
-    else if SameText(aInput,_OpUptSub) then
-      result := FAppParam.TwConvertStr(_OpUptSubStr)
-    else if SameText(aInput,_OpDelSub) then
-      result := FAppParam.TwConvertStr(_OpDelSubStr)
-    else if SameText(aInput,_OpReBack) then
-      result := FAppParam.TwConvertStr(_OpReBackStr)
-
+    result := FAppParam.TwConvertStr(_OpAddSubStr)
+  else if SameText(aInput,_OpUptSub) then
+    result := FAppParam.TwConvertStr(_OpUptSubStr)
+  else if SameText(aInput,_OpDelSub) then
+    result := FAppParam.TwConvertStr(_OpDelSubStr)
+    
     else if SameText(aInput,_OpAdd) then
       result := FAppParam.TwConvertStr(_OpAddStr)
     else if SameText(aInput,_OpUpt) then
@@ -7056,7 +7193,7 @@ function TAMainFrm.ColloectUploadLog:boolean;
 
 
 const BlockSize=20;
-var sOpLogFile,sLogFile,sLine,sLine2,sLine3,sLine4,sDt8S,sDt8E,sDtTimeS,sDtTimeE,sSameList:String;
+var sOpLogFile,sLogFile,sOpLogFileEcb,sLogFileEcb,sLine,sLine2,sLine3,sLine4,sDt8S,sDt8E,sDtTimeS,sDtTimeE,sSameList,sLogForCbpa,sLogForCbpaEcb:String;
     Remain,ReadCount,GotCount,k,i,j : Integer;
     bUpload:boolean;
     f:file of TTrancsationRec; r: array[0..BlockSize-1] of TTrancsationRec;
@@ -7112,6 +7249,8 @@ var sOpLogFile,sLogFile,sLine,sLine2,sLine3,sLine4,sDt8S,sDt8E,sDtTimeS,sDtTimeE
 
 begin
   result:=false;
+  sLogForCbpa:='';
+  sLogForCbpaEcb:='';
   ShowMsg2Tw('開始執行 產生操作記錄并郵寄.');
   sLine:='_'+FormatDateTime('hhmmss',FSendMailOfOpLogTime)+'000';
   sDt8S:=FmtDt8(date-1);
@@ -7127,9 +7266,14 @@ begin
   if FileExists(sLogFile) then
     DeleteFile(sLogFile);
 
-  CBDataMgr.GetCBDataOpLog(sDt8S,sDt8E,sOpLogFile);
-  CBDataMgr.GetCBDataLog(sDt8S,sDt8E,sLogFile);
-  setlength(FRecLogs,0);
+  sOpLogFileEcb:=GetWinTempPath+'TempCBDataOpLogEcb.log';
+  if FileExists(sOpLogFileEcb) then
+    DeleteFile(sOpLogFileEcb);
+  sLogFileEcb:=GetWinTempPath+'TempCBDataLogEcb.log';
+  if FileExists(sLogFileEcb) then
+    DeleteFile(sLogFileEcb);
+
+
   ts:=nil; ts2:=nil; ts3:=nil;
     try
     try
@@ -7137,6 +7281,12 @@ begin
       ts2:=TStringList.create;
       ts3:=TStringList.create;
 
+      //----------- 台灣or大陸資料庫的操作記錄歸總
+      ts.clear; ts2.clear; ts3.clear;
+      CBDataMgr.GetCBDataOpLog(sDt8S,sDt8E,sOpLogFile);
+      CBDataMgr.GetCBDataLog(sDt8S,sDt8E,sLogFile);
+      setlength(FRecLogs,0);
+      
       if FileExists(sLogFile) then
         ts.LoadFromFile(sLogFile);
       SetLength(FRecLogs,ts.count);
@@ -7260,11 +7410,157 @@ begin
          begin
            sLine:=sLine+#13#10+#13#10+'<h2>========上傳已完成========</h2>'+#13#10+#13#10+FAppParam.ToTwIfCnSys(ts2.text);
          end;
+         sLogForCbpa:=sLine;
        end
        else begin
-         sLine:='無資料維護記錄';
+         //sLine:='無資料維護記錄';
        end;
 
+
+        //----------- ecb資料庫的操作記錄歸總
+      if FAppParam.IsTwSys then
+      begin
+          ts.clear; ts2.clear; ts3.clear;
+          CBDataMgrEcb.GetCBDataOpLog(sDt8S,sDt8E,sOpLogFileEcb);
+          CBDataMgrEcb.GetCBDataLog(sDt8S,sDt8E,sLogFileEcb);
+          setlength(FRecLogs,0);
+      
+          if FileExists(sLogFileEcb) then
+            ts.LoadFromFile(sLogFileEcb);
+          SetLength(FRecLogs,ts.count);
+          ReMain:=0;
+          for i:=0 to ts.count-1 do
+          begin
+            sLine:=Trim(ts[i]);
+            if sLine='' then
+              continue;
+            StrLst2:=DoStrArray2(sLine,#9);
+            if Length(StrLst2)=6 then
+            begin
+              for j:=Low(StrLst2) to High(StrLst2) do
+                FRecLogs[ReMain].Dats[j]:=StrLst2[j];
+              Inc(ReMain);
+            end;
+          end;
+          SetLength(FRecLogs,ReMain);
+
+           ts2.clear;ts3.clear;ts.clear;
+           if FileExists(sOpLogFileEcb) then
+           try
+             AssignFile(f,sOpLogFileEcb);
+             FileMode:=0;
+             Reset(f);
+             ReMain := FileSize(f);
+             while ReMain>0 do
+             Begin
+                 if Remain<BlockSize then  ReadCount := ReMain
+                 else ReadCount := BlockSize;
+                 BlockRead(f,r[0],ReadCount,GotCount);
+                 For k:=0 to GotCount-1 do
+                 Begin
+                    Application.ProcessMessages;
+                    if (r[k].OpTime>sDtTimeS) and (r[k].OpTime<sDtTimeE) then
+                    begin
+                      sLine:=r[k].Operator+#9+r[k].ID+r[k].IDName+#9+
+                        r[k].OpTime+#9+
+                        Op2OpStr(r[k].Op)+#9+r[k].ModouleName+#9+r[k].OpTime;
+                      //TimeKey2TimeStr(r[k].OpTime)
+                      ts.Add(sLine);
+                    end;
+                 End;
+                 Remain:=Remain-GotCount;
+             End;
+           finally
+             try
+               CloseFile(f);
+             except
+               on e:Exception do
+                 e := nil;
+             end;
+           end;
+
+           if ts.Count>0 then
+           begin
+             ts.Sort;
+             for i:=0 to ts.count-1 do
+             begin
+                sLine:=(ts[i]);
+                if sLine='' then
+                  continue;
+                StrLst2:=DoStrArray2(sLine,#9);
+                if Length(StrLst2)>=6 then
+                begin
+                  sSameList:='';
+                  for j:=i+1 to ts.count-1 do
+                  begin
+                    sLine2:=(ts[j]);
+                    if sLine2='' then
+                      continue;
+                    StrLst3:=DoStrArray2(sLine2,#9);
+                    if Length(StrLst3)>=5 then
+                    begin
+                      if (StrLst2[5]=StrLst3[4]) then //這段判斷邏輯應該是錯誤無用的，暫時先留著吧
+                      begin
+                        sLine3:=ZuoFang+StrLst3[0]+SepItem2Str+StrLst3[1]+YouFang+SepItemStr+StrLst3[2]+SepItemStr+StrLst3[3]+SepItemStr+TimeKey2TimeStr(StrLst3[4])+SepItemStr+FAppParam.TwConvertStr('同上');
+                        if sSameList='' then sSameList:=sLine3
+                        else sSameList:=sSameList+#13#10+sLine3;
+                        ts[j]:='';
+                      end
+                      else if ( (Length(StrLst3)>=6) and
+                           (StrLst2[5]=StrLst3[5])
+                         ) then
+                      begin
+                        sLine3:=ZuoFang+StrLst3[0]+SepItem2Str+StrLst3[1]+YouFang+SepItemStr+StrLst3[3]+SepItemStr+StrLst3[4]+SepItemStr+TimeKey2TimeStr(StrLst3[5])+SepItemStr+FAppParam.TwConvertStr('同上');
+                        if sSameList='' then sSameList:=sLine3
+                        else sSameList:=sSameList+#13#10+sLine3;
+                        ts[j]:='';
+                      end;
+                    end;
+                  end;
+
+                  bUpload:=FillUploadRelative(StrLst2[5],sLine2);
+                  sLine3:=ZuoFang+StrLst2[0]+SepItem2Str+StrLst2[1]+YouFang+SepItemStr+StrLst2[3]+SepItemStr+StrLst2[4]+SepItemStr+TimeKey2TimeStr(StrLst2[5])+SepItemStr+FtpStatusBool2Str(bUpload);
+                  if sSameList<>'' then
+                    sLine3:=sLine3+#13#10+sSameList;
+                  if bUpload then
+                  begin
+                    ts2.Add(sLine3);
+                    //ts2.Add('');
+                  end
+                  else begin
+                    ts3.Add(sLine3);
+                    //ts3.Add('');
+                  end;
+                end;
+             end;
+           end;
+           if (ts2.Count>0) or (ts3.Count>0) then
+           begin
+             sLine3:='Ecb【操作人,代碼】'+_SepItem+'【操作類型】'+_SepItem+'【操作頁面】'+_SepItem+'【時間】'+_SepItem+'【上傳狀態】';
+             sLine:=sLine3;
+             if (ts3.Count>0) then
+             begin
+               sLine:=sLine+#13#10+#13#10+'<h2 color="red">========上傳未完成========</h2>'+#13#10+#13#10+FAppParam.ToTwIfCnSys(ts3.text);
+             end;
+             if (ts2.Count>0) then
+             begin
+               sLine:=sLine+#13#10+#13#10+'<h2>========上傳已完成========</h2>'+#13#10+#13#10+FAppParam.ToTwIfCnSys(ts2.text);
+             end;
+             sLogForCbpaEcb:=sLine;
+           end
+           else begin
+             //sLine:='無資料維護記錄';
+           end;
+      end;
+
+
+       if (sLogForCbpaEcb='') and (sLogForCbpa='') then
+       begin
+         sLine:='無資料維護記錄';
+       end
+       else begin
+         sLine:=sLogForCbpa+#13#10+#13#10+#13#10+sLogForCbpaEcb;
+       end;
        CreateAMail(false, 'cbpa資料維護'+FormatDateTime('yyyy/mm/dd',date),sLine);
        ShowMsg2Tw('ok.');
        result:=true;
@@ -7289,11 +7585,11 @@ end;
 
 initialization
 begin
-  //--DOC4.0.0〞N001 huangcq090407  Doc迵WarningCenter淕磁  -->
+//--DOC4.0.0—N001 huangcq090407  Doc與WarningCenter整合  -->
   G_Caption :=('Doc Center Ver['+GetFileVer(Application.ExeName)+']');
   Handle:=FindWindow('TAMainFrm',PChar(G_Caption));
   if Handle<>0 then Halt;
-  //<--DOC4.0.0〞N001 huangcq090407  Doc迵WarningCenter淕磁
+  //<--DOC4.0.0—N001 huangcq090407  Doc與WarningCenter整合
 
   InitializeCriticalSection(CriticalSection);
   InitializeCriticalSection(CriticalSection2);

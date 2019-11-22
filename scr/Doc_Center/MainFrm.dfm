@@ -559,4 +559,36 @@ object AMainFrm: TAMainFrm
     Left = 192
     Top = 200
   end
+  object TCPServerEcb: TIdTCPServer
+    Bindings = <
+      item
+        Port = 8090
+      end>
+    CommandHandlers = <>
+    DefaultPort = 8090
+    Greeting.NumericCode = 0
+    MaxConnectionReply.NumericCode = 0
+    OnExecute = TCPServerEcbExecute
+    ReplyExceptionCode = 0
+    ReplyTexts = <>
+    ReplyUnknownCommand.NumericCode = 0
+    Left = 136
+    Top = 48
+  end
+  object TCPServer2Ecb: TIdTCPServer
+    Bindings = <
+      item
+        Port = 8090
+      end>
+    CommandHandlers = <>
+    DefaultPort = 8090
+    Greeting.NumericCode = 0
+    MaxConnectionReply.NumericCode = 0
+    OnExecute = TCPServer2EcbExecute
+    ReplyExceptionCode = 0
+    ReplyTexts = <>
+    ReplyUnknownCommand.NumericCode = 0
+    Left = 136
+    Top = 96
+  end
 end

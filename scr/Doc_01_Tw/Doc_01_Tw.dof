@@ -41,7 +41,7 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=W:\DocMgr_TW\AnotherDocMgr
+OutputDir=
 UnitOutputDir=
 PackageDLLOutputDir=
 PackageDCPOutputDir=
@@ -92,10 +92,9 @@ Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 Count=1
 Item0=..\TDefine
 [HistoryLists\hlOutputDirectorry]
-Count=6
-Item0=..\Build
-Item1=..\..\Build
-Item2=F:\Doc_4.0.0.0(Huangcq-090714)\QA197DocMgr
-Item3=F:\DocMgr_CN
-Item4=F:\DocMgr2.3TW(From172)
-Item5=D:\DocMgr2.3TW(From172)
+Count=5
+Item0=..\..\Build
+Item1=F:\Doc_4.0.0.0(Huangcq-090714)\QA197DocMgr
+Item2=F:\DocMgr_CN
+Item3=F:\DocMgr2.3TW(From172)
+Item4=D:\DocMgr2.3TW(From172)

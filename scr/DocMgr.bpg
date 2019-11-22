@@ -9,14 +9,23 @@ MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
 DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
-PROJECTS = DocCenter.exe DownIndustry.exe Doc_DwnHtml.exe DownIFRS.exe \
-  Doc_Ftp.exe Doc_01.exe Doc_03.exe DownShenBaoCase.exe Doc_01_Tw.exe \
-  ParseF10HtmLib.dll
+PROJECTS = CBDatEdit.exe DocCenter.exe DocMgr.exe Doc_ChinaTodayHint.exe \
+  DownIndustry.exe Doc_DwnHtml.exe DownIFRS.exe Doc_Ftp.exe Doc_01.exe Doc_03.exe \
+  DownShenBaoCase.exe Doc_01_Tw.exe ParseF10HtmLib.dll ParseYuanTaHtmLib.dll
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
 
+CBDatEdit.exe: CBDatEdit\CBDatEdit.dpr
+  $(DCC)
+
 DocCenter.exe: Doc_Center\DocCenter.dpr
+  $(DCC)
+
+DocMgr.exe: DocMgr\DocMgr.dpr
+  $(DCC)
+
+Doc_ChinaTodayHint.exe: Doc_ChinaTodayHint\Doc_ChinaTodayHint.dpr
   $(DCC)
 
 DownIndustry.exe: DownIndustry\DownIndustry.dpr
@@ -44,6 +53,9 @@ Doc_01_Tw.exe: Doc_01_Tw\Doc_01_Tw.dpr
   $(DCC)
 
 ParseF10HtmLib.dll: ParseF10Htm\ParseF10HtmLib.dpr
+  $(DCC)
+
+ParseYuanTaHtmLib.dll: ParseYuanTaHtm\ParseYuanTaHtmLib.dpr
   $(DCC)
 
 
