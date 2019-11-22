@@ -1,0 +1,911 @@
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司第三届监事会第五次会议决议公告/2014-12-25
+del ftp ok.600023_20141225_1.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司股东大会议事规则（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_2.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司2014年可转换公司债券信用评级分析报告/2014-12-25
+del ftp ok.600267_20141225_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司公开发行可转换公司债券发行方案提示性公告/2014-12-25
+del ftp ok.600267_20141225_2.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,中国民生银行股份有限公司关于股东权益变动的提示性公告/2014-12-26
+del ftp ok.600267_20141226_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,中国民生银行股份有限公司关于股东权益变动的提示性公告/2014-12-26
+del ftp ok.600067_20141226_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司关于召开2014年第三次临时股东大会的提示性公告/2014-12-26
+del ftp ok.002241_20141226_1.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,三一重工股份有限公司关于股东协议转让公司股份完成过户登记的公告/2014-12-27
+del ftp ok.600067_20141227_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司关于签订战略合作框架协议的公告/2014-12-27
+del ftp ok.600267_20141227_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600037,中国民生银行股份有限公司关于股东权益变动的提示性公告/2014-12-26
+del ftp ok.600037_20141226_1.rtf.192.168.88.183:21
+upload _600037_DOCLST.dat
+ftp ok._600037_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600037_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司2014年第四次临时股东大会见证的法律意见书/2014-12-25
+del ftp ok.002462_20141225_1.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,上海电气集团股份有限公司关于公开发行A股可转换公司债券方案获中国证券监督管理委员会审核通过的公告/2014-12-25
+del ftp ok.601988_20141225_1.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,上海电气集团股份有限公司关于接受委托研发的关联交易公告/2014-12-25
+del ftp ok.601988_20141225_2.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司募集资金管理办法（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_3.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司前次募集资金使用情况鉴证报告/2014-12-25
+del ftp ok.600023_20141225_4.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司关联交易管理办法（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_5.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,中国民生银行股份有限公司关于实施2014年中期利润分配时“民生转债”转股连续停牌的提示性公告/2014-12-25
+del ftp ok.600067_20141225_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司第三届董事会第二十六次会议决议公告/2014-12-25
+del ftp ok.600023_20141225_6.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,招商局地产控股股份有限公司关于收到《中国证监会行政许可申请受理通知书》的公告/2014-12-26
+del ftp ok.002241_20141226_2.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,上海电气集团股份有限公司关于海外项目自愿性公告/2014-12-26
+del ftp ok.601988_20141226_1.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司关于召开2015年第一次临时股东大会通知/2014-12-25
+del ftp ok.600023_20141225_7.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司2014年第五次临时股东大会决议公告/2014-12-25
+del ftp ok.600023_20141225_8.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司2014年第五次临时股东大会的法律意见/2014-12-25
+del ftp ok.600023_20141225_9.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司监事会议事规则（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_10.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司独立董事关于相关担保事项的独立意见/2014-12-25
+del ftp ok.600023_20141225_11.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司独立董事工作制度（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_12.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,上海电气集团股份有限公司出售资产关联交易公告/2014-12-25
+del ftp ok.601988_20141225_3.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,三一重工股份有限公司重大经营合同的公告/2014-12-25
+del ftp ok.600067_20141225_2.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司2014年第四次临时股东大会决议公告/2014-12-25
+del ftp ok.002462_20141225_2.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司公司章程（2014年12月）/2014-12-25
+del ftp ok.002462_20141225_3.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司关于流动资金归还募集资金帐户的公告/2014-12-25
+del ftp ok.600023_20141225_13.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司对外担保制度（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_14.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司对外投资制度（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_15.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司担保公告/2014-12-25
+del ftp ok.600023_20141225_16.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司关于与弘翌投资联合中标土地的公告/2014-12-25
+del ftp ok.600267_20141225_3.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司关于与关联方联合竞买地块的关联交易公告/2014-12-25
+del ftp ok.600267_20141225_4.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600037,中国民生银行股份有限公司关于实施2014年中期利润分配时“民生转债”转股连续停牌的提示性公告/2014-12-25
+del ftp ok.600037_20141225_3.rtf.192.168.88.183:21
+upload _600037_DOCLST.dat
+ftp ok._600037_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600037_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司公司章程（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_17.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司董事会议事规则（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_18.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司董事、监事和高级管理人员内部问责制度（2014年12月）/2014-12-25
+del ftp ok.600023_20141225_19.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司公开发行可转换公司债券网上路演公告/2014-12-23
+del ftp ok.600267_20141223_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司董事会决议公告/2014-12-23
+del ftp ok.600267_20141223_2.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司关于召开2014年第四次临时股东大会的提示公告/2014-12-23
+del ftp ok.002462_20141223_1.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,中国民生银行股份有限公司2014年第二次临时股东大会、2014年第一次A股类别股东大会和2014年第一次H股类别股东大会决议公告/2014-12-24
+del ftp ok.600267_20141224_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司股票交易异常波动公告/2014-12-24
+del ftp ok.600267_20141224_2.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600037,中国民生银行股份有限公司2014年第二次临时股东大会、2014年第一次A股类别股东大会和2014年第一次H股类别股东大会决议公告/2014-12-24
+del ftp ok.600037_20141224_2.rtf.192.168.88.183:21
+upload _600037_DOCLST.dat
+ftp ok._600037_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600037_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,中国民生银行股份有限公司2014年第二次临时股东大会、2014年第一次A股类别股东大会和2014年第一次H股类别股东大会决议公告/2014-12-24
+del ftp ok.600067_20141224_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司关于与北京歌华有线电视网络股份有限公司签订电视院线项目合作协议的公告/2014-12-24
+del ftp ok.601988_20141224_1.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司关于与北京歌华有线电视网络股份有限公司签订视频点播业务合作协议的公告/2014-12-24
+del ftp ok.601988_20141224_2.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,中国民生银行股份有限公司关于实施2014年中期利润分配时“民生转债”转股连续停牌的提示性公告/2014-12-25
+del ftp ok.600267_20141225_5.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,三一重工股份有限公司简式权益变动报告书/2014-12-20
+del ftp ok.600067_20141220_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,中国民生银行股份有限公司详式权益变动报告书/2014-12-20
+del ftp ok.600067_20141220_2.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,三一重工股份有限公司关于控股股东协议转让所持部分股份的提示性公告/2014-12-20
+del ftp ok.600067_20141220_3.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,中国民生银行股份有限公司详式权益变动报告书/2014-12-20
+del ftp ok.600267_20141220_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601398,广州汽车集团股份有限公司第三届董事会第51次会议决议公告/2014-12-20
+del ftp ok.601398_20141220_1.rtf.192.168.88.183:21
+upload _601398_DOCLST.dat
+ftp ok._601398_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601398_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司关于召开2014年第五次临时股东大会提示性公告/2014-12-22
+del ftp ok.600023_20141222_1.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司公开发行可转换公司债券募集说明书摘要/2014-12-23
+del ftp ok.600267_20141223_3.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司公开发行可转换公司债券募集说明书/2014-12-23
+del ftp ok.600267_20141223_4.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司公开发行可转换公司债券发行公告/2014-12-23
+del ftp ok.600267_20141223_5.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,淄博齐翔腾达化工股份有限公司关于获得政策扶持资金的公告/2014-12-23
+del ftp ok.002462_20141223_2.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,淄博齐翔腾达化工股份有限公司关于甲乙酮项目扩产的公告/2014-12-19
+del ftp ok.002462_20141219_1.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600067,中国民生银行股份有限公司关于股东权益变动及第一大股东变更的提示性公告/2014-12-19
+del ftp ok.600067_20141219_1.rtf.192.168.88.183:21
+upload _600067_DOCLST.dat
+ftp ok._600067_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600067_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司第二届董事会第十四次会议决议公告/2014-12-19
+del ftp ok.601988_20141219_2.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,中国民生银行股份有限公司关于股东权益变动及第一大股东变更的提示性公告/2014-12-19
+del ftp ok.600267_20141219_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司子公司管理办法/2014-12-19
+del ftp ok.601988_20141219_3.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司第二届监事会第十一次会议决议公告/2014-12-19
+del ftp ok.601988_20141219_4.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司关于使用可转债募集资金置换先期已投入到募投项目自筹资金的公告/2014-12-19
+del ftp ok.601988_20141219_5.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司2011年公司债券(第一期)2014年付息公告/2014-12-19
+del ftp ok.002241_20141219_5.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,吉视传媒股份有限公司关于会计政策变更公告/2014-12-19
+del ftp ok.601988_20141219_6.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600037,中国民生银行股份有限公司详式权益变动报告书/2014-12-20
+del ftp ok.600037_20141220_1.rtf.192.168.88.183:21
+upload _600037_DOCLST.dat
+ftp ok._600037_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600037_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司第三届董事会第二十五次会议决议公告/2014-12-16
+del ftp ok.600023_20141216_1.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐工集团工程机械有限公司拟转让其持有徐州美驰车桥有限公司40%股权项目资产评估报告书/2014-12-16
+del ftp ok.002241_20141216_1.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司公司章程（2014年12月）/2014-12-16
+del ftp ok.002241_20141216_2.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司独立董事关于相关担保事项的独立意见/2014-12-17
+del ftp ok.600023_20141217_1.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司对外担保的公告/2014-12-17
+del ftp ok.600023_20141217_2.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601988,上海电气集团股份有限公司关于公司股东减持本公司股份的公告/2014-12-17
+del ftp ok.601988_20141217_1.rtf.192.168.88.183:21
+upload _601988_DOCLST.dat
+ftp ok._601988_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601988_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,招商局地产控股股份有限公司关于中期票据获准注册的公告/2014-12-17
+del ftp ok.002241_20141217_2.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,深圳市机场股份有限公司关于AB航站楼商业转型项目公开招商情况的公告/2014-12-18
+del ftp ok.002241_20141218_3.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司北京市中咨律师事务所关于公司实施员工持股计划的法律意见书/2014-12-18
+del ftp ok.002462_20141218_1.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600037,中国民生银行股份有限公司关于股东权益变动及第一大股东变更的提示性公告/2014-12-19
+del ftp ok.600037_20141219_1.rtf.192.168.88.183:21
+upload _600037_DOCLST.dat
+ftp ok._600037_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600037_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐工集团工程机械有限公司拟转让其持有徐州赫思曼电子有限公司50%股权项目资产评估报告书/2014-12-16
+del ftp ok.002241_20141216_3.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司北京大成（南京）律师事务所关于公司与徐工集团工程机械有限公司股权收购暨关联交易的法律意见书/2014-12-16
+del ftp ok.002241_20141216_4.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐州徐工基础工程机械有限公司审计报告/2014-12-16
+del ftp ok.002241_20141216_5.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司华泰联合证券有限责任公司关于公司收购股权项目暨关联交易之独立财务顾问报告/2014-12-16
+del ftp ok.002241_20141216_6.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司关于召开2014年第三次临时股东大会的通知/2014-12-16
+del ftp ok.002241_20141216_7.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司关于为下属公司提供担保的公告/2014-12-16
+del ftp ok.002241_20141216_8.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司关于购买徐工集团工程机械有限公司所持徐州徐工基础工程机械有限公司等四家公司全部股权暨关联交易的公告/2014-12-16
+del ftp ok.002241_20141216_9.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司第二届董事会第十三次会议决议公告/2014-12-16
+del ftp ok.600023_20141216_2.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司第二届监事会第十二次会议决议公告/2014-12-16
+del ftp ok.600023_20141216_3.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司独立董事关于第二届董事会第十三次会议相关事项的独立意见/2014-12-16
+del ftp ok.600023_20141216_4.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司关于将部分闲置募集资金转为定期存款方式存放的公告/2014-12-16
+del ftp ok.600023_20141216_5.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,江苏双星彩塑新材料股份有限公司关于取得实用新型专利证书的公告/2014-12-16
+del ftp ok.600023_20141216_6.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司独立董事提名人声明/2014-12-16
+del ftp ok.002241_20141216_10.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司第七届董事会第十八次会议(临时)决议公告/2014-12-16
+del ftp ok.002241_20141216_11.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司第七届监事会第十三次会议(临时)决议公告/2014-12-16
+del ftp ok.002241_20141216_12.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐州派特控制技术有限公司审计报告/2014-12-16
+del ftp ok.002241_20141216_13.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐州赫思曼电子有限公司审计报告/2014-12-16
+del ftp ok.002241_20141216_14.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐州美驰车桥有限公司审计报告/2014-12-16
+del ftp ok.002241_20141216_15.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐工集团工程机械有限公司拟转让徐州徐工基础工程机械有限公司股权项目资产评估报告书/2014-12-16
+del ftp ok.002241_20141216_16.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,徐工集团工程机械股份有限公司徐工集团工程机械有限公司拟转让其持有的徐州派特控制技术有限公司50%股权项目资产评估报告书/2014-12-16
+del ftp ok.002241_20141216_17.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,招商局地产控股股份有限公司2014年11月销售及近期购得土地使用权情况简报/2014-12-10
+del ftp ok.002241_20141210_8.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,深圳市机场股份有限公司2014年11月份生产经营快报/2014-12-11
+del ftp ok.002241_20141211_1.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601398,广州汽车集团股份有限公司第三届董事会第50次会议决议公告/2014-12-12
+del ftp ok.601398_20141212_2.rtf.192.168.88.183:21
+upload _601398_DOCLST.dat
+ftp ok._601398_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601398_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601398,广州汽车集团股份有限公司独立董事关于广汽商贸收购丽新公司股权的独立意见/2014-12-12
+del ftp ok.601398_20141212_3.rtf.192.168.88.183:21
+upload _601398_DOCLST.dat
+ftp ok._601398_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601398_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601398,广州汽车集团股份有限公司关于全资子公司广汽商贸收购丽新公司股权暨关联交易公告/2014-12-12
+del ftp ok.601398_20141212_4.rtf.192.168.88.183:21
+upload _601398_DOCLST.dat
+ftp ok._601398_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601398_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600267,格力地产股份有限公司关于公开发行可转换公司债券获得核准的公告/2014-12-12
+del ftp ok.600267_20141212_1.rtf.192.168.88.183:21
+upload _600267_DOCLST.dat
+ftp ok._600267_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600267_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002241,招商局地产控股股份有限公司关于股票期权首次授予计划登记完成的公告/2014-12-13
+del ftp ok.002241_20141213_1.rtf.192.168.88.183:21
+upload _002241_DOCLST.dat
+ftp ok._002241_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002241_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司关于公司子公司收购Vision7InternationalULC股权暨对外投资的公告/2014-12-15
+del ftp ok.600023_20141215_1.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司第三届董事会第二十三次会议决议公告/2014-12-15
+del ftp ok.600023_20141215_2.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...600023,北京蓝色光标品牌管理顾问股份有限公司第三届董事会第二十四次会议决议公告/2014-12-15
+del ftp ok.600023_20141215_3.rtf.192.168.88.183:21
+upload _600023_DOCLST.dat
+ftp ok._600023_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\600023_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...601398,深圳市燃气集团股份有限公司非公开发行限售股上市流通公告/2014-12-08
+del ftp ok.601398_20141208_1.rtf.192.168.88.183:21
+upload _601398_DOCLST.dat
+ftp ok._601398_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\601398_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司兴证资管鑫众7号集合资产管理计划管理合同（草案）/2014-12-09
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司关于召开公司2014年第四次临时股东大会的通知/2014-12-09
+del ftp ok.002462_20141209_2.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.
+处理错误公告...002462,江苏通鼎光电股份有限公司第三届董事会第九次会议决议公告/2014-12-09
+del ftp ok.002462_20141209_3.rtf.192.168.88.183:21
+upload _002462_DOCLST.dat
+ftp ok._002462_DOCLST.dat.192.168.88.183:21
+upload _StockDocIdxLst.dat
+ftp ok._StockDocIdxLst.dat.192.168.88.183:21
+Z:\CBData\Document\StockDocIdxLst\002462_DOCLST.dat cls ok.
+doclst.dat cls ok.

@@ -1,0 +1,49 @@
+#------------------------------------------------------------------------------
+VERSION = BWS.01
+#------------------------------------------------------------------------------
+!ifndef ROOT
+ROOT = $(MAKEDIR)\..
+!endif
+#------------------------------------------------------------------------------
+MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
+DCC = $(ROOT)\bin\dcc32.exe $**
+BRCC = $(ROOT)\bin\brcc32.exe $**
+#------------------------------------------------------------------------------
+PROJECTS = DocCenter.exe DownIndustry.exe Doc_DwnHtml.exe DownIFRS.exe \
+  Doc_Ftp.exe Doc_01.exe Doc_03.exe DownShenBaoCase.exe Doc_01_Tw.exe \
+  ParseF10HtmLib.dll
+#------------------------------------------------------------------------------
+default: $(PROJECTS)
+#------------------------------------------------------------------------------
+
+DocCenter.exe: Doc_Center\DocCenter.dpr
+  $(DCC)
+
+DownIndustry.exe: DownIndustry\DownIndustry.dpr
+  $(DCC)
+
+Doc_DwnHtml.exe: Doc_DwnHtml\Doc_DwnHtml.dpr
+  $(DCC)
+
+DownIFRS.exe: DownIFRS\DownIFRS.dpr
+  $(DCC)
+
+Doc_Ftp.exe: Doc_Ftp\Doc_Ftp.dpr
+  $(DCC)
+
+Doc_01.exe: Doc_01\Doc_01.dpr
+  $(DCC)
+
+Doc_03.exe: Doc_03\Doc_03.dpr
+  $(DCC)
+
+DownShenBaoCase.exe: DownShenBaoCase\DownShenBaoCase.dpr
+  $(DCC)
+
+Doc_01_Tw.exe: Doc_01_Tw\Doc_01_Tw.dpr
+  $(DCC)
+
+ParseF10HtmLib.dll: ParseF10Htm\ParseF10HtmLib.dpr
+  $(DCC)
+
+

@@ -1,0 +1,3 @@
+[Default]
+SCDB=E:\charles\数据打包测试环境\VSS数据库\srcsafe.ini
+SCPATH=$/DataPacket_test/TDefine
