@@ -1,6 +1,6 @@
 object AMainFrm: TAMainFrm
-  Left = 432
-  Top = 171
+  Left = 568
+  Top = 350
   Width = 534
   Height = 447
   Caption = 'CBDatEdit And Document Server Center'
@@ -194,6 +194,14 @@ object AMainFrm: TAMainFrm
         end
       end
     end
+  end
+  object chkAutoAuditDoc: TCheckBox
+    Left = 116
+    Top = 5
+    Width = 97
+    Height = 17
+    Caption = #33258#21205#23529#26680#20844#21578
+    TabOrder = 3
   end
   object TCPServer: TIdTCPServer
     Bindings = <
@@ -524,9 +532,9 @@ object AMainFrm: TAMainFrm
   object pm1: TPopupMenu
     Left = 176
     Top = 120
-    object InitData1: TMenuItem
+    object miInitData1: TMenuItem
       Caption = 'InitData'
-      OnClick = InitData1Click
+      OnClick = miInitData1Click
     end
   end
   object Timer2: TTimer

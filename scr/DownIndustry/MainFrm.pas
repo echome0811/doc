@@ -3121,16 +3121,15 @@ begin
     for i:=0 to tsAry[6].count-1 do
     begin
       sAryItem[0]:=tsAry[6][i];
-      GetPartTwoData(sAryItem[0],sAryItem[1],sAryItem[2]);
-      ProOfThePart2(sAryItem[2]);
+      GetPartThreeData(sAryItem[0],sAryItem[1],sAryItem[2],sAryItem[6]);
+      //ProOfThePart2(sAryItem[2]);
       for j:=0 to tsAry[7].count-1 do
       begin
         if Pos(sAryItem[1],tsAry[7][j])=1 then
         begin
           sAryItem[3]:=tsAry[7][j];
-          GetPartTwoData(sAryItem[3],sAryItem[4],sAryItem[5]);
-          sAryItem[5]:=StringReplace(sAryItem[5],_CompareSep3,'',[rfReplaceAll]);
-          if (sAryItem[1]=sAryItem[4]) and (sAryItem[2]=sAryItem[5]) then
+          GetPartThreeData(sAryItem[3],sAryItem[4],sAryItem[5],sAryItem[7]);
+          if (sAryItem[1]=sAryItem[4]) and (sAryItem[6]=sAryItem[7]) then
           begin
             tsAry[6][i]:='';
             Break;
@@ -3150,7 +3149,7 @@ begin
         WriteLineForApp('','');
       end;}
       GetPartThreeData(sAryItem[0],sAryItem[1],sAryItem[3],sAryItem[2]);
-      ProOfThePart2(sAryItem[3]);
+      //ProOfThePart2(sAryItem[3]);
       for j:=0 to tsAry[9].count-1 do
       begin
         if tsAry[9][j]='' then
@@ -3159,7 +3158,7 @@ begin
         begin
           sAryItem[4]:=tsAry[9][j];
           GetPartThreeData(sAryItem[4],sAryItem[5],sAryItem[7],sAryItem[6]);
-          if (sAryItem[1]=sAryItem[5]) and (sAryItem[3]=sAryItem[7]) then
+          if (sAryItem[1]=sAryItem[5]) and (sAryItem[2]=sAryItem[6]) then
           begin
             tsAry[6][i]:='';
             Break;

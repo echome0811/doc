@@ -22,6 +22,11 @@ NoneNum     = -999999999;
 ValueEmpty  = -888888888;
 
 type
+  THtmlParseRec=record
+    TagBegin:string;
+    TagEnd:string;
+  end;
+  
     TFileDownLoadThread = class;
     TDownLoadProcessEvent = procedure(Sender:TFileDownLoadThread;Progress, ProgressMax:Cardinal;StatusCode: ULONG;StatusText:string) of object;
     TDownLoadCompleteEvent = procedure(Sender:TFileDownLoadThread) of object ;
@@ -104,8 +109,9 @@ type
     DisplayMsg : TDisplayMsg;
     AppParam : TDocMgrParam;
     FDownTryTimes:integer;
-    FUrlFRBH15,FUrlFRBH15Home:string; 
-
+    FUrlFRBH15,FUrlFRBH15Home:string;
+    FHtmlParseRecs:array of THtmlParseRec;
+    FIgnoreStrList:array of string;
 
     procedure SetNowIsRunning(const Value: Boolean);
     function DownloadFile2(AUrl:String; var AResultStr,AErrMsg: string):Boolean;
@@ -337,7 +343,7 @@ begin
 end;
 
 procedure TAMainFrm.InitForm;
-var inifile:Tinifile; sPath:string;  b:Boolean; i:integer;
+var inifile:Tinifile; sPath:string;  b:Boolean; i,ic:integer;
 begin
   sPath:=ExtractFilePath(Application.ExeName);
   AppParam := TDocMgrParam.Create;
@@ -392,7 +398,28 @@ begin
       ShowMessage(AppParam.TwConvertStr(Format('代理設定失敗.(%s:%d)',[FProxySrv,FProxyPort])));
     end;
   end;
-    
+
+  ic:=inifile.ReadInteger(CAppTopic,'HtmlParseCount',0);
+  if ic=0 then
+  begin
+    ShowMessage(AppParam.TwConvertStr('未進行html解析設定.無法啟動運行'));
+    Application.Terminate;
+    Halt;
+  end;
+  SetLength(FHtmlParseRecs,ic);
+  for i:=1 to ic do
+  begin
+    FHtmlParseRecs[i-1].TagBegin:=inifile.ReadString(CAppTopic,'Html.'+inttostr(i)+'.Begin','');
+    FHtmlParseRecs[i-1].TagEnd:=inifile.ReadString(CAppTopic,'Html.'+inttostr(i)+'.End','');
+  end;
+
+  ic:=inifile.ReadInteger(CAppTopic,'IgnoreStrCount',0);
+  SetLength(FIgnoreStrList,ic);
+  for i:=1 to ic do
+  begin
+    FIgnoreStrList[i-1]:=inifile.ReadString(CAppTopic,'Ignore.'+inttostr(i),'');
+  end;
+
   inifile.Free;
 end;
 
@@ -828,9 +855,62 @@ begin
   end;
 end;
 
+function RplHtmlZhuanYiWithEmpty(aInput:string):string;
+begin
+  result:=aInput;
+  ReplaceSubString('&NBSP;','',result);
+  ReplaceSubString('&nbsp;','',result);
+  ReplaceSubString('&quot;','',result);
+  ReplaceSubString('&QUOT;','',result);
+  ReplaceSubString('&amp;','',result);
+  ReplaceSubString('&AMP;','',result);
+  ReplaceSubString('&lt;','',result);
+  ReplaceSubString('&LT;','',result);
+  ReplaceSubString('&gt;','',result);
+  ReplaceSubString('&GT;','',result);
+
+  ReplaceSubString('&NBSP','',result);
+  ReplaceSubString('&nbsp','',result);
+  ReplaceSubString('&quot','',result);
+  ReplaceSubString('&QUOT','',result);
+  ReplaceSubString('&amp','',result);
+  ReplaceSubString('&AMP','',result);
+  ReplaceSubString('&lt','',result);
+  ReplaceSubString('&LT','',result);
+  ReplaceSubString('&gt','',result);
+  ReplaceSubString('&GT','',result);
+end;
+
+function RplHtmlZhuanYi(aInput:string):string;
+begin
+  result:=aInput;
+  ReplaceSubString('&NBSP;',' ',result);
+  ReplaceSubString('&nbsp;',' ',result);
+  ReplaceSubString('&quot;','"',result);
+  ReplaceSubString('&QUOT;','"',result);
+  ReplaceSubString('&amp;','&',result);
+  ReplaceSubString('&AMP;','&',result);
+  ReplaceSubString('&lt;','<',result);
+  ReplaceSubString('&LT;','<',result);
+  ReplaceSubString('&gt;','>',result);
+  ReplaceSubString('&GT;','>',result);
+
+  ReplaceSubString('&NBSP',' ',result);
+  ReplaceSubString('&nbsp',' ',result);
+  ReplaceSubString('&quot','"',result);
+  ReplaceSubString('&QUOT','"',result);
+  ReplaceSubString('&amp','&',result);
+  ReplaceSubString('&AMP','&',result);
+  ReplaceSubString('&lt','<',result);
+  ReplaceSubString('&LT','<',result);
+  ReplaceSubString('&gt','>',result);
+  ReplaceSubString('&GT','>',result);
+end;
+
+
 function TAMainFrm.StartGet(): Boolean;
 var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,sThisDir,sLastDir,
-    sItemUrl,sItemTitle,sHomeYear,sTxt,sSrcTxt,sLine,sInputErr: String;
+    sItemUrl,sItemTitle,sHomeYear,sTxt,sSrcTxt,sLine,sInputErr,sHomeUrl: String;
   tsAry:array[0..5] of TStringList;
   aRecLst,aRecLst2:TAryDatasRec;
   aComCodeList:array of TShenBaoCaseComRec;
@@ -1536,6 +1616,19 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
     ClsUptDatLog;
   end;
 
+  function IgnoreOfTitileStr(aInput:string):string;
+  var xi:integer;
+  begin
+    Result:=aInput;
+    for xi:=0 to High(FIgnoreStrList) do
+    begin
+      if FIgnoreStrList[xi]<>'' then
+      begin
+        Result:=StringReplace(Result,FIgnoreStrList[xi],'',[rfReplaceAll]);
+      end;
+    end;
+  end;
+
 begin
   Result := false;
   bChangeComCode:=False;
@@ -1554,7 +1647,12 @@ begin
     if InitComCodeRecList<>1 then
       exit;
     ShowSb('下載申報案件資料首頁...',1);
-    if not GetData2('申報案件資料首頁',FUrl,'0') then
+    sHomeUrl:=FUrl;
+    if Pos('?',sHomeUrl)>0 then
+      sHomeUrl:=sHomeUrl+'&tick='+Formatdatetime('yymmddhhmmss',now)
+    else
+      sHomeUrl:=sHomeUrl+'?tick='+Formatdatetime('yymmddhhmmss',now);
+    if not GetData2('申報案件資料首頁',sHomeUrl,'0') then
     begin
       exit;
     end;
@@ -1562,7 +1660,18 @@ begin
 
     sTxt:=ResultStr;
     sTxt:=Utf8Decode(sTxt);
-    sSrcTxt:=GetStrOnly2('<div class="c001"','</div>',sTxt,true);
+    sSrcTxt:=sTxt;
+    //sSrcTxt:=GetStrOnly2('<div class="c001"','</div>',sTxt,true);
+    for i:=0 to High(FHtmlParseRecs) do
+    begin
+      sSrcTxt:=GetStrOnly2(FHtmlParseRecs[i].TagBegin,FHtmlParseRecs[i].TagEnd,sSrcTxt,true);
+    end;
+    if sSrcTxt='' then
+    begin
+      raise Exception.Create('無法解析到目標數據塊.');
+    end;
+
+
     sSrcTxt:=StringReplace(sSrcTxt,#13#10,'',[rfReplaceAll]);
     sSrcTxt:=StringReplace(sSrcTxt,'<a',#13#10+'<a',[rfReplaceAll]);
     sSrcTxt:=StringReplace(sSrcTxt,'</a>','</a>'+#13#10,[rfReplaceAll]);
@@ -1583,8 +1692,11 @@ begin
              (Pos('</a>',sLine)>0) then
           begin
             sItemUrl:=GetStrOnly2('href="','"',sLine,false);
-            sItemUrl:=StringReplace(sItemUrl,'amp;','',[rfReplaceAll]);
+            sItemUrl:=RplHtmlZhuanYi(sItemUrl);
             sItemTitle:=GetStrOnly2('>','</a>',sLine,false);
+            //sItemTitle:=RplHtmlZhuanYiWithEmpty(sItemTitle); IgnoreOfTitileStr
+            sItemTitle:=IgnoreOfTitileStr(sItemTitle);
+            sItemTitle:=Trim(sItemTitle);
             if (sItemUrl<>'') and (InTheKeyWords(sItemTitle)) then
             begin
               sItemTitle:=StringReplace(sItemTitle,FKeyWord1,'',[rfReplaceAll]);

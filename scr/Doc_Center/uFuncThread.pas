@@ -148,7 +148,7 @@ begin
   result := false;
   if not FileExists(aDatFS) then
   begin
-    result := true;
+    //result := true;
     exit;
   end;
   for i:=1 to 5 do
@@ -459,7 +459,7 @@ procedure TCBDataWorkHandleThread.ProExecute;
     end;
   end;
 
-var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer;
+var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer; sTempGuidOfProIFRSData:string;
     sMsg,sTemp,sOperator,sTimeKey,sUptfile,
     sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn,sLogFile:string;
     aLogRec:TTrancsationRec;
@@ -546,20 +546,15 @@ begin
         end;
 
         if not (
-          ( (FLastGUIDOfCBData<>FGUIDOfCBData) or
-             (FLastGUIDOfCBData='')
-           ) or
-           ( (FLastGUIDOfNodeData<>FGUIDOfNodeData) or
-             (FLastGUIDOfNodeData='')
-           ) or
-           ( (FLastGUIDOfIFRSData<>FGUIDOfIFRSData) or
-             (FLastGUIDOfIFRSData='')
-           )
+           ( (FLastGUIDOfCBData<>FGUIDOfCBData) or (FLastGUIDOfCBData='') ) or
+           ( (FLastGUIDOfNodeData<>FGUIDOfNodeData) or (FLastGUIDOfNodeData='') ) or
+           ( (FLastGUIDOfIFRSData<>FGUIDOfIFRSData) or (FLastGUIDOfIFRSData='') )
            )then
            Continue;
         iErrOfProCBData:=0;
         iErrOfProNodeData:=0;
         iErrOfProIFRSData:=0;
+        sTempGuidOfProIFRSData:=FGUIDOfIFRSData;
         GetDataWorkList;
         
         with AMainFrm do
@@ -595,11 +590,11 @@ begin
             end;
           end
           else begin
-            if FGUIDOfCBData='' then
-            begin
-              UptGUIDOfCBData;
-              FLastGUIDOfCBData:=FGUIDOfCBData;
-            end;
+              if FGUIDOfCBData='' then
+              begin
+                UptGUIDOfCBData;
+                FLastGUIDOfCBData:=FGUIDOfCBData;
+              end;
           end;
 
           if tsNodeWork.Count>0 then
@@ -654,7 +649,10 @@ begin
                   sLogFile:=ExtractFilePath(ParamStr(0))+IFRSOpLogDir+copy(sTimeKey,1,8)+'.log';
                   if CBDataMgr.SetIFRSTFN(sCode, strtoint(sYear),strtoint(sQ),sOperator,sTimeKey) then
                   begin
-                    SetStatusOfIFRS(sCode,_CShen);
+                    {if SameText('DownIFRS',sOperator) then
+                      SetStatusOfIFRS(sCode,_CShen2)
+                    else
+                      SetStatusOfIFRS(sCode,_CShen);}
                     with aLogRec do
                     begin
                        ID := Format('%s,%s',[sYear,sQ]);
@@ -684,12 +682,16 @@ begin
             end;
             if iErrOfProIFRSData=0 then
             begin
-              if FGUIDOfIFRSData='' then
-                UptGUIDOfIFRSData;
-              FLastGUIDOfIFRSData:=FGUIDOfIFRSData;
+              if sTempGuidOfProIFRSData=FGUIDOfIFRSData then
+              begin
+                if FGUIDOfIFRSData='' then
+                  UptGUIDOfIFRSData;
+                FLastGUIDOfIFRSData:=FGUIDOfIFRSData;
+              end;
             end;
           end
           else begin
+            if sTempGuidOfProIFRSData=FGUIDOfIFRSData then
             if FGUIDOfIFRSData='' then
             begin
               UptGUIDOfIFRSData;

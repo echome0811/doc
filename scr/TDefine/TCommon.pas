@@ -20,6 +20,8 @@ const
   IFRSOpLogDir = 'Data\DwnDocLog\IFRSOpLog\';
   WM_CloseAllApp = WM_USER + 11;
   WM_CloseAllMinotorApp = WM_USER + 123;
+  WM_ToDownIFRS=WM_USER+12;
+
   type TUrlType=(urlFull,urlCurDir,urlAfterHome,urlUpGrade,urlNone);
   type TTrancsationRec = packed record
     ID:shortstring; //¾Þ§@¥N½X
@@ -78,6 +80,9 @@ var
 
 procedure DoStrArrayTs(Str:String;sep:String; var tsRst:TStringList);
 //--
+procedure GetYearAndQ(ADate:TDate;var aYear,aQ:Integer;var aIsQMon:boolean);
+function GetQFromMonth(AMonth:integer):integer;
+function GetListOfYearQ(aSYear,aSQ,aEYear,aEQ:Integer;var ts:TStringList):boolean;
 function GetFileDateTimeC(const FileName: string): TDateTime;
 function GetFileDateTimeLastW(const FileName: string): TDateTime;
 function DelDocDatInLog(aLogFile,aGuid:string):boolean;
@@ -205,8 +210,8 @@ function  GetIniFileByTiniFile(SectionName:string;
                     DefaultS:string;
                     FileName:string):ShortString;
 
-function  SaveIniFile(SectionName:PChar;keyName:PChar;
-                     keyVal:PChar;FileName:PChar):ShortString;
+function  SaveIniFile(SectionName:PChar;keyName:PChar;keyVal:PChar;FileName:PChar):ShortString;
+function  SaveIniFile2(SectionName,keyName,keyVal,FileName:string):boolean;
 
 function  CGBtoBIG5(value: String;isSys:Boolean=True): String;
 function Big5ToGB2(BIG5Str: string): AnsiString;
@@ -384,6 +389,7 @@ procedure SleepWait(Const Value:Double);
   procedure ResetLogRecsFile();
   procedure RefreshLogRecs();
   function AddTrancsationDatToFile(ALogFile,aDstFile:String):boolean;
+  function AddTrancsationDatToFileByM(ALogFile,aDstFile,aM:String;var ts:TStringList):boolean;
   function CreateAnEmptTrancsationDatFile(aFile:string):boolean;
 //--
   procedure SendLogMsg(aHost: string; aPort: Integer; ARec:TTrancsationRec);
@@ -898,6 +904,65 @@ begin
     End;
 end;
 
+function AddTrancsationDatToFileByM(ALogFile,aDstFile,aM:String;var ts:TStringList):boolean;
+var f,f2:file of TTrancsationRec; r:array of TTrancsationRec;
+  Remain,Remain2,i:Integer;
+begin
+    result:=false;
+    if not DirectoryExists(ExtractFilePath(aDstFile)) then
+      exit;
+    SetLength(r,0);
+    if FileExists(ALogFile) then
+    Begin
+       try
+       try
+         AssignFile(f,ALogFile);
+         AssignFile(f2,aDstFile);
+         FileMode:=2;
+         Reset(f);
+         if not FileExists(aDstFile) then
+           rewrite(f2);
+         Reset(f2);
+         Remain2:=FileSize(f2);
+         if Remain2<=0 then
+           Reset(f2)
+         else
+           seek(f2,Remain2);
+         Remain:=FileSize(f);
+         SetLength(r,Remain);
+         BlockRead(f,r[0],Remain );
+         for i:=0 to High(r) do
+         begin
+           if SameText(r[i].ModouleNameEn,aM) then
+           begin
+             if ts.IndexOf(r[i].OpTime)=-1 then 
+               ts.Add(r[i].OpTime);
+             Write(f2,r[i]);
+           end;
+         end;
+         result:=true;
+       except
+         on e:Exception do
+           e := nil;
+       end;
+       finally
+         try SetLength(r,0); except end;
+         try
+           CloseFile(f);
+         except
+           on e:Exception do
+             e := nil;
+         end;
+         try
+           CloseFile(f2);
+         except
+           on e:Exception do
+             e := nil;
+         end;
+       end;
+    End;
+end;
+
 
 procedure WriteALog(AUser,AOP,APage:String);
 Var
@@ -1066,16 +1131,16 @@ ContinueLoop: BOOL;
 FSnapshotHandle: THandle; 
 FProcessEntry32: TProcessEntry32; 
 begin  
-result := False;  
-FSnapshotHandle := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);  
-FProcessEntry32.dwSize := Sizeof(FProcessEntry32);  
-ContinueLoop := Process32First(FSnapshotHandle,FProcessEntry32);  
-while integer(ContinueLoop) <> 0 do begin  
-      if ((UpperCase(ExtractFileName(FProcessEntry32.szExeFile)) =UpperCase(ExeFileName))  
-      or (UpperCase(FProcessEntry32.szExeFile) =UpperCase(ExeFileName))) then  
-        result := True;  
-      ContinueLoop := Process32Next(FSnapshotHandle,FProcessEntry32);  
-end;  
+  result := False;  
+  FSnapshotHandle := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);  
+  FProcessEntry32.dwSize := Sizeof(FProcessEntry32);  
+  ContinueLoop := Process32First(FSnapshotHandle,FProcessEntry32);  
+  while integer(ContinueLoop) <> 0 do begin  
+        if ((UpperCase(ExtractFileName(FProcessEntry32.szExeFile)) =UpperCase(ExeFileName))  
+        or (UpperCase(FProcessEntry32.szExeFile) =UpperCase(ExeFileName))) then  
+          result := True;  
+        ContinueLoop := Process32Next(FSnapshotHandle,FProcessEntry32);  
+  end;  
 end;
 
 function AddDocDatInLog(aLogFile,aGuid,aText:string):boolean;
@@ -1219,6 +1284,42 @@ var
 begin
   Result := 0;
   GetFileInfo(FileName,1, Size, Result);
+end;
+
+function GetListOfYearQ(aSYear,aSQ,aEYear,aEQ:Integer;var ts:TStringList):boolean;
+var i,j:integer;
+begin
+  result:=false;
+  ts.Clear;
+  if not ((aEYear>=aSYear) and (aEQ>=aSQ)) then
+  begin
+    Exit;
+  end;
+  if aSYear = aEYear then
+  begin
+    for i:=aSQ to aEQ do
+      ts.Add(Format('%d_%d',[aSYear,i]));
+  end
+  else begin
+    for j:=aSYear to aEYear do
+    begin
+      if j=aSYear then
+      begin
+        for i:=aSQ to 4 do
+          ts.Add(Format('%d_%d',[j,i]));
+      end
+      else if j=aEYear then
+      begin
+        for i:=1 to aEQ  do
+          ts.Add(Format('%d_%d',[j,i]));
+      end
+      else begin
+        for i:=1 to 4  do
+          ts.Add(Format('%d_%d',[j,i]));
+      end;
+    end;
+  end;
+  result:=true;
 end;
 
 
@@ -3099,6 +3200,34 @@ Begin
 
 End;
 
+procedure GetYearAndQ(ADate:TDate;var aYear,aQ:Integer;var aIsQMon:boolean);
+var AY, AMonth,ADay,AOneQ: Word;
+begin
+  DecodeDate(ADate,AY, AMonth, ADay);
+  aYear:=AY;
+  aQ:=GetQFromMonth(AMonth);
+  aIsQMon:=(aQ in [3,6,9,12]);
+end;
+
+function GetQFromMonth(AMonth:integer):integer;
+begin
+  result:=-1;
+  case AMonth of
+      1,2,3: begin
+        result := 1;
+      end;
+      4,5,6:  begin
+        result := 2;
+      end;
+      7,8,9:  begin
+        result := 3;
+      end;
+      10,11,12: begin
+        result := 4;
+      end;
+    end;
+end;
+
 function  GetIniFileEx(SectionName:string;
                     keyName:string;
                     DefaultS:string;
@@ -3149,15 +3278,27 @@ begin
 end;
 
 
-function SaveIniFile(SectionName:PChar;keyName:PChar;
-                       keyVal:PChar;FileName:PChar):ShortString;
-
+function SaveIniFile(SectionName:PChar;keyName:PChar;keyVal:PChar;FileName:PChar):ShortString;
 begin
-
      WritePrivateProfileString(SectionName,KeyName,
                                KeyVal,FileName);
 end;
 
+function  SaveIniFile2(SectionName,keyName,keyVal,FileName:string):boolean;
+var fini:TiniFile; sPath:string;
+begin
+  result:=false;
+  sPath:=ExtractFilePath(FileName);
+  if not DirectoryExists(sPath) then
+    exit;
+  try
+    fini:=TiniFile.create(FileName);
+    fini.WriteString(SectionName,keyName,keyVal);
+    result:=True;
+  finally
+    try if Assigned(fini) then FreeAndNil(fini); except end; 
+  end;
+end;
 
 Function Get_DateSep():ShortString;
 Begin

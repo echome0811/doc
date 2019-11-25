@@ -45,6 +45,7 @@ const
   _XJLLBStr='現金流量表';
   _IFRSListPkgDat='IFRSListPkgDat';
   _IFRSWorklst='IFRSWork.lst';
+  _IFRSWorkHisLst='IFRSWorkHis.lst';
 
   _ShenBaoCaseComCodeF='shenbaocasecomcode.dat';
   _ShenBaoCaseYearF='shenbaocase.dat';

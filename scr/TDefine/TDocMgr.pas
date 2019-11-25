@@ -850,7 +850,8 @@ type
       Function GetCBDataText(Const FileName:String):String;
       function GetCBNameFromConfig(pCBkeyName:string):string;
       Function GetCBDataLog(Const sDateS,aDateE,DstFileName:String):Boolean;
-      Function GetCBDataOpLog(sDateS,aDateE,aDstFile:String):boolean;
+      function GetCBDataOpLog(sDateS,aDateE,aDstFile:String):boolean;
+      function GetCBDataOpLogByM(sDateS,aDateE,aDstFile,aM:String;var ts:TStringList):boolean;
       function GetNewDatFile(aSrcFile:string):string;
       function GetNewStopDatFile(aSrcFile:string):string;
 
@@ -947,6 +948,7 @@ type
       function SetCBBaseInfoIdListIsOk:Boolean;
       Function SetCBDataTextFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
+      Function SetTCRIUploadWork(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetTCRITFN(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey:string):Boolean;
       Function Setstockweight(aUptFiles:TStringList;aDstDatPath,aOperator,aTimeKey:string):Boolean;
@@ -6661,7 +6663,6 @@ finally
 end;
 end;
 
-
 function TDoc02DataMgr.TempDocFileNameExists: Boolean;
 begin
     FNowTempDocFileNameList.clear;
@@ -7786,7 +7787,7 @@ begin
    While FileExists(FileName2) do
    Begin
        inc(Index);
-       FileName2 := LoaclDatDir()+FileName+'_'+IntToStr(Index)+FileExt;
+       FileName2 := LoaclDatDirRateData()+FileName+'_'+IntToStr(Index)+FileExt;
    End;
    Result := FileName2;
 end;
@@ -7916,6 +7917,24 @@ begin
     sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'.log';
     if FileExists(sPath+sLogFile) then
       AddTrancsationDatToFile(sPath+sLogFile,aDstFile);
+    dtTemp:=dtTemp+1;
+  end;
+  result:=true;
+end;
+
+Function TCBDataMgrBase.GetCBDataOpLogByM(sDateS,aDateE,aDstFile,aM:String;var ts:TStringList):boolean;
+var dtTemp,dtS,dtE:TDate; sPath,sLogFile:string;
+begin
+  result:=false;
+  dtS:=DateStr8ToDate(sDateS);
+  dtE:=DateStr8ToDate(aDateE);
+  dtTemp:=dtS;
+  sPath:=LoaclDatDir()+'DwnDocLog\Doc_CBDataEdit\';
+  while dtTemp<=dtE do
+  begin
+    sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'.log';
+    if FileExists(sPath+sLogFile) then
+      AddTrancsationDatToFileByM(sPath+sLogFile,aDstFile,aM,ts);
     dtTemp:=dtTemp+1;
   end;
   result:=true;
@@ -10768,7 +10787,8 @@ var aLogFileName,FileNameEN,FileNameCN,CBFileName,aLogPath:String;
       Copy(xstr1,10,2)+':'+Copy(xstr1,12,2)+':'+Copy(xstr1,14,2)+':'+Copy(xstr1,16,3);
   end;
 begin
-  FAppParam  := TDocMgrParam.Create;
+  if not Assigned(FAppParam) then 
+    FAppParam  := TDocMgrParam.Create;
   try
     if Length(FileName)<=0 then exit;
     if not FileExists(UpLoadCBFileName) then exit;
@@ -11789,6 +11809,25 @@ begin
       SaveCBTxtToUpLoad8('ifrs',sDstFile[0],aOperator,aTimeKey,'ifrs',sTemp);
       Result := True;
     end;
+end;
+
+Function TCBDataMgr.SetTCRIUploadWork(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
+Var  FileName2,sListFile,sTemp,sBaseF1,sBaseF2 : String;
+begin
+    Result := False;
+    FileName2 := LowerCase(FTr1DBPath+'CBData\tcri\'+DstFileName);
+    sListFile := LowerCase(FTr1DBPath+'CBData\tcri\'+'tcriguid.lst');
+    sBaseF1:= LowerCase(FTr1DBPath+'CBData\tcri\'+'TcriComClassCode.dat');
+    sBaseF2:= LowerCase(FTr1DBPath+'CBData\tcri\'+'TcriComCode.dat');
+
+    sTemp:=Get_GUID8;
+    SaveIniFile(PChar(ExtractFileName(FileName2)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+    SaveIniFile(PChar(ExtractFileName(sBaseF1)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+    SaveIniFile(PChar(ExtractFileName(sBaseF2)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+
+    SaveCBTxtToUpLoad('tcri',FileName2,aOperator,aTimeKey);
+    SaveCBTxtToUpLoad4('lst','tcri',sListFile,aOperator,aTimeKey);
+    Result := True;
 end;
 
 Function TCBDataMgr.SetTCRITFN(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
@@ -12975,7 +13014,8 @@ var aLogFileName,FileNameEN,FileNameCN,CBFileName,aLogPath:String;
       Copy(xstr1,10,2)+':'+Copy(xstr1,12,2)+':'+Copy(xstr1,14,2)+':'+Copy(xstr1,16,3);
   end;
 begin
-  FAppParam  := TDocMgrParam.Create(ExtractFilePath(Application.ExeName)+'EcbSetup.ini');
+  if not Assigned(FAppParamEcb) then
+    FAppParamEcb := TDocMgrParam.Create(ExtractFilePath(Application.ExeName)+'EcbSetup.ini');
   try
     if Length(FileName)<=0 then exit;
     if not FileExists(UpLoadCBFileName) then exit;
@@ -12993,19 +13033,19 @@ begin
        if  pos('irrate',TypeFlag)>0  then  // 公債利率
        begin
          CBFileName:='irrate'+CBFileName;
-         FileNameCN:= FAppParam.TwConvertStr ('公債利率')+ StringReplace(TypeFlag,'irrate','',[rfIgnoreCase]);
+         FileNameCN:= FAppParamEcb.TwConvertStr ('公債利率')+ StringReplace(TypeFlag,'irrate','',[rfIgnoreCase]);
        end
        else if  pos('ecbrate',TypeFlag)>0  then
        begin
          CBFileName:=CBFileName;
          if SameText(ExtractFileName(FileName),'ntd2usd.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('新臺幣/美元匯率')+ ExtractFileName(FileName)
+           FileNameCN:= FAppParamEcb.TwConvertStr ('新臺幣/美元匯率')+ ExtractFileName(FileName)
          else if SameText(ExtractFileName(FileName),'fed.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('fed利率資料')+ ExtractFileName(FileName)
+           FileNameCN:= FAppParamEcb.TwConvertStr ('fed利率資料')+ ExtractFileName(FileName)
          else if SameText(ExtractFileName(FileName),'stockq.dat') then
-           FileNameCN:= FAppParam.TwConvertStr ('美國公債殖利率')+ ExtractFileName(FileName)
+           FileNameCN:= FAppParamEcb.TwConvertStr ('美國公債殖利率')+ ExtractFileName(FileName)
          else
-           FileNameCN:= FAppParam.TwConvertStr ('美金匯率利率')+ ExtractFileName(FileName);
+           FileNameCN:= FAppParamEcb.TwConvertStr ('美金匯率利率')+ ExtractFileName(FileName);
        end
        else FileNameCN:= GetCBNameFromConfig(FileNameEN);
       //---------------------------------------------

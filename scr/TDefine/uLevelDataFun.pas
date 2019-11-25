@@ -9,7 +9,9 @@ const
   _CXiaOK='2';
   _CXiaFail='3';
   _CShen='4';
-  _CNoNeedShen='5';
+  _CShen2='b';
+  _CNoNeedShen='5';//無資料
+  _CNoNeedShen2='a';//tr1db中已經存在資料
   _CCreateWorkList='6';
   _CCreateWorkListFail='7';
   _CCreateWorkListReady='8';
@@ -18,10 +20,15 @@ const
   _CStrDaiXia='待下載';
   _CStrXiaing='下載中';
   _CStrXiaOK='下載成功';
+  _CStrXiaOKIFRS='待審核';
   _CStrXiaFail='下載失敗';
   _CStrShen='已保存';
+  _CStrShenIFRS='已保存(手動)';
+  _CStrShenIFRS2='已保存(自動)';
   _CTodayD='今日數據--';
   _CStrNoNeedShen='無需處理';
+  _CStrNoNeedShenIFRS='無需處理(無資料)';
+  _CStrNoNeedShenIFRS2='無需處理(資料已存在)';
   _CStrCreateWorkList='生成任務清單中';
   _CStrCreateWorkListFail='生成任務清單失敗';
   _CStrCreateWorkListReady='正在生成任務清單';
@@ -44,12 +51,14 @@ function LevelsOfIFRS(aInput:string):integer;
 function LevelParentStrOfIFRS(aStartLevel:integer;ts:TStringList):string;
 function FindNodeOfIFRS(aTblType:integer;aNode,aParentNode:string;ts:TStringList):integer;
 function RplNode(aNode:string):string;
+function RplNode0(aNode:string):string;
 function UptIFRSRecToTr1db(aSrcF,aDstF:string):integer;
 function GetIFRSFile2File(aSrcF,aDstF,aCode:string):boolean;
 function IFRSTblChr2Str(aTblChr:char):string;
 
 procedure Init_TIFRSDatRec(var Rec:TIFRSDatRec);
 function IFRS_GetRecOfIFRSData(aInputCode,aDataFile:string):TIFRSDatRec;
+function IFRS_GetCodeList(aDataFile:string;var ts:TStringList):boolean;
 
 
 implementation
@@ -147,13 +156,17 @@ function Status2StrSubForIFRS(aInput:string):string;
      else if aInput=_CXiaing then
        Result:=_CStrXiaing
      else if aInput=_CXiaOK then
-       Result:=_CStrXiaOK
+       Result:=_CStrXiaOKIFRS
      else if aInput=_CXiaFail then
        Result:=_CStrXiaFail
      else if aInput=_CShen then
-       Result:=_CStrShen
+       Result:=_CStrShenIFRS
+     else if aInput=_CShen2 then
+       Result:=_CStrShenIFRS2
      else if aInput=_CNoNeedShen then
-       Result:=_CStrNoNeedShen
+       Result:=_CStrNoNeedShenIFRS
+     else if aInput=_CNoNeedShen2 then
+       Result:=_CStrNoNeedShenIFRS2
      else if aInput=_CCreateWorkList then
        Result:=_CStrCreateWorkList
      else if aInput=_CCreateWorkListFail then
@@ -260,6 +273,12 @@ begin
     try if Assigned(ts) then FreeAndNil(ts); except end;
     try if Assigned(xFini) then FreeAndNil(xFini); except end;
   end;
+end;
+
+function RplNode0(aNode:string):string;
+begin
+  result:=aNode;
+  result:=StringReplace(result,#161+'@',' ',[rfReplaceAll]);
 end;
 
 function RplNode(aNode:string):string;
@@ -478,6 +497,28 @@ begin
   finally
     try CloseFile(fBCode); except end;
   end;
+end;
+
+function IFRS_GetCodeList(aDataFile:string;var ts:TStringList):boolean;
+var fBCode: File  of TIFRSDatRec; rBCode: TIFRSDatRec;
+  ReMain,GotCount,j:integer;
+begin
+  result:=False;
+  ts.clear;
+  if FileExists(aDataFile) then
+  try
+    AssignFile(fBCode,aDataFile);
+    FileMode := 0;
+    ReSet(fBCode);
+    while not Eof(fBCode) do
+    begin
+      read(fBCode,rBCode);
+      ts.Add(rBCode.CompCode);
+    end;
+  finally
+    try CloseFile(fBCode); except end;
+  end;
+  result:=true;
 end;
 
 end.

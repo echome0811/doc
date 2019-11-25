@@ -4124,16 +4124,6 @@ object AMainFrm: TAMainFrm
       F001000000000000F80100000000000000000000000000000000000000000000
       000000000000}
   end
-  object ADocon: TADOConnection
-    Left = 256
-    Top = 80
-  end
-  object adsNameTbl: TADODataSet
-    Connection = ADocon
-    Parameters = <>
-    Left = 288
-    Top = 80
-  end
   object Timer_StartGetDoc: TTimer
     Enabled = False
     OnTimer = Timer_StartGetDocTimer

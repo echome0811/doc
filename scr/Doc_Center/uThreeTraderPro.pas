@@ -15,12 +15,13 @@ function GetStatusOfTCRI(ATag:string):string;
 function SetStatusOfTCRI(ATag,aStatus:string):boolean;
 function SetStatusOfIFRS(aCode,aStatus:string):boolean;
 
-procedure StartIFRSDownExe(aYear,aQ:Integer;aForceCreateWork:boolean);
+procedure StartIFRSDownExe(aYear,aQ:Integer;aForceCreateWork:boolean;aScan:integer);
+procedure StartIFRSDownHisExe(aHisParam:string;aForceCreateWork:boolean);
 procedure StartIFRSDownExe2();
 procedure StartIndustryDownExe2();
 function CPF(APackFile,AExt:string):string;
 function IFRSWorkLstFile:string;
-function CreateIFRSListing(aYear,aQ:integer):Boolean;
+function CreateIFRSListing(aYear,aQ,aScan:integer):Boolean;
 
 function GetZZSZHintText: string;
 function GetLastOkTime(aDocType:Integer;aTw:Boolean):string;
@@ -188,7 +189,7 @@ end;
 end;
 
 
-procedure StartIFRSDownExe(aYear,aQ:Integer;aForceCreateWork:boolean);
+procedure StartIFRSDownExe(aYear,aQ:Integer;aForceCreateWork:boolean;aScan:integer);
 var sEXEFile:string; aInt:integer;
 begin
   sEXEFile:=ExtractFilePath(Application.ExeName)+'DownIFRS.exe';
@@ -198,7 +199,21 @@ begin
       aInt:=1
     else
       aInt:=0;
-    InvokeExe(sEXEFile,IntToStr(aYear)+' '+IntToStr(aQ)+' '+IntToStr(aInt));
+    InvokeExe(sEXEFile,IntToStr(aYear)+' '+IntToStr(aQ)+' '+IntToStr(aInt)+' '+IntToStr(aScan));
+  End;
+end;
+
+procedure StartIFRSDownHisExe(aHisParam:string;aForceCreateWork:boolean);
+var sEXEFile:string; aInt:integer;
+begin
+  sEXEFile:=ExtractFilePath(Application.ExeName)+'DownIFRS.exe';
+  if FileExists(sEXEFile) Then
+  Begin
+    if aForceCreateWork then
+      aInt:=1
+    else
+      aInt:=0;
+    InvokeExe(sEXEFile,'his'+' '+aHisParam+' '+IntToStr(aInt)+' '+'1');
   End;
 end;
 
@@ -233,7 +248,7 @@ function IFRSWorkLstFile:string;
     result:=ExtractFilePath(ParamStr(0))+_IFRSWorklst;
   end;
   
-function CreateIFRSListing(aYear,aQ:integer):Boolean;
+function CreateIFRSListing(aYear,aQ,aScan:integer):Boolean;
 var sFile:string;  fini:TiniFile;
 begin
   result:=false;
@@ -249,6 +264,7 @@ begin
     fini.WriteString('work','status',_CCreateWorkListReady);
     fini.Writefloat('work','createtime',now);
     fini.Writefloat('work','lasttime',now);
+    fini.Writeinteger('work','scan',aScan);
   finally
     try if Assigned(fini) then FreeAndNil(fini); except end;
   end;

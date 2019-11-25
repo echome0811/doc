@@ -9,7 +9,8 @@ uses
   uThreeTraderPro in 'uThreeTraderPro.pas',
   uForCBOpCom in '..\TDefine\uForCBOpCom.pas',
   uFuncThread in 'uFuncThread.pas',
-  uCbdataAndNodePro in 'uCbdataAndNodePro.pas';
+  uCbdataAndNodePro in 'uCbdataAndNodePro.pas',
+  uSetWorkForIFRSFrm in 'uSetWorkForIFRSFrm.pas' {SetWorkForIFRSForm};
 
 {$R *.res}
 
@@ -17,5 +18,6 @@ begin
   Application.Initialize;
   //Application.ShowMainForm := false;
   Application.CreateForm(TAMainFrm, AMainFrm);
+  Application.CreateForm(TSetWorkForIFRSForm, SetWorkForIFRSForm);
   Application.Run;
 end.
