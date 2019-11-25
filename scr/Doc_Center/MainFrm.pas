@@ -20,7 +20,8 @@ uses
   ComObj, Menus,uFuncFileCodeDecode,zlib,
   uLevelDataDefine,uLevelDataFun,DateUtils,
   uCBDataTokenMng,uLogHandleThread,uForUserMoudule,uThreeTraderPro,
-  uForCBOpCom,uCBPARateData,uFuncThread,uSetWorkForIFRSFrm; //TWarningServer,FastStrings
+  uForCBOpCom,uCBPARateData,uFuncThread,uSetWorkForIFRSFrm,
+  uShenBaoCasePro; //TWarningServer,FastStrings
 const
 //-----------------------
   _CBDBUplFile='cbdb.upl';
@@ -249,6 +250,7 @@ type
     FIRSavePathList:TStringList;
     FIRSavePathListEcb:TStringList;
     FRateDatUploadWorkDir:string;
+    FShenbaoCase_UptLogSaveDays:integer;
 
     FLoadCountOfIFRS:integer;
     FDataPath : String;
@@ -356,6 +358,9 @@ type
     function Pro_RequestTr1dbStockWeightDelFile(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     function Pro_RequestDelOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
     function Pro_RequestReBackOfTr1dbStockWeight(aConnect:TIdTCPConnection;SRequest:string):Integer;
+
+    function Pro_RequestDiffOfLastShenBaoCase(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+    function Pro_RequestSubmitShenBaoCase(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     
     function Pro_RequestReadNodeFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
     //function Pro_RequestSetCBDBFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
@@ -383,7 +388,7 @@ type
     CBDataMgr:TCBDataMgr; CBDataMgrEcb:TCBDataMgrEcb; 
     FSendMailOfOpLogFlag:string; FSendMailOfOpLogTime:TTime;
     //FSendMailOfOpLogFlagEcb:string; FSendMailOfOpLogTimeEcb:TTime;
-    
+
     procedure ShowMsg(const Msg:String;AutoConvert:Boolean=true);
     procedure ShowMsgTw(const Msg:String;AutoConvert:Boolean=true);
     procedure ShowMsgTwEcb(const Msg:String;AutoConvert:Boolean=true);
@@ -805,6 +810,8 @@ begin
         FIRSavePathList.Add(sTemp);
       end;
     end;
+
+    FShenbaoCase_UptLogSaveDays:= fini.Readinteger('DownShenBaoCase','UptLogSaveDays',90);
     
     iPort:=fini.ReadInteger('doccenter','DocServerPort',8100);
     iPort2:=fini.ReadInteger('doccenter','CBDataServerPort',8101);
@@ -4223,6 +4230,10 @@ try
          Pro_RequestTr1dbStockWeightDelFile(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('IRRateDateDatWrite',SRequest)=1) then
          Pro_RequestSetIRRateFiles(AThread.Connection,SRequest,ReadStr)
+      else if (PosEx('DiffOfLastShenBaoCase',SRequest)=1) then
+         Pro_RequestDiffOfLastShenBaoCase(AThread.Connection,SRequest,ReadStr)
+      else if (PosEx('SubmitShenBaoCase',SRequest)=1) then
+         Pro_RequestSubmitShenBaoCase(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('EcbRateDateDatWrite',SRequest)=1) then
          Pro_RequestSetEcbRateFiles(AThread.Connection,SRequest,ReadStr)
       else if (PosEx('StockWeightDateDatWrite',SRequest)=1) then
@@ -5664,6 +5675,121 @@ begin
     end;
   end;
 end;
+
+
+function TAMainFrm.Pro_RequestSubmitShenBaoCase(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var sTemp,sLocker,sErr,sUplFile,sLogOpCur,sTimeKey,sLogOpLst,sPath,sPath2,sThisDir,aThisDatFile,aThisUrlList:string;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  function doccentertwTempPath():string;
+  begin
+    result:=GetWinTempPath+'doccentertw\shenbaocasetemp\';
+  end;
+begin
+  with aConnect do
+  begin
+    try
+      WriteLnEx('HELLO');
+      sUplFile:=doccentertwTempPath+sCmd+'.upl';
+      ShowMsgTw('準備接收資料');
+      Pro_RecvFile_CBDataFiles(sUplFile,aConnect,false);
+      ShowMsgTw('完成接收資料');
+
+      sPath:=FAppParam.Tr1DBPath+'CBData\ShenBaoCase\';
+      sThisDir:=GetIniFileByTiniFile('diff','thisdir','',sPath+_ShenBaoCaseLstF);
+      if sThisDir='' then
+      begin
+        WriteLnErrEx('參數錯誤,未能找到thisdir參數');
+      end
+      else begin
+        sPath2:=sPath+sThisDir+'\';
+        Mkdir_Directory(sTemp);
+        if InputDatFileFmt2_ForSetCBData(sUplFile,sPath2,sErr) then
+        begin
+          if DirectoryExists(sPath2+'Bak\') then 
+            TCommon.Deltree(sPath2+'Bak\',True,True);
+          ShowMsgTw('資料解壓成功');
+          aThisDatFile:=GetStrOnly2('<ThisDatFile>','</ThisDatFile>',SRequest,false);
+          aThisUrlList:=GetStrOnly2('<ThisUrlList>','</ThisUrlList>',SRequest,false);
+          sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,SRequest,false);
+          sTemp:=sPath2+'shenbaocasetemp.dat';
+          if SetDataOfShenBaoCase(FAppParam.Tr1DBPath,sTemp,aThisDatFile,aThisUrlList,FShenbaoCase_UptLogSaveDays,sErr) then
+          begin
+            WriteLnEx('HELLO');
+            DelDatF(sPath2+'shenbaocasetemp.dat');  
+          end
+          else WriteLnErrEx(sErr);
+        end else
+          WriteLnErrEx('資料解壓處理失敗.'+sErr);
+      end;
+      ShowMsgTw('完成資料處理');
+    finally
+    end;
+  end;
+end;
+
+function TAMainFrm.Pro_RequestDiffOfLastShenBaoCase(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
+var sTemp,sLocker,sErr,sUplFile,sLogOpCur,sGUID,sTimeKey,sLogOpLst:string;
+  procedure WriteLnEx(amsg:string);
+  begin
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  procedure WriteLnErrEx(amsg:string);
+  begin
+    amsg:='<ErrMsg>'+amsg+'</ErrMsg>' ;
+    ShowMsgTw(amsg);
+    aConnect.WriteLn(amsg);
+  end;
+  function doccentertwTempPath():string;
+  begin
+    result:=GetWinTempPath+'doccentertw\shenbaocasetemp\';
+  end;
+begin
+  with aConnect do
+  begin
+    try
+      WriteLnEx('HELLO');
+      sUplFile:=doccentertwTempPath;
+      DelAllFiles(sUplFile,false);
+      if not DirectoryExists(sUplFile) then
+        Mkdir_Directory(sUplFile);
+      sUplFile:=sUplFile+sCmd+'.upl';
+      ShowMsgTw('準備接收資料');
+      Pro_RecvFile_CBDataFiles(sUplFile,aConnect,false);
+      ShowMsgTw('完成接收資料');
+      
+      sLogOpLst:=doccentertwTempPath+'shenbaocasetemp.dat';
+      DelDatF(sLogOpLst);
+      sTemp:=doccentertwTempPath;
+      if InputDatFileFmt2_ForSetCBData(sUplFile,sTemp,sErr) then
+      begin
+        ShowMsgTw('資料解壓成功');
+        sGUID:=GetStrOnly2('<DiffGUID>','</DiffGUID>',SRequest,false);
+        sLogOpCur:=GetStrOnly2(_OpCurBegin,_OpCurEnd,SRequest,false);
+        sTemp:=doccentertwTempPath+'shenbaocasetemp.dat';
+        if MakeDiffOfShenBaoCase(FAppParam.Tr1DBPath,sTemp,sGUID,FShenbaoCase_UptLogSaveDays,sErr) then
+        begin
+          WriteLnEx('HELLO');
+        end
+        else WriteLnErrEx(sErr);
+      end else
+        WriteLnErrEx('資料解壓處理失敗.'+sErr);
+      ShowMsgTw('完成資料處理');
+    finally
+    end;
+  end;
+end;
+
 
 function TAMainFrm.Pro_RequestSetIRRateFiles(aConnect:TIdTCPConnection;sCmd,SRequest:string):Integer;
 var sTemp,sLocker,sErr,sUplFile,sDate,sLogOpCur,sCurDataType,sTimeKey,sLogOpLst:string;

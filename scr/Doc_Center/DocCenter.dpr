@@ -10,7 +10,8 @@ uses
   uForCBOpCom in '..\TDefine\uForCBOpCom.pas',
   uFuncThread in 'uFuncThread.pas',
   uCbdataAndNodePro in 'uCbdataAndNodePro.pas',
-  uSetWorkForIFRSFrm in 'uSetWorkForIFRSFrm.pas' {SetWorkForIFRSForm};
+  uSetWorkForIFRSFrm in 'uSetWorkForIFRSFrm.pas' {SetWorkForIFRSForm},
+  uShenBaoCasePro in 'uShenBaoCasePro.pas';
 
 {$R *.res}
 

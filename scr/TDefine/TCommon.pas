@@ -78,6 +78,8 @@ var
   P_CurUser:TUser;
   OpTrancsationRecs:TTrancsationRecs;
 
+function CpyF(aDatFS,aDatFD:ShortString):boolean;
+function DelF(aDatF:ShortString):boolean;
 procedure DoStrArrayTs(Str:String;sep:String; var tsRst:TStringList);
 //--
 procedure GetYearAndQ(ADate:TDate;var aYear,aQ:Integer;var aIsQMon:boolean);
@@ -1322,6 +1324,49 @@ begin
   result:=true;
 end;
 
+
+function CpyF(aDatFS,aDatFD:ShortString):boolean;
+var i:integer;
+begin
+  result := false;
+  if not FileExists(aDatFS) then
+  begin
+    result := true;
+    exit;
+  end;
+  for i:=1 to 5 do
+  begin
+    if CopyFile(PChar(String(aDatFS)),PChar(String(aDatFD)),false ) then
+    if FileExists(aDatFD) then
+    begin
+      result := true;
+      exit;
+    end;
+    Sleep(500);
+  end;
+end;
+
+function DelF(aDatF:ShortString):boolean;
+var i:integer;
+begin
+  result := false;
+  for i:=1 to 5 do
+  begin
+    if FileExists(aDatF) then
+    begin
+      if DeleteFile(aDatF) then
+      begin
+        result := true;
+        exit;
+      end;
+    end
+    else begin
+      result := true;
+      exit;
+    end;
+    Sleep(500);
+  end;
+end;
 
 procedure DoStrArrayTs(Str:String;sep:String; var tsRst:TStringList);
 var ts:TStringList;
