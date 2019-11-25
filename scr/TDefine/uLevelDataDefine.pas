@@ -8,6 +8,7 @@ const
   C_SelectLimit : array[0..4] of String=('>','<','=','>=','<=');
   FmtYYYYMMDD='yyyymmdd';
   FmtYYYYMM='yyyymm';
+  _IFRSDatColSize=200;
 
 
   _LevelDataF='leveldata.dat';
@@ -37,7 +38,9 @@ const
 
   _IFRSTopNodeF='IFRSTopNode.dat';
   _IFRSNodeF='IFRSNode.dat';
+  _IFRSColNodeF='IFRSColNode.dat';
   _ZCFZB='1';//資產負債表
+  _ZZSYB2='7';
   _ZZSYB='2';//綜合損益表
   _XJLLB='3';//現金流量表
   _ZCFZBStr='資產負債表';
@@ -282,7 +285,7 @@ PBorrowMoneyRec = ^TBorrowMoneyRec;
 
 
 //------------IFRS
-TIFRSTopNodeRec=record
+{TIFRSTopNodeRec=record
   Idx:integer;//索引序號
   Level:byte;//層次
   ParentNodeIdx:integer;//父節點引序號
@@ -297,12 +300,24 @@ TIFRSNodeRec=record
   Name:string[120];//名稱
   ListNo:integer;//顯示時的次序號
   TblType:char;//所屬數據表 1=資產負債表 2=綜合損益表 3=現金流量表
-end;
+end;}
+
+TIFRSColRec=record
+    Idx:integer;//索引序號
+    ParentNodeIdx:integer;//父節點引序號
+    Name:string[130];//名稱
+    ListNo:integer;//顯示時的次序號
+    TblType:char;//所屬數據表 1=資產負債表 2=綜合損益表 3=現金流量表
+    Kong:Byte;
+  end;
 
 TIFRSDatRec=record
+    Year:Word;
+    Q:Byte;
+    Tbl:Byte;
     CompCode:string[4];//代碼
-    NumAry:array[0..299] of Double;//會計金額
-    IdxAry:array[0..299] of Smallint;//會計項目索引
+    NumAry:array[0.._IFRSDatColSize] of Double;//會計金額
+    IdxAry:array[0.._IFRSDatColSize] of Smallint;//會計項目索引
 end;
 TIFRSDatRecAry=array of TIFRSDatRec;
 

@@ -13,7 +13,7 @@ unit TDocMgr;
 interface
 Uses Windows,IniFiles,Controls,Classes,Forms,SysUtils,CsDef,TCommon,IdHTTP,
    Graphics,ADODB,DateUtils,Dialogs,StdCtrls,StrUtils,IdComponent,TDocRW,
-   uLevelDataFun,uFuncFileCodeDecode,FReplace;//FastStrings
+   uLevelDataFun,uFuncFileCodeDecode,FReplace,TCBDataType,TCBDataTypeEcb;//FastStrings
 const
   CHttpSleep=5;
   CParamSep=';';
@@ -815,6 +815,9 @@ type
     FExceptCodeList:TStringList;//需要將記錄從正式數據文件分離出來的代碼列表
     FShangShiCodeList:TStringList;
 
+    procedure RefreshExceptList;virtual;
+    procedure RefreshShangShiCodeList;virtual;
+    
     function GetUploadLogFileRateData():String;
     function GetUploadLogFile():String;
     function GetUploadLogFile2(aTag:string):String;
@@ -828,10 +831,9 @@ type
   public
       constructor Create(aTw:boolean;Tr1DBPath:String);
       destructor  Destroy; override;
-      procedure RefreshExceptList;
-      procedure RefreshShangShiCodeList;
       function LoaclDatDir():string;virtual;
       function LoaclDatDirRateData():string;
+      procedure RefreshCodeList(aXiashi,aFeiXiaShi:boolean);
 
       Function GetUploadTmpFile():_cStrLst;
       Function GetUploadTmpFileRateData():_cStrLst;
@@ -840,6 +842,7 @@ type
 
       procedure ChangeDBLstVer(const FileName:String);
       Function GetCBDataFile_FullPath(FileName:String):String;
+      Function GetNodetextforcbpa_FullPath():String;
       Function GetCBData_FullPath():String;
       Function GetCBDataTextFileName(FileName:String):String;
       function CreateCBDataFileIfNotExists(FileName:String):boolean;
@@ -882,10 +885,14 @@ type
       function ProSepPassHis_cbredeemdate(aExtractYear:string):string;  //贖回條款
       function ProSepPassHis_cbsaledate(aExtractYear:string):string;  //賣回條款
       function ProSepPassHis_cbdate(aExtractYear:string):string;  //重要日期
+      function GetTr1DBPath:string;
   End;
   
   TCBDataMgr = Class(TCBDataMgrBase)
   private
+    procedure RefreshExceptList;override;
+    procedure RefreshShangShiCodeList;override;
+
     function GetNifaxingCBText: String;
     procedure SetNifaxingCBText(const Value: String);
     function GetPassCBText: String;
@@ -950,10 +957,10 @@ type
       Function SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
       Function SetTCRIUploadWork(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetTCRITFN(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
-      Function SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey:string):Boolean;
+      Function SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey,aIFRSSaveRst,sDstFile1,sDstFile2,sDstFile3:string):Boolean;
       Function Setstockweight(aUptFiles:TStringList;aDstDatPath,aOperator,aTimeKey:string):Boolean;
       Function SetCBDataTextFileName_10(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
-      function SetNodeUpload(const aOperator,aTimeKey: String):boolean;
+      function SetNodeUpload(const aNodeOp,aOldCid,aCid,aOperator,aTimeKey: String):boolean;
       //--DOC4.4.0.0   pqx 20120208
       procedure Strike4ConvToResetLst(aOperator,aTimeKey:string);
       //---
@@ -991,6 +998,9 @@ type
 
   TCBDataMgrEcb = Class(TCBDataMgrBase)
   private
+    procedure RefreshExceptList;override;
+    procedure RefreshShangShiCodeList;override;
+    
     function GetNifaxingCBText: String;
     procedure SetNifaxingCBText(const Value: String);
     function GetPassCBText: String;
@@ -1025,7 +1035,7 @@ type
       Function SetCBDataText(Const FileName,Value,aOperator,aTimeKey :String):String;
       Function SetCBDataTextFileName(Const DstFileName,SrcFileName,aOperator,aTimeKey:String):Boolean;
       Function SetCBDataUpload(Const aOperator,aTimeKey,DstFileName:String):Boolean;
-      function SetNodeUpload(const aOperator,aTimeKey: String):boolean;
+      function SetNodeUpload(const aNodeOp,aOldCid,aCid,aOperator,aTimeKey: String):boolean;
 
       procedure SetCBDataLog(Const AppName,FileName,UpLoadCBFileName,aOperator,aTimeKey:String;
         FtpServerCount:Integer=1;FtpServerName:String='';TypeFlag:string ='');
@@ -6663,6 +6673,7 @@ finally
 end;
 end;
 
+
 function TDoc02DataMgr.TempDocFileNameExists: Boolean;
 begin
     FNowTempDocFileNameList.clear;
@@ -7689,6 +7700,16 @@ begin
     End;
 end;
 
+procedure TCBDataMgrBase.RefreshExceptList;
+begin
+
+end;
+
+procedure TCBDataMgrBase.RefreshShangShiCodeList;
+begin
+
+end;
+
 constructor TCBDataMgrBase.Create(aTw:boolean;Tr1DBPath:String);
 begin
    FIsTw:=aTw;
@@ -7734,6 +7755,14 @@ end;
 function TCBDataMgrBase.LoaclDatDirRateData():string;
 begin
    result:=LoaclDatDir+'RateDatUpload\';
+end;
+
+procedure TCBDataMgrBase.RefreshCodeList(aXiashi,aFeiXiaShi:boolean);
+begin
+  if aXiashi then
+   RefreshExceptList;
+  if aFeiXiaShi then
+    RefreshShangShiCodeList;
 end;
 
 function TCBDataMgrBase.GetUploadLogFile2(aTag:string):String;
@@ -8117,6 +8146,11 @@ begin
   result := FTr1DBPath+'CBData\Data\';
 end;
 
+Function TCBDataMgrBase.GetNodetextforcbpa_FullPath():String;
+begin
+  result := FTr1DBPath+'CBData\nodetextforcbpa\';
+end;
+
 Function TCBDataMgrBase.GetCBDataFile_FullPath(FileName:String):String;
 begin
   result := GetCBData_FullPath+FileName;
@@ -8254,23 +8288,6 @@ Except
 End;
 end;
 
-function GetAEnableIFRSUploadNo:string;
-var i:integer; sNo,sPath,sFile:string;
-begin
-  Result:='';
-  sPath:=ExtractFilePath(ParamStr(0))+'data\';
-  for i:=20 to 10000 do
-  begin
-    Application.ProcessMessages;
-    sFile:=sPath+'upload_ifrs'+inttostr(i)+'.cb';
-    if not FileExists(sFile) then
-    begin
-      result:=inttostr(i);
-      exit;
-    end;
-  end;
-end;
-
 procedure Sort(Var aRecLst:TList);
 var
   i,j:integer;
@@ -8366,139 +8383,6 @@ begin
   end;
 end; }
 
-procedure TCBDataMgrBase.RefreshExceptList;
-var sAryCodeFile:array of string;
-    i,j:integer;
-    sFile,sLine,sName:string;
-    ts:TStringList;
-    bIsPassWay:boolean;
-begin
-  //RefreshPassHisList('');
-  try
-    FExceptCodeList.clear;
-    ts:=TStringList.create;
-    SetLength(sAryCodeFile,1);
-    sAryCodeFile[0]:=FTr1DBPath+'CBData\market_db\'+_PasswayTxt;
-
-    for i:=0 to High(sAryCodeFile) do
-    begin
-      ts.Clear;
-      if FileExists(sAryCodeFile[i]) then
-        ts.LoadFromFile(sAryCodeFile[i])
-      else Continue;
-      sname:=ExtractFileName(sAryCodeFile[i]);
-      bIsPassWay:=SameText('passaway.txt',sname);
-      for j:=0 to ts.Count-1 do
-      begin
-        sLine:=Trim(ts[j]);
-          if Pos('TradeCode=',sLine)=1 then
-          begin
-            ReplaceSubString('TradeCode=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FExceptCodeList.Add(sLine);
-          end
-          else if Pos('TraderCodeEcb=',sLine)=1 then
-          begin
-            ReplaceSubString('TraderCodeEcb=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FExceptCodeList.Add(sLine);
-          end
-          else if Pos('BID=',sLine)=1 then
-          begin
-            ReplaceSubString('BID=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FExceptCodeList.Add(sLine);
-          end;
-      end;
-    end;
-  finally
-    SetLength(sAryCodeFile,0);
-    FreeAndNil(ts);
-  end;
-end;
-
-procedure TCBDataMgrBase.RefreshShangShiCodeList;
-var sAryCodeFile:array of string;
-    i,j:integer;
-    sFile,sLine,sName:string;
-    ts:TStringList;
-
-    function Getmarket_dbFileList(sIniFile:string):boolean;
-    var fini:TiniFile; sVarFiles:string;
-        tsVar:TStringList; iVar1,iVar2,iVar3:integer;
-    begin
-      Result:=false;
-      fini:=nil; tsVar:=nil;
-      if not FileExists(sIniFile) then exit;
-      try
-        fini:=TIniFile.create(sIniFile);
-        tsVar:=TStringList.create;
-        sVarFiles:=fini.ReadString('dblst','filename','');
-        sVarFiles:=StringReplace(sVarFiles,',',#13#10,[rfReplaceAll]);
-        tsVar.text:=sVarFiles;
-        if tsVar.Count>0 then
-        begin
-          iVar1:=Length(sAryCodeFile);
-          iVar2:=iVar1+tsVar.Count;
-          SetLength(sAryCodeFile,iVar2);
-          for iVar3:=0 to tsVar.Count-1 do
-          begin
-            sAryCodeFile[iVar1+iVar3]:='';
-            if SameText('passaway.txt',tsVar[iVar3]) then continue;
-            sAryCodeFile[iVar1+iVar3]:=ExtractFilePath(sIniFile)+tsVar[iVar3];
-          end;
-        end;
-      finally
-        try if fini<>nil then FreeAndNil(fini); except end;
-        try if tsVar<>nil then FreeAndNil(tsVar); except end;
-      end;
-      result:=true;
-    end;
-
-begin
-  try
-    FShangShiCodeList.clear;
-    ts:=TStringList.create;
-    SetLength(sAryCodeFile,0);
-    Getmarket_dbFileList(FTr1DBPath+'CBData\publish_db\dblst.lst');
-    Getmarket_dbFileList(FTr1DBPath+'CBData\market_db\dblst2.lst');
-
-    for i:=0 to High(sAryCodeFile) do
-    begin
-      ts.Clear;
-      if sAryCodeFile[i]='' then continue;
-      if FileExists(sAryCodeFile[i]) then
-        ts.LoadFromFile(sAryCodeFile[i])
-      else continue;
-      sname:=ExtractFileName(sAryCodeFile[i]);
-      for j:=0 to ts.Count-1 do
-      begin
-          sLine:=Trim(ts[j]);
-          if Pos('TradeCode=',sLine)=1 then
-          begin
-            ReplaceSubString('TradeCode=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FShangShiCodeList.Add(sLine);
-          end
-          else if Pos('TraderCodeEcb=',sLine)=1 then
-          begin
-            ReplaceSubString('TraderCodeEcb=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FShangShiCodeList.Add(sLine);
-          end
-          else if Pos('BID=',sLine)=1 then
-          begin
-            ReplaceSubString('BID=','',sLine);
-            sLine:=Trim(sLine);
-            if sLine<>'' then FShangShiCodeList.Add(sLine);
-          end;
-      end;
-    end;
-  finally
-    SetLength(sAryCodeFile,0);
-    FreeAndNil(ts);
-  end;
-end;
 
 function TCBDataMgrBase.ProSep_Cbidx2OrCbidx(sTagFile:string;aFtpXiaShi,aFtpNotXiaShi:boolean): string;
 var sFile1,sFile2,sFile3:string;
@@ -10147,6 +10031,11 @@ Finally
 End;
 end;
 
+function TCBDataMgrBase.GetTr1DBPath:string;
+begin
+  result:=FTr1DBPath;
+end;
+
 function TCBDataMgrBase.ProSepPassHis_cbdate(aExtractYear:string):string;
 var sFile1,sFile2:string;
     ts1,ts2,ts4,ts5:TStringList;
@@ -10466,6 +10355,8 @@ Except
 End;
 End;
 
+
+
 function TCBDataMgr.ProSepPassHis_cbstopconv(aExtractYear:string):string;
 var
   Rec :TSTOPCONV_PERIOD_RPT;
@@ -10519,6 +10410,33 @@ End;
 function TCBDataMgr.LoaclDatDir():string;
 begin
   result:=ExtractFilePath(Application.ExeName)+'Data\';
+end;
+
+procedure TCBDataMgr.RefreshExceptList;
+var ts:TStringList;
+begin
+  //RefreshPassHisList('');
+  try
+    FExceptCodeList.clear;
+    ts:=TStringList.create;
+    if TCBDataType.GetTradeCodeList(FTr1DBPath+'CBData\nodetextforcbpa\',1,ts) then
+      FExceptCodeList.text:=ts.text;
+  finally
+    FreeAndNil(ts);
+  end;
+end;
+
+procedure TCBDataMgr.RefreshShangShiCodeList;
+var ts:TStringList;
+begin
+  try
+    FShangShiCodeList.clear;
+    ts:=TStringList.create;
+    if TCBDataType.GetTradeCodeList(FTr1DBPath+'CBData\nodetextforcbpa\',2,ts) then
+      FShangShiCodeList.text:=ts.text;
+  finally
+    FreeAndNil(ts);
+  end;
 end;
 
 function TCBDataMgr.GetHushiCBText: String;
@@ -10918,7 +10836,7 @@ begin
 end;
 
 Function TCBDataMgr.GetIFRSOpLog(sDateS,aDateE,aDstFile:String):boolean;
-var dtTemp,dtS,dtE:TDate; sPath,sLogFile:string;
+var dtTemp,dtS,dtE:TDate; sPath,sLogFile:string; i:integer;
 begin
   result:=false;
   dtS:=DateStr8ToDate(sDateS);
@@ -10927,9 +10845,16 @@ begin
   sPath:=ExtractFilePath(ParamStr(0))+IFRSOpLogDir;
   while dtTemp<=dtE do
   begin
-    sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'.log';
-    if FileExists(sPath+sLogFile) then
-      AddTrancsationDatToFile(sPath+sLogFile,aDstFile);
+    for i:=0 to 24 do
+    begin
+      if i<10 then
+        sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'_'+'0'+inttostr(i)+'.log'
+      else 
+        sLogFile:=FormatDateTime('yyyymmdd',dtTemp)+'_'+''+inttostr(i)+'.log';
+      if FileExists(sPath+sLogFile) then
+        AddTrancsationDatToFile(sPath+sLogFile,aDstFile);
+    end;
+
     dtTemp:=dtTemp+1;
   end;
   result:=true;
@@ -11084,46 +11009,78 @@ begin
 end;
 
 
-function TCBDataMgr.SetNodeUpload(const aOperator,aTimeKey: String):boolean;
-var bParam1,bParam2:boolean; sMkt,sFileName,sPath,sOneF:string;
-    ts:TStringList; i:Integer;
+function TCBDataMgr.SetNodeUpload(const aNodeOp,aOldCid,aCid,aOperator,aTimeKey: String):boolean;
+const
+  C_CIDLst1 : array[0..7] of String=('Prepare_List_tw','TW_OTC','TW_Market','TW_Stop',
+                'Prepare_List_china','market_sh','market_sz','passaway');
+  C_CIDFileLst1 : array[0..7] of String=('guapai.txt','shanggui.txt','shangshi.txt','passaway.txt',
+                'guapai.txt','hushi.txt','shenshi.txt','passaway.txt');
+  C_CIDLst2 : array[0..7] of String=('Announce_tw','Send_tw','Pass_tw','QueryList_tw','StopIssue_tw',
+                'Announce','Pass','Stop_Issue');
+  C_CIDFileLst2 : array[0..7] of String=('nifaxing.txt','song.txt','pass.txt','xunquan.txt','stopissue.txt',
+                'nifaxing.txt','pass.txt','stopissue.txt');
+
+  function ProOfCid(aInputCid:string):boolean;
+  var i:integer; sMkt,sOneF,sDatText:string; bTw:boolean;
+  begin
+    result:=false;
+    for i:=0 to High(C_CIDLst1) do
+    begin
+      if SameText(C_CIDLst1[i],aInputCid) then
+      begin
+        bTw:=i in [0..3];
+        sMkt:='market_db';
+        sOneF:=LowerCase(FTr1DBPath+'CBData\market_db\'+C_CIDFileLst1[i]);
+        sDatText:=TCBDataType.GetTextOfACBClass(bTw,FTr1DBPath+'CBData\nodetextforcbpa\',aInputCid);
+        SetTextByTs(sOneF,sDatText);
+        SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+        result:=true;
+        exit;
+      end;
+    end;
+
+    for i:=0 to High(C_CIDLst2) do
+    begin
+      if SameText(C_CIDLst2[i],aInputCid) then
+      begin
+        bTw:=i in [0..4];
+        sMkt:='publish_db';
+        sOneF:=LowerCase(FTr1DBPath+'CBData\publish_db\'+C_CIDFileLst2[i]);
+        sDatText:=TCBDataType.GetTextOfACBClass(bTw,FTr1DBPath+'CBData\nodetextforcbpa\',aInputCid);
+        SetTextByTs(sOneF,sDatText);
+        SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+        result:=true;
+        exit;
+      end;
+    end;
+  end;
+var bParam1,bParam2:boolean;
 begin
   Result:=false;
-  sPath:=LowerCase(FTr1DBPath+'CBData\');
-  ts:=TStringList.Create;
-  try
-    sMkt:='publish_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\publish_db\dblst.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
 
-    
-    sMkt:='market_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\market_db\dblst2.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
+  if not ProOfCid(aCid) then
+    Exit;
+  if aOldCid<>'' then
+    if not ProOfCid(aOldCid) then
+    Exit;
 
+  //--涉及到節點的更新，就要更新doccenter緩存中的code list,以防止條款下市、非下市 分類時出錯
+  RefreshExceptList;
+  RefreshShangShiCodeList;
+
+  //--只有當設計下下市節點的節點刪除、 節點移動時，才進行轉債條款資料全面的重新分類
+  if ( SameText(aNodeOp,'Mov') or SameText(aNodeOp,'DelCB') ) and
+     ( SameText(aCid,'passaway') or SameText(aCid,'TW_Stop') or
+       SameText(aOldCid,'passaway') or SameText(aOldCid,'TW_Stop') 
+     )  then
+  begin
     bParam1:=true;
     bParam2:=true;
-    ProAfterNodeChanged(bParam1,bParam2,bParam1,bParam2,aOperator,aTimeKey);
+    ProAfterNodeChanged(false,false,bParam1,bParam2,aOperator,aTimeKey);
     Strike4ConvToResetLst(aOperator,aTimeKey);
     ResetLstConvToStrike2(aOperator,aTimeKey);
-    result:=True;
-  finally
-    FreeAndNil(ts);
   end;
+  result:=True;
 end;
 
 function TCBDataMgr.GetStopCBText: String;
@@ -11717,29 +11674,46 @@ begin
   result:=true;
 end;
 
+function GetAEnableIFRSUploadNo:string;
+var i:integer; sNo,sPath,sFile:string;
+begin
+  Result:='';
+  sPath:=ExtractFilePath(ParamStr(0))+'data\';
+  for i:=100000 to 200000 do
+  begin
+    Application.ProcessMessages;
+    sFile:=sPath+'upload_ifrs'+inttostr(i)+'.cb';
+    if not FileExists(sFile) then
+    begin
+      result:=inttostr(i);
+      exit;
+    end;
+  end;
+end;
 
-Function TCBDataMgr.SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey:string):Boolean;
-Var
-  sListFile,sDstName,
-   sTemp,sTemp1,sTemp2,sTemp3,sDelF,sDelF2,sBaseF1,sBaseF2,sFirstAdd : String;
+Function TCBDataMgr.SetIFRSTFN(aCode:string;aYear,aQ:integer;aOperator,aTimeKey,aIFRSSaveRst,sDstFile1,sDstFile2,sDstFile3:string):Boolean;
+Var sListFile,sDstName,sTemp,sTemp1,sTemp2,sTemp3,sDelF,sDelF2,sBaseF1,sFirstAdd,sFirstAdd2,sUploadWorkNo : String;//sBaseF2
   f1,i : Integer;
   FileStr : TStringList;
-  sDstFile,sSrFile:array[0..2] of string;
-  bAry:array[0..2] of integer; 
+  //sDstFile,sSrFile:array[0..2] of string;
+  //bAry:array[0..2] of integer;
 begin
     Result := False;
     sListFile := Format('%sCBData\ifrs\ifrsguid.lst',[FTr1DBPath]);
     sListFile := LowerCase(sListFile);
-    sBaseF1:= Format('%sCBData\ifrs\IFRSTopNode.dat',[FTr1DBPath]);
+    //sBaseF1:= Format('%sCBData\ifrs\IFRSTopNode.dat',[FTr1DBPath]);
+    sBaseF1:= Format('%sCBData\ifrs\IFRSColNode.dat',[FTr1DBPath]);
     sBaseF1:= LowerCase(sBaseF1);
-    sBaseF2:= Format('%sCBData\ifrs\IFRSNode.dat',[FTr1DBPath]);
-    sBaseF2:= LowerCase(sBaseF2);
+    //sBaseF2:= Format('%sCBData\ifrs\IFRSNode.dat',[FTr1DBPath]);
+    //sBaseF2:= LowerCase(sBaseF2);
 
+    if aYear<100 then sFirstAdd2:='0'+inttostr(aYear)+inttostr(aQ)
+    else sFirstAdd2:=inttostr(aYear)+inttostr(aQ);
     sTemp:=ExtractFilePath(sBaseF1);
     if not DirectoryExists(sTemp) then
       Raise Exception.Create('Cannot find Directory '+sTemp);
 
-    sSrFile[0] := Format('%sData\IFRS\%d_%d_%s_1.dat',[ExtractFilePath(ParamStr(0)),aYear,aQ,aCode]);
+    {sSrFile[0] := Format('%sData\IFRS\%d_%d_%s_1.dat',[ExtractFilePath(ParamStr(0)),aYear,aQ,aCode]);
     sSrFile[0] := LowerCase(sSrFile[0]);
     sSrFile[1] := Format('%sData\IFRS\%d_%d_%s_2.dat',[ExtractFilePath(ParamStr(0)),aYear,aQ,aCode]);
     sSrFile[1] := LowerCase(sSrFile[1]);
@@ -11751,62 +11725,70 @@ begin
     sDstFile[1] := LowerCase(sDstFile[1]);
     sDstFile[2] := Format('%sCBData\ifrs\%d_%d_3.dat',[FTr1DBPath,aYear,aQ]);
     sDstFile[2] := LowerCase(sDstFile[2]);
-
     bAry[0]:=UptIFRSRecToTr1db(sSrFile[0] ,sDstFile[0]);
     bAry[1]:=UptIFRSRecToTr1db(sSrFile[1] ,sDstFile[1]);
-    bAry[2]:=UptIFRSRecToTr1db(sSrFile[2] ,sDstFile[2]);
+    bAry[2]:=UptIFRSRecToTr1db(sSrFile[2] ,sDstFile[2]);}
 
+    
     sFirstAdd:='0';
-    sTemp:=GetUploadLogFile6('ifrs',sFirstAdd+'6');
+    sTemp:=GetUploadLogFile6('ifrs',sFirstAdd2+sFirstAdd+'6');
     if FileExists(sTemp) then
     begin
       sFirstAdd:='1';
     end;
+    sFirstAdd:=sFirstAdd2+sFirstAdd;
 
-    if (bAry[0]=0) and
-       (bAry[1]=0) and
-       (bAry[2]=0) then
+    sUploadWorkNo:=GetAEnableIFRSUploadNo;
+    if sUploadWorkNo='' then
+    begin
+      exit;
+    end;
+
+    if (Copy(aIFRSSaveRst,1,1)='0') and
+       (Copy(aIFRSSaveRst,2,1)='0') and
+       (Copy(aIFRSSaveRst,3,1)='0') then
     begin
       result:=true;
     end
-    else if (bAry[0]<>-1) and
-       (bAry[1]<>-1) and
-       (bAry[2]<>-1) then
+    else if (Copy(aIFRSSaveRst,1,1)='1') and
+            (Copy(aIFRSSaveRst,2,1)='1') and
+            (Copy(aIFRSSaveRst,3,1)='1') then
     begin
-      if (bAry[0]=1) then
+      //if (bAry[0]=1) then
       begin
         sTemp:=Get_GUID8;
-        SaveIniFile(PChar(ExtractFileName(sDstFile[0])),PChar('guid'),PChar(sTemp),PChar(sListFile));
-        SaveCBTxtToUpLoad7('ifrs',sDstFile[0],aOperator,aTimeKey,'ifrs',sFirstAdd+'1');
+        SaveIniFile(PChar(ExtractFileName(sDstFile1)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+        //在Doc\Data\DwnDocLog\uploadCBData\yymmdd.log中寫入log供log查詢時使用
+        SaveCBTxtToUpLoad8('ifrs',sDstFile1,aOperator,aTimeKey,'ifrs',sUploadWorkNo);
       end;
-      if (bAry[1]=1) then
+      //if (bAry[1]=1) then
       begin
         sTemp:=Get_GUID8;
-        SaveIniFile(PChar(ExtractFileName(sDstFile[1])),PChar('guid'),PChar(sTemp),PChar(sListFile));
-        SaveCBTxtToUpLoad7('ifrs',sDstFile[1],aOperator,aTimeKey,'ifrs',sFirstAdd+'2');
+        SaveIniFile(PChar(ExtractFileName(sDstFile2)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+        SaveCBTxtToUpLoad7('ifrs',sDstFile2,aOperator,aTimeKey,'ifrs',sFirstAdd+'2');
       end;
-      if (bAry[2]=1) then
+      //if (bAry[2]=1) then
       begin
         sTemp:=Get_GUID8;
-        SaveIniFile(PChar(ExtractFileName(sDstFile[2])),PChar('guid'),PChar(sTemp),PChar(sListFile));
-        SaveCBTxtToUpLoad7('ifrs',sDstFile[2],aOperator,aTimeKey,'ifrs',sFirstAdd+'3');
+        SaveIniFile(PChar(ExtractFileName(sDstFile3)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+        SaveCBTxtToUpLoad7('ifrs',sDstFile3,aOperator,aTimeKey,'ifrs',sFirstAdd+'3');
       end;
 
       sTemp:=Get_GUID8;
       SaveIniFile(PChar(ExtractFileName(sBaseF1)),PChar('guid'),PChar(sTemp),PChar(sListFile));
-      sTemp:=Get_GUID8;
-      SaveIniFile(PChar(ExtractFileName(sBaseF2)),PChar('guid'),PChar(sTemp),PChar(sListFile));
+      //sTemp:=Get_GUID8;
+      //SaveIniFile(PChar(ExtractFileName(sBaseF2)),PChar('guid'),PChar(sTemp),PChar(sListFile));
 
       SaveCBTxtToUpLoad7('ifrs',sBaseF1,aOperator,aTimeKey,'ifrs',sFirstAdd+'4');
-      SaveCBTxtToUpLoad7('ifrs',sBaseF2,aOperator,aTimeKey,'ifrs',sFirstAdd+'5');
+      //SaveCBTxtToUpLoad7('ifrs',sBaseF2,aOperator,aTimeKey,'ifrs',sFirstAdd+'5');
       SaveCBTxtToUpLoad7('ifrs',sListFile,aOperator,aTimeKey,'ifrs',sFirstAdd+'6');
 
-      sTemp:=GetAEnableIFRSUploadNo;
+      {sTemp:=GetAEnableIFRSUploadNo(aYear,aQ);
       if sTemp='' then
       begin
         exit;
       end;
-      SaveCBTxtToUpLoad8('ifrs',sDstFile[0],aOperator,aTimeKey,'ifrs',sTemp);
+      SaveCBTxtToUpLoad8('ifrs',sDstFile1,aOperator,aTimeKey,'ifrs',sTemp);  }
       Result := True;
     end;
 end;
@@ -12698,10 +12680,8 @@ var sListFile,sFileName,sTemp,sTemp1,sTemp2,sTemp3,sGuid,sPath:string;
   end;
 begin
   Result:=false;
-  //if aRefreshExceptList then RefreshExceptList;
-  //if aRefreshShangShiCodeList then RefreshShangShiCodeList;
-  RefreshExceptList;
-  RefreshShangShiCodeList;
+  if aRefreshExceptList then RefreshExceptList;
+  if aRefreshShangShiCodeList then RefreshShangShiCodeList;
 
   sPath:=FTr1DBPath+'CBData\Data\';
   sListFile := LowerCase(sPath+'cbdataguid.lst');
@@ -13246,45 +13226,72 @@ begin
     f.Free;
 end;
 
+function TCBDataMgrEcb.SetNodeUpload(const aNodeOp,aOldCid,aCid,aOperator,aTimeKey: String):boolean;
+const
+  C_CIDLst1 : array[0..3] of String=('Prepare_List_Ecb','Ecb_OTC','Ecb_Market','Ecb_Stop');
+  C_CIDFileLst1 : array[0..3] of String=('guapai.txt','shanggui.txt','shangshi.txt','passaway.txt');
+  C_CIDLst2 : array[0..4] of String=('Announce_Ecb','Send_Ecb','Pass_Ecb','QueryList_Ecb','StopIssue_Ecb');
+  C_CIDFileLst2 : array[0..4] of String=('nifaxing.txt','song.txt','pass.txt','xunquan.txt','stopissue.txt');
 
-function TCBDataMgrEcb.SetNodeUpload(const aOperator,aTimeKey: String):boolean;
-var bParam1,bParam2:boolean; sMkt,sFileName,sPath,sOneF:string;
-    ts:TStringList; i:Integer;
+  function ProOfCid(aInputCid:string):boolean;
+  var i:integer; sMkt,sOneF,sDatText:string; bTw:boolean;
+  begin
+    result:=false;
+    for i:=0 to High(C_CIDLst1) do
+    begin
+      if SameText(C_CIDLst1[i],aInputCid) then
+      begin
+        bTw:=true;
+        sMkt:='market_db';
+        sOneF:=LowerCase(FTr1DBPath+'CBData\market_db\'+C_CIDFileLst1[i]);
+        sDatText:=TCBDataTypeEcb.GetTextOfACBClass(bTw,FTr1DBPath+'CBData\nodetextforcbpa\',aInputCid);
+        SetTextByTs(sOneF,sDatText);
+        SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+        result:=true;
+        exit;
+      end;
+    end;
+
+    for i:=0 to High(C_CIDLst2) do
+    begin
+      if SameText(C_CIDLst2[i],aInputCid) then
+      begin
+        bTw:=true;
+        sMkt:='publish_db';
+        sOneF:=LowerCase(FTr1DBPath+'CBData\publish_db\'+C_CIDFileLst2[i]);
+        sDatText:=TCBDataTypeEcb.GetTextOfACBClass(bTw,FTr1DBPath+'CBData\nodetextforcbpa\',aInputCid);
+        SetTextByTs(sOneF,sDatText);
+        SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
+        result:=true;
+        exit;
+      end;
+    end;
+  end;
+var bParam1,bParam2:boolean;
 begin
   Result:=false;
-  sPath:=LowerCase(FTr1DBPath+'CBData\');
-  ts:=TStringList.Create;
-  try
-    sMkt:='publish_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\publish_db\dblst.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
 
-    
-    sMkt:='market_db';
-    sPath:=LowerCase(FTr1DBPath+'CBData\market_db\dblst2.lst');
-    GetdbFileList(sPath,ts);
-    for i:=0 to ts.count-1 do
-    begin
-      sOneF:=Trim(ts[i]);
-      if sOneF='' then
-        continue;
-      SaveCBTxtToUpLoad(sMkt,sOneF,aOperator,aTimeKey,sMkt);
-    end;
+  if not ProOfCid(aCid) then
+    Exit;
+  if aOldCid<>'' then
+    if not ProOfCid(aOldCid) then
+    Exit;
 
+  //--涉及到節點的更新，就要更新doccenter緩存中的code list,以防止條款下市、非下市 分類時出錯
+  RefreshExceptList;
+  RefreshShangShiCodeList;
+
+  //--只有當設計下下市節點的節點刪除、 節點移動時，才進行轉債條款資料全面的重新分類
+  if ( SameText(aNodeOp,'Mov') or SameText(aNodeOp,'DelCB') ) and
+     ( SameText(aCid,'Ecb_Stop') or
+       SameText(aOldCid,'Ecb_Stop')
+     )  then
+  begin
     bParam1:=true;
     bParam2:=true;
-    ProAfterNodeChanged(bParam1,bParam2,bParam1,bParam2,aOperator,aTimeKey);
-    result:=True;
-  finally
-    FreeAndNil(ts);
+    ProAfterNodeChanged(false,false,bParam1,bParam2,aOperator,aTimeKey);
   end;
+  result:=True;
 end;
 
 function TCBDataMgrEcb.GetStopCBText: String;
@@ -13420,7 +13427,11 @@ begin
       SaveIniFile(PChar('cbidx.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
     end
     else if SameText(sTemp,'strike2.dat') or SameText(sTemp,'strike4.dat') then
-      sTemp1:=ProSep_strike2(true,true)
+    begin
+      sTemp1:=ProSep_strike2(true,true);
+      SaveIniFile(PChar('strike2.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
+      SaveIniFile(PChar('strike4.dat'),PChar('guid'),PChar(sGuid),PChar(sListFile));
+    end
     else if SameText(sTemp,'strike32.dat') then
     begin
       sTemp1:=ProSep_strike32(true,true);
@@ -13482,10 +13493,8 @@ var sListFile,sFileName,sTemp,sTemp1,sTemp2,sTemp3,sGuid,sPath:string;
   end;
 begin
   Result:=false;
-  //if aRefreshExceptList then RefreshExceptList;
-  //if aRefreshShangShiCodeList then RefreshShangShiCodeList;
-  RefreshExceptList;
-  RefreshShangShiCodeList;
+  if aRefreshExceptList then RefreshExceptList;
+  if aRefreshShangShiCodeList then RefreshShangShiCodeList;
 
   sPath:=FTr1DBPath+'CBData\Data\';
   sListFile := LowerCase(sPath+'cbdataguid.lst');
@@ -13548,6 +13557,32 @@ begin
   SaveCBTxtToUpLoad3('lst','data',sListFile,aOperator,aTimeKey);
 end;
 
+procedure TCBDataMgrEcb.RefreshExceptList;
+var ts:TStringList;
+begin
+  //RefreshPassHisList('');
+  try
+    FExceptCodeList.clear;
+    ts:=TStringList.create;
+    if TCBDataTypeEcb.GetTradeCodeList(FTr1DBPath+'CBData\nodetextforcbpa\',1,ts) then
+      FExceptCodeList.text:=ts.text;
+  finally
+    FreeAndNil(ts);
+  end;
+end;
+
+procedure TCBDataMgrEcb.RefreshShangShiCodeList;
+var ts:TStringList;
+begin
+  try
+    FShangShiCodeList.clear;
+    ts:=TStringList.create;
+    if TCBDataTypeEcb.GetTradeCodeList(FTr1DBPath+'CBData\nodetextforcbpa\',2,ts) then
+      FShangShiCodeList.text:=ts.text;
+  finally
+    FreeAndNil(ts);
+  end;
+end;
 
 function TCBDataMgrEcb.GetNifaxingCBText: String;
 var FileName : String;  f : TStringList;

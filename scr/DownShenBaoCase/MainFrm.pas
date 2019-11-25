@@ -103,14 +103,14 @@ type
     FEndTick : DWord;
     FUrl:string;  FFailSleep,FUptLogSaveDays:integer;
     FProxySrv:ShortString; FProxyPort:Integer;
-    FLogFileName,FKeyWord1,FKeyWord2,FKeyWord3,FKeyWord4 : String;
+    FLogFileName,FKeyWord1,FKeyWord2,FKeyWord3,FKeyWord4,FKeyWord5 : String;
     FNowIsRunning: Boolean;
     StopRunning : Boolean;
     DisplayMsg : TDisplayMsg;
     AppParam : TDocMgrParam;
     FDownTryTimes:integer;
     FUrlFRBH15,FUrlFRBH15Home:string;
-    FHtmlParseRecs:array of THtmlParseRec;
+    FHtmlParseRecs,FHisHtmlParseRecs:array of THtmlParseRec;
     FIgnoreStrList:array of string;
 
     procedure SetNowIsRunning(const Value: Boolean);
@@ -377,6 +377,7 @@ begin
   FKeyWord2:=inifile.ReadString(CAppTopic,'KeyWord2','年申報未結案件');
   FKeyWord3:=inifile.ReadString(CAppTopic,'KeyWord3','申報未結案件');
   FKeyWord4:=inifile.ReadString(CAppTopic,'KeyWord4','本月已結');
+  FKeyWord5:=inifile.ReadString(CAppTopic,'KeyWord5','年度');
 
   Self.Caption:='申報案件下載';
 
@@ -411,6 +412,21 @@ begin
   begin
     FHtmlParseRecs[i-1].TagBegin:=inifile.ReadString(CAppTopic,'Html.'+inttostr(i)+'.Begin','');
     FHtmlParseRecs[i-1].TagEnd:=inifile.ReadString(CAppTopic,'Html.'+inttostr(i)+'.End','');
+  end;
+
+
+  ic:=inifile.ReadInteger(CAppTopic,'HisHtmlParseCount',0);
+  if ic=0 then
+  begin
+    ShowMessage(AppParam.TwConvertStr('未進行Hishtml解析設定.無法啟動運行'));
+    Application.Terminate;
+    Halt;
+  end;
+  SetLength(FHisHtmlParseRecs,ic);
+  for i:=1 to ic do
+  begin
+    FHisHtmlParseRecs[i-1].TagBegin:=inifile.ReadString(CAppTopic,'HisHtml.'+inttostr(i)+'.Begin','');
+    FHisHtmlParseRecs[i-1].TagEnd:=inifile.ReadString(CAppTopic,'HisHtml.'+inttostr(i)+'.End','');
   end;
 
   ic:=inifile.ReadInteger(CAppTopic,'IgnoreStrCount',0);
@@ -749,7 +765,15 @@ begin
     try
       aExcelApp := CreateOleObject('Excel.Application');
       aExcelApp.WorkBooks.Open(aExcelFile);
+      //--去年年度
       if aSheetType=0 then
+      begin
+        sKey:=Format('%d',[aThisYear-1]);
+        aExcelApp.WorkSheets[1].Activate;
+        GetDatasFromSheet;
+      end
+      //--年度迄今
+      else if aSheetType=1 then
       begin
         sKey:=Format('%d',[aThisYear]);
         aExcelApp.WorkSheets[1].Activate;
@@ -907,15 +931,23 @@ begin
   ReplaceSubString('&GT','>',result);
 end;
 
+function GetThisTwYear:Integer;
+var aY,aM,aD:Word;
+begin
+  result:=0;
+  DecodeDate(Date,aY,aM,aD);
+  result:=aY-1911;
+end;
+
 
 function TAMainFrm.StartGet(): Boolean;
-var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,sThisDir,sLastDir,
+var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastYearDatFile,sLastDatFile,sClassName,sThisDir,sLastDir,
     sItemUrl,sItemTitle,sHomeYear,sTxt,sSrcTxt,sLine,sInputErr,sHomeUrl: String;
   tsAry:array[0..5] of TStringList;
   aRecLst,aRecLst2:TAryDatasRec;
   aComCodeList:array of TShenBaoCaseComRec;
   bChangeComCode,bDownFile:boolean;
-  i,j1,j2,iThisYear,iType:integer; aIsLastItem:Boolean;
+  i,j1,j2,j3,iThisYear,iType:integer; aIsLastItem,bSection2:Boolean;
 
       function InitComCodeRecList():integer;
       var xx1,xx2:integer; xxsFile00:string;
@@ -1085,19 +1117,33 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
        end;
        result:=xb;
     end;
+    function LastYearTitleKey:string;
+    begin
+      result:=IntToStr(GetThisTwYear-1)+FKeyWord5;
+    end;
     function InTheKeyWords(aInput:string):boolean;
     var x1:integer;
     begin
       result:=false;
       aInput:=Trim(aInput);
-      if Pos(FKeyWord1,aInput)>0 then
+      if not bSection2 then
       begin
-        result:=true;
-        Exit;
-      end;
-      for x1:=1 to 12 do
-      begin
-        if SameText(aInput,IntToStr(x1)) then
+        if Pos(FKeyWord1,aInput)>0 then
+        begin
+          result:=true;
+          Exit;
+        end;
+        for x1:=1 to 12 do
+        begin
+          if SameText(aInput,IntToStr(x1)) then
+          begin
+            result:=true;
+            Exit;
+          end;
+        end;
+      end
+      else begin
+        if SameText(LastYearTitleKey,aInput) then
         begin
           result:=true;
           Exit;
@@ -1127,7 +1173,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
     result:=true;
   end;
 
-  //上次下載的13份資料地址與本次的地址是否一致
+  //上次下載的14份資料地址與本次的地址是否一致
   function IsNeedUpt:boolean;
   var xFIni:TIniFile; xi:integer; xstr1:string;
   begin
@@ -1141,7 +1187,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       
       if tsAry[1].Count=0 then
         exit;
-      for xi:=1 to 13 do
+      for xi:=1 to 14 do
       begin
         if (tsAry[1].Count>=xi*2) then
         begin
@@ -1207,12 +1253,11 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
   const _SepDThis=#9;
   var xxf1: File  of TShenBaoCaseRec; xx1,xx2,xx3:integer;  xAryInt:array[0..5] of integer;
       xOldDatList:array of TShenBaoCaseRec; xARec:TShenBaoCaseRec;
-      xstr1,xstr2,xstr3,xstr4,xstr5,xstr6,xstr61,xstr62,xstr63,xstrTempFile:string;
+      xstr1,xstr2,xstr3,xstr4,xstr5,xstr6,xstr61,xstr62,xstr63,xstrTempFile,xstrTempFile2:string;
       xFIni:TIniFile;
   begin
     //tsAry[2].Clear;
     //tsAry[3].Clear;
-
       if FileExists(sLastDatFile) then
       try
         AssignFile(xxf1,sLastDatFile);
@@ -1233,8 +1278,11 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
         for xx1:=0 to High(aRecLst) do
         begin
           Application.ProcessMessages;
+
           with aRecLst[xx1] do
           begin
+            if SameText(IntToStr(iThisYear-1),Datas[18]) then
+              Continue;
             xAryInt[0]:=SendToComCode('gsxt',Datas[1]);
             xAryInt[1]:=SendToComCode('jalx',Datas[2]);
             xAryInt[2]:=SendToComCode('cxs',Datas[4]);
@@ -1286,14 +1334,13 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
     //第一次，比較本次下載資料中"月份已結"的資料（如key為105,11）
     for xx1:=High(aRecLst) downto 0 do
     begin
+      Application.ProcessMessages;
       if (Pos(_UnDo,aRecLst[xx1].Datas[18])>0) then
-      begin
         Continue;
-      end;
       if aRecLst[xx1].Datas[18]='' then
         Continue;
       if (Pos(',',aRecLst[xx1].Datas[18])<=0) then
-          Continue;
+        Continue;
       Application.ProcessMessages;
       xstr3:=aRecLst[xx1].Datas[18];
       xstr4:=aRecLst[xx1].Datas[0];
@@ -1302,6 +1349,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       xstr6:='';
       for xx2:=High(xOldDatList) downto 0 do
       begin
+        Application.ProcessMessages;
         if xOldDatList[xx2].key='' then
           Continue;
         if SameText(aRecLst[xx1].Datas[18],xOldDatList[xx2].key) and
@@ -1340,130 +1388,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
           if SameText(xstr1,xstr2) then
             xx3:=4
           else begin
-            {xstr6:='';
-            with xOldDatList[xx2],aRecLst[xx1] do
-            begin
-              if Datas[1]<>IntToStr(mkt) then
-              begin
-                xstr61:=GetOfComName(mkt);
-                xstr62:=GetOfComName(StrToInt(Datas[1]));
-                xstr63:=Format('<公司型態 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[2]<>IntToStr(closetype) then
-              begin
-                xstr61:=GetOfComName(closetype);
-                xstr62:=GetOfComName(StrToInt(Datas[2]));
-                xstr63:=Format('<結案類型 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[3]<>stkname then
-              begin
-                xstr61:=stkname;
-                xstr62:=Datas[3];
-                xstr63:=Format('<公司名稱 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[4]<>IntToStr(memberclass) then
-              begin
-                xstr61:=GetOfComName(memberclass);
-                xstr62:=GetOfComName(StrToInt(Datas[4]));
-                xstr63:=Format('<承銷商 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[5]<>IntToStr(caseclass) then
-              begin
-                xstr61:=GetOfComName(caseclass);
-                xstr62:=GetOfComName(StrToInt(Datas[5]));
-                xstr63:=Format('<案件類別 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[6]<>amount then
-              begin
-                xstr61:=amount;
-                xstr62:=Datas[6];
-                xstr63:=Format('<金額(元) %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[7]<>IntToStr(moneytype) then
-              begin
-                xstr61:=GetOfComName(moneytype);
-                xstr62:=GetOfComName(StrToInt(Datas[7]));
-                xstr63:=Format('<幣別 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[8]<>issueprice then
-              begin
-                xstr61:=issueprice;
-                xstr62:=Datas[8];
-                xstr63:=Format('<發行價格 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[9]<>swrq then
-              begin
-                xstr61:=swrq;
-                xstr62:=Datas[9];
-                xstr63:=Format('<收文日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[10]<>zdbzrq then
-              begin
-                xstr61:=zdbzrq;
-                xstr62:=Datas[10];
-                xstr63:=Format('<自動補正日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[11]<>tzsxrq then
-              begin
-                xstr61:=tzsxrq;
-                xstr62:=Datas[11];
-                xstr63:=Format('<停止生效日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[12]<>jcsxrq then
-              begin
-                xstr61:=jcsxrq;
-                xstr62:=Datas[12];
-                xstr63:=Format('<解除生效日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[13]<>sxrq then
-              begin
-                xstr61:=sxrq;
-                xstr62:=Datas[13];
-                xstr63:=Format('<生效日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[14]<>fzcxrq then
-              begin
-                xstr61:=fzcxrq;
-                xstr62:=Datas[14];
-                xstr63:=Format('<廢止/撤銷日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[15]<>zxcxrq then
-              begin
-                xstr61:=zxcxrq;
-                xstr62:=Datas[15];
-                xstr63:=Format('<自行撤回日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[16]<>tjrq then
-              begin
-                xstr61:=tjrq;
-                xstr62:=Datas[16];
-                xstr63:=Format('<退件日期 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              if Datas[17]<>IntToStr(casetype) then
-              begin
-                xstr61:=GetOfComName(casetype);
-                xstr62:=GetOfComName(StrToInt(Datas[17]));
-                xstr63:=Format('<案件性質 %s-->%s >',[xstr61,xstr62]);
-                xstr6:=xstr6+xstr63; 
-              end;
-              
-            end;}
+
 
           end;
           aRecLst[xx1].Datas[18]:='';
@@ -1480,14 +1405,13 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
     //第二次，比較本次下載資料中"未結"的資料（可能包括105,undo、104,undo）
     for xx1:=High(aRecLst) downto 0 do
     begin
+      Application.ProcessMessages;
       if not (Pos(_UnDo,aRecLst[xx1].Datas[18])>0) then
-      begin
         Continue;
-      end;
       if aRecLst[xx1].Datas[18]='' then
         Continue;
       if (Pos(',',aRecLst[xx1].Datas[18])<=0) then
-          Continue;
+        Continue;
       Application.ProcessMessages;
       xstr3:=aRecLst[xx1].Datas[18];
       xstr4:=aRecLst[xx1].Datas[0];
@@ -1496,6 +1420,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       xstr6:='';
       for xx2:=High(xOldDatList) downto 0 do
       begin
+        Application.ProcessMessages;
         if xOldDatList[xx2].key='' then
           Continue;
         if SameText(aRecLst[xx1].Datas[18],xOldDatList[xx2].key) and
@@ -1545,17 +1470,17 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
         AddToRecLst2(xstr3,xstr4+'/'+xstr5,xx3); //+xstr6
       end;
     end;
-    
+
     //剩下的都是相對刪除的
-    for xx1:=High(xOldDatList) downto 0 do
+    for xx1:=High(xOldDatList) downto 0 do //exg: 105,3
     begin
       Application.ProcessMessages;
       with xOldDatList[xx1] do
       begin
+        //if SameText(IntToStr(iThisYear-1),key) then
+        //  Continue;
         if (Pos(_UnDo,key)>0) then
-        begin
           Continue;
-        end;
         if (Pos(',',key)<=0) then
           Continue;
         if key='' then
@@ -1571,18 +1496,155 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       Application.ProcessMessages;
       with xOldDatList[xx1] do
       begin
+        //if SameText(IntToStr(iThisYear-1),key) then
+        //  Continue;
         if (Pos(',',key)<=0) then
           Continue;
         if not (Pos(_UnDo,key)>0) then
-        begin
           Continue;
-        end;
         if key='' then
           Continue;
         xstr3:=key;
         xstr4:=code;
         xstr5:=GetOfComName(caseclass);
         AddToRecLst2(xstr3,xstr4+'/'+xstr5,3);
+      end;
+    end;
+
+    //----------比對去年的匯總申報案件資料
+    SetLength(xOldDatList,0);
+    if (sLastYearDatFile<>'') and FileExists(FDataPath+sLastYearDatFile) then
+    try
+      AssignFile(xxf1,FDataPath+sLastYearDatFile);
+      FileMode := 0;
+      ReSet(xxf1);
+      xx1 := FileSize(xxf1);
+      SetLength(xOldDatList,xx1);
+      BlockRead(xxf1,xOldDatList[0],xx1,xx2);
+    finally
+      try CloseFile(xxf1); except end;
+    end;
+
+    xstrTempFile2:=FDataPath+'~'+sLastYearDatFile;
+    try
+      AssignFile(xxf1,xstrTempFile2);
+      FileMode := 2;
+      Rewrite(xxf1);
+      for xx1:=0 to High(aRecLst) do
+      begin
+        Application.ProcessMessages;
+        with aRecLst[xx1] do
+        begin
+          if not SameText(IntToStr(iThisYear-1),Datas[18]) then
+            Continue;
+          xAryInt[0]:=SendToComCode('gsxt',Datas[1]);
+          xAryInt[1]:=SendToComCode('jalx',Datas[2]);
+          xAryInt[2]:=SendToComCode('cxs',Datas[4]);
+          xAryInt[3]:=SendToComCode('ajlb',Datas[5]);
+          xAryInt[4]:=SendToComCode('bblx',Datas[7]);
+          xAryInt[5]:=SendToComCode('ajlx',Datas[17]);
+
+          Datas[1]:=IntToStr(xAryInt[0]);
+          Datas[2]:=IntToStr(xAryInt[1]);
+          Datas[4]:=IntToStr(xAryInt[2]);
+          Datas[5]:=IntToStr(xAryInt[3]);
+          Datas[7]:=IntToStr(xAryInt[4]);
+          Datas[17]:=IntToStr(xAryInt[5]);
+
+
+          with xARec do
+          begin
+            key:=Datas[18];
+            code:=Datas[0];//證券代號
+            mkt:=xAryInt[0];//公司型態--gsxt
+            closetype:=xAryInt[1];//結案類型--jalx
+            stkname:=Datas[3];//公司名稱
+            memberclass:=xAryInt[2];//承銷商--cxs
+            caseclass:=xAryInt[3];//案件類別--ajlb
+            amount:=Datas[6];//金　　　　額(元)
+            moneytype:=xAryInt[4];//幣別--bblx
+            issueprice:=Datas[8];//發行價格
+            swrq:=Datas[9];//收文日期
+            zdbzrq:=Datas[10];//自動補正日期
+            tzsxrq:=Datas[11];//停止生效日期
+            jcsxrq:=Datas[12];//解除生效日期
+            sxrq:=Datas[13];//生效日期
+            fzcxrq:=Datas[14];//廢止/撤銷日期
+            zxcxrq:=Datas[15];//自行撤回日期
+            tjrq:=Datas[16];//退件日期
+            casetype:=xAryInt[5];//案件性質--ajlx
+          end;
+          write(xxf1,xARec);
+        end;
+      end;
+    finally
+      try CloseFile(xxf1); except end;
+    end;
+    if bChangeComCode then
+      FreeComCodeRecList;
+    //比對去年匯總資料（如key為105）
+    for xx1:=High(aRecLst) downto 0 do
+    begin
+      Application.ProcessMessages;
+      if (not SameText(IntToStr(iThisYear-1),aRecLst[xx1].Datas[18])) then
+        Continue;
+
+      Application.ProcessMessages;
+      xstr3:=aRecLst[xx1].Datas[18];
+      xstr4:=aRecLst[xx1].Datas[0];
+      xstr5:=GetOfComName(StrToInt(aRecLst[xx1].Datas[5]));
+      xx3:=1;//1=add 2=mdf 3=del  4=deng
+      xstr6:='';
+      for xx2:=High(xOldDatList) downto 0 do
+      begin
+        Application.ProcessMessages;
+        if xOldDatList[xx2].key='' then
+          Continue;
+        if SameText(aRecLst[xx1].Datas[18],xOldDatList[xx2].key) and
+           SameText(aRecLst[xx1].Datas[0],xOldDatList[xx2].code) and
+           
+           SameText(aRecLst[xx1].Datas[5],IntToStr(xOldDatList[xx2].caseclass) ) and
+           SameText(aRecLst[xx1].Datas[6],xOldDatList[xx2].amount) and
+           SameText(aRecLst[xx1].Datas[9],xOldDatList[xx2].swrq)then
+        begin
+          xx3:=2;
+          with aRecLst[xx1] do
+          begin
+            xstr1:=Datas[18]+_SepDThis+Datas[0]+_SepDThis+
+                Datas[1]+_SepDThis+Datas[2]+_SepDThis+
+                Datas[3]+_SepDThis+Datas[4]+_SepDThis+
+                Datas[5]+_SepDThis+Datas[6]+_SepDThis+
+                Datas[7]+_SepDThis+Datas[8]+_SepDThis+
+                Datas[9]+_SepDThis+Datas[10]+_SepDThis+
+                Datas[11]+_SepDThis+Datas[12]+_SepDThis+
+                Datas[13]+_SepDThis+Datas[14]+_SepDThis+
+                Datas[15]+_SepDThis+Datas[16]+_SepDThis+Datas[17];
+          end;
+
+          with xOldDatList[xx2] do
+          begin
+            xstr2:=key+_SepDThis+code+_SepDThis+
+              IntToStr(mkt)+_SepDThis+IntToStr(closetype)+_SepDThis+
+              stkname+_SepDThis+IntToStr(memberclass)+_SepDThis+
+              IntToStr(caseclass)+_SepDThis+(amount)+_SepDThis+
+              IntToStr(moneytype)+_SepDThis+(issueprice)+_SepDThis+
+              swrq+_SepDThis+zdbzrq+_SepDThis+
+              tzsxrq+_SepDThis+jcsxrq+_SepDThis+
+              sxrq+_SepDThis+fzcxrq+_SepDThis+
+              zxcxrq+_SepDThis+tjrq+_SepDThis+IntToStr(casetype);
+          end;
+          if SameText(xstr1,xstr2) then
+            xx3:=4
+          else begin
+          end;
+          aRecLst[xx1].Datas[18]:='';
+          xOldDatList[xx2].key:='';
+          Break;
+        end;
+      end;//--xunhuanbidui
+      if xx3<>4 then
+      begin
+        AddToRecLst2(xstr3,xstr4+'/'+xstr5,xx3); //+xstr6
       end;
     end;
 
@@ -1598,7 +1660,7 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       xFIni.WriteString('last','datfile',ExtractFileName(sThisDatFile));
       xFIni.WriteString('last','dir',sThisDir);
 
-      for xx1:=1 to 13 do
+      for xx1:=1 to 14 do
       begin
         if (tsAry[1].Count>=xx1*2) then
         begin
@@ -1608,6 +1670,11 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       if CpyDatF(xstrTempFile,FDataPath+sThisDatFile) then
       begin
         DelDatF(xstrTempFile);
+        //result:=true;
+      end;
+      if CpyDatF(xstrTempFile2,FDataPath+sLastYearDatFile) then
+      begin
+        DelDatF(xstrTempFile2);
         //result:=true;
       end;
     finally
@@ -1628,7 +1695,6 @@ var ResultStr,ResultFile,vErrMsg,sThisPath,sThisDatFile,sLastDatFile,sClassName,
       end;
     end;
   end;
-
 begin
   Result := false;
   bChangeComCode:=False;
@@ -1637,7 +1703,7 @@ begin
   sThisDir:=FormatDateTime('yyyymmdd_hhmmss',now);
   sLastDir:='';
   sThisPath:=FDataPath+sThisDir+'\';
-  sLastDatFile:='';
+  sLastDatFile:=''; sLastYearDatFile:='';
   sThisDatFile:='';
   iThisYear:=0;
   try
@@ -1671,6 +1737,16 @@ begin
       raise Exception.Create('無法解析到目標數據塊.');
     end;
 
+    sLine:=sTxt;
+    for i:=0 to High(FHisHtmlParseRecs) do
+    begin
+      sLine:=GetStrOnly2(FHisHtmlParseRecs[i].TagBegin,FHisHtmlParseRecs[i].TagEnd,sLine,true);
+    end;
+    if sLine='' then
+    begin
+      raise Exception.Create('無法解析到目標數據塊(歷史資料).');
+    end;
+    sSrcTxt:=sSrcTxt+'<sectionsep/>'+sLine;
 
     sSrcTxt:=StringReplace(sSrcTxt,#13#10,'',[rfReplaceAll]);
     sSrcTxt:=StringReplace(sSrcTxt,'<a',#13#10+'<a',[rfReplaceAll]);
@@ -1678,6 +1754,10 @@ begin
     tsAry[0].text:=sSrcTxt;
     //tsAry[0].SaveToFile('d:\shenbaocase.txt');
     tsAry[1].Clear;
+    tsAry[2].Clear;
+
+    //---遍歷網頁中的a，從"XXX年度迄今”開始取得最多14個鏈接的地址(今年、去年、以及12個月份資料)
+    bSection2:=false;
     for j1:=0 to tsAry[0].count-1 do
     begin
       sLine:=tsAry[0][j1];
@@ -1687,7 +1767,9 @@ begin
       begin
         for j2:=j1 to tsAry[0].count-1 do
         begin
-          sLine:=tsAry[0][j2];
+          sLine:=tsAry[0][j2];//FKeyWord5
+          if Pos('<sectionsep/>',sLine)>0 then
+            bSection2:=true;
           if (Pos('<a',sLine)>0) and
              (Pos('</a>',sLine)>0) then
           begin
@@ -1706,14 +1788,30 @@ begin
                 if (MayBeDigital(sItemTitle)) then
                 begin
                   iThisYear:=StrToInt(sItemTitle);
+                  if GetThisTwYear<>iThisYear then
+                    raise Exception.Create('年度迄今 非當前年份.');  
                   sThisDatFile:=sItemTitle+_ShenBaoCaseYearF;
                 end
                 else raise Exception.Create('年份解析出錯.');
               end;
-              tsAry[1].Add(sItemTitle);
-              tsAry[1].Add(sItemUrl);
+              if SameText(sItemTitle,LastYearTitleKey) then
+              begin
+                sLastYearDatFile:=IntToStr(iThisYear-1)+_ShenBaoCaseYearF;
+                tsAry[1].Clear;
+                tsAry[1].Add(sItemTitle);
+                tsAry[1].Add(sItemUrl);
+                for j3:=0 to tsAry[2].count-1 do
+                  tsAry[1].Add(tsAry[2][j3]);
+                tsAry[2].clear;
+                break;
+              end
+              else begin
+                tsAry[2].Add(sItemTitle);
+                tsAry[2].Add(sItemUrl);
+              end;
             end;
-            if SameText(sItemTitle,'12') then
+            //if SameText(sItemTitle,'12') then
+            if SameText(sItemTitle,LastYearTitleKey) then
               break;
           end;
         end;
@@ -1729,7 +1827,7 @@ begin
       begin
         sItemTitle:=tsAry[1][j1];
         sItemUrl:=tsAry[1][j1+1];
-        //是否還有下一個輪迴
+        //是否還有下一個輪迴(是否最新月份的資料)
         if (j1+2)+1<tsAry[1].Count then
           aIsLastItem:=false
         else
@@ -1744,7 +1842,8 @@ begin
         if (ResultFile<>'') and (FileExists(ResultFile)) then
         begin
           if j1=0 then iType:=0
-          else iType:=1;
+          else if j1=2 then iType:=1
+          else iType:=2;
           if (not GetShenBaoCaseFromExecl(iThisYear,iType,sItemTitle,ResultFile,aIsLastItem,aRecLst,sInputErr,nil)) or
              (sInputErr<>'') then
           begin
@@ -1754,7 +1853,7 @@ begin
         j1:=j1+2;
       end;
       CompareOldDat;
-    end;  
+    end;
 
     Result := true;
     if result then SaveMsg('內容成功取得');

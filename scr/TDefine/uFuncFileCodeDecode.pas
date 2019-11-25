@@ -6,7 +6,7 @@ uses
   TCallBack,TCommon,TZipCompress,MyDef,ZLib;
 type
 
-DeCodeF = Record
+  DeCodeF = Record
      FileCount : Integer;
      FileNames : array[0..10000] of String[20];
      FileSize  : array[0..10000] of Longint;

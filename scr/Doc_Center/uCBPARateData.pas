@@ -3392,9 +3392,9 @@ end;
 
 
 function Saventd2usdData(aSrcDir,aDstDir:String;var aErrMsg:string):Boolean;
-var f1,f2,f3:File of TNTDToUSDRec; r1: TNTDToUSDRec;
+var f1,f2,f3:File of TNTDToUSDRec; r1,r2: TNTDToUSDRec;
   i, j,iRemain : integer; aSrcFile,aDstFile,aTempFile,sBakPath,sBakFile:string;
-  b:boolean; dtDate:TDate;
+  b,b1,b2:boolean; dtDate:TDate; ts:TStringList;
 begin
   result := false;
   aSrcFile:=aSrcDir+'ntd2usd.dat';
@@ -3423,6 +3423,7 @@ begin
       try
       try
         try
+          ts:=TStringList.create;
           AssignFile(f1,aSrcFile);
           AssignFile(f2,aDstFile);
           AssignFile(f3,aTempFile);
@@ -3452,6 +3453,7 @@ begin
             write(f3,r1);
           end;
         finally
+          FreeAndNil(ts);
           try CloseFile(f1); except end;
           try CloseFile(f2); except end;
           try CloseFile(f3); except end;
@@ -3473,9 +3475,39 @@ end;
 
 
 function SavfedData(aSrcDir,aDstDir:String;var aErrMsg:string):Boolean;
-var f1,f2,f3:File of TECBRate1Rec; r1: TECBRate1Rec;
+var f1,f2,f3:File of TECBRate1Rec; r1,r2: TECBRate1Rec;
   i, j,iRemain : integer; aSrcFile,aDstFile,aTempFile,sBakPath,sBakFile:string;
-  b:boolean; dtDate:TDate;
+  b,b1,b2:boolean; dtDate:TDate; ts,tsDelDate:TStringList;
+
+  function ReadR1():boolean;
+  begin
+    result:=False;
+    if not Eof(f1) then
+    begin
+      read(f1,r1);
+      result:=true;
+    end;
+  end;
+  function ReadR2():boolean;
+  begin
+    result:=False;
+    if not Eof(f2) then
+    begin
+      read(f2,r2);
+      result:=true;
+    end;
+  end;
+  function IsExistsInDel(aInputDate:TDate):boolean;
+  var xstr:string;
+  begin
+    result:=False;
+    xstr:=FloatToStr(aInputDate);
+    if tsDelDate.IndexOf(xstr)>=0 then
+    begin
+      result:=True;
+    end;
+  end;
+  
 begin
   result := false;
   aSrcFile:=aSrcDir+'fed.dat';
@@ -3505,35 +3537,69 @@ begin
       try
       try
         try
+          ts:=TStringList.create;
+          tsDelDate:=TStringList.create;
           AssignFile(f1,aSrcFile);
           AssignFile(f2,aDstFile);
           AssignFile(f3,aTempFile);
           FileMode := 2;
-          //找到tr1db中最新的日期
-          Reset(f2);
-          read(f2,r1);
-          dtDate:=r1.Adate;
-
-          Rewrite(f3);
-          //將提交文檔中的最新日期之後的資料寫入
           Reset(f1);
+          Reset(f2);
+          Rewrite(f3);
+          //先找到需要刪除的日期
           while not Eof(f1) do
           begin
+            Application.ProcessMessages;
             read(f1,r1);
-            if r1.Adate<=dtDate then
+            if r1.Months1=-1 then
             begin
-              Break;
+              tsDelDate.Add(FloatToStr(r1.Adate));
             end;
-            write(f3,r1);
           end;
-          //將tr1db中的原來的資料寫入
-          Reset(f2);
-          while not Eof(f2) do
+          Reset(f1);
+          //
+          b1:=ReadR1; b2:=ReadR2;
+          while (b1 or b2) do
           begin
-            read(f2,r1);
-            write(f3,r1);
+            Application.ProcessMessages;
+            if b1 and b2 then
+            begin
+              if r1.Adate>r2.Adate then
+              begin
+                if not IsExistsInDel(r1.Adate) then
+                  write(f3,r1);
+                b1:=ReadR1;
+              end
+              else if r1.Adate<r2.Adate then
+              begin
+                if not IsExistsInDel(r2.Adate) then
+                  write(f3,r2);
+                b2:=ReadR2;
+              end
+              else if r1.Adate=r2.Adate then
+              begin
+                if not IsExistsInDel(r2.Adate) then
+                  write(f3,r2);
+                b1:=ReadR1;
+                b2:=ReadR2;
+              end;
+            end
+            else if b1 then
+            begin
+              if not IsExistsInDel(r1.Adate) then
+                write(f3,r1);
+              b1:=ReadR1;
+            end
+            else if b2 then
+            begin
+              if not IsExistsInDel(r2.Adate) then
+                write(f3,r2);
+              b2:=ReadR2;
+            end;
           end;
         finally
+          FreeAndNil(ts);
+          FreeAndNil(tsDelDate);
           try CloseFile(f1); except end;
           try CloseFile(f2); except end;
           try CloseFile(f3); except end;

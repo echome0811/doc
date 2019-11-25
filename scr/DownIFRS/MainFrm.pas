@@ -10,7 +10,7 @@ uses
   IdTCPConnection, IdTCPClient, IdHTTP,IniFiles,TCommon,TDocMgr, ImgList,
   SocketClientFrm,TSocketClasses,uDisplayMsg,
   uLevelDataDefine,uLevelDataFun,TGetDocMgr,
-  DateUtils, DB, ADODB,UrlMon,ActiveX, IdTCPServer,WinInet; //TWarningServer
+  DateUtils, DB, ADODB,UrlMon,ActiveX, IdTCPServer,WinInet,uComFunc; //TWarningServer
 
 const CAppTopic='DownIFRS';
       CAppTitle='DownIFRS';
@@ -102,14 +102,15 @@ type
     FParamStrAry:array[0..3] of string;
     FDataPath,FTrlDBPath,FNameTblPath : String;
     FEndTick : DWord;
-    FUrl1,FUrl2,FUrl3:string;  FFailSleep:integer;  //FListenPort:integer;
+    FUrlFmt:string;//FUrl1,FUrl2,FUrl3:string;
+    FFailSleep:integer;  //FListenPort:integer;
     FProxySrv:ShortString; FProxyPort:Integer;
     FLogFileName : String;
     FNowIsRunning: Boolean;
     StopRunning : Boolean;
     DisplayMsg : TDisplayMsg;
     AppParam : TDocMgrParam;
-    FIDLstMgr,FIDNameLstMgr,FIFRSRplOfKJKM:TStringList;
+    FIDLstMgr,FIDNameLstMgr,FIFRSRplOfKJKM,Fexceptcodelist:TStringList;
     FDownTryTimes,FSleepWhenFrequence,FSleepPerStkCode:integer;
 
     CBDataMgr:TCBDataMgr;
@@ -128,7 +129,6 @@ type
     function SameIFRSItem(aCode,sYear,sQ:string;aClassIdx:char):Boolean;
     function SameIFRS(aCode,sYear,sQ:string):Boolean;
 
-    function ProKJLMName(aName:string):string;
     function StartGet():Boolean;
     procedure SleepWait(Const Value:Double);
     procedure ShowRunBar(const Max,NowP:Integer;Const Msg:String);
@@ -460,9 +460,10 @@ begin
   FEndTick := GetTickCount + Round(1000);
 
   inifile:=Tinifile.Create(sPath+'setup.ini');
-  FUrl1:=inifile.ReadString(CAppTopic,'Url1','');
-  FUrl2:=inifile.ReadString(CAppTopic,'Url2','');
-  FUrl3:=inifile.ReadString(CAppTopic,'Url3','');
+  FUrlFmt:=inifile.ReadString(CAppTopic,'Url','');
+  //FUrl1:=inifile.ReadString(CAppTopic,'Url1','');
+  //FUrl2:=inifile.ReadString(CAppTopic,'Url2','');
+  //FUrl3:=inifile.ReadString(CAppTopic,'Url3','');
   FTrlDBPath:=inifile.ReadString('CONFIG','TR1DBPath','');
   //FNameTblPath:=inifile.ReadString(CAppTopic,'NameTblPath','');
   FNameTblPath:=inifile.ReadString('CONFIG','RealTimePath','');
@@ -620,7 +621,7 @@ begin
    Application.OnException := AppExcept;
    InitForm;
    InitObj;
-   ClearSysLog;
+   //ClearSysLog;
    BtnGo.Click;
 end;
 
@@ -696,6 +697,8 @@ begin
    FIDLstMgr := TStringList.Create;
    FIDNameLstMgr := TStringList.Create;
    FIFRSRplOfKJKM := TStringList.Create;
+   Fexceptcodelist := TStringList.Create;
+   ReadIfrsExceptCodeListEx(Fexceptcodelist);
 end;
 
 procedure TAMainFrm.ShowURL(const msg: String);
@@ -910,49 +913,55 @@ begin
   result:=CreateAnUplaodFlag;
 end;
 
-function TAMainFrm.ProKJLMName(aName:string):string;
-const CList1 : array[0..3] of String=('資產','負債','權益','負債及權益');
-      CList2 : array[0..2] of String=('總額','總計','合計');
-var i,j:integer;
+function IFRSTblC2S(aInput:char):string;
 begin
-  //總額、總計、合計
-  //資產總額
-  //負債總額
-  //權益總額
-  //負債及權益總計
-  result:=aName;
-  result:=StringReplace(result,'：',':',[rfReplaceAll]);
-  result:=StringReplace(result,'（','(',[rfReplaceAll]);
-  result:=StringReplace(result,'）',')',[rfReplaceAll]);
-  result:=StringReplace(result,'－','-',[rfReplaceAll]);
-  for i:=0 to High(CList1) do
-    for j:=0 to High(CList2) do
-    begin
-      if SameText(aName,CList1[i]+CList2[j]) then
-      begin
-        Result:=CList1[i]+CList2[0];
-        Exit;
-      end;
-    end;
+  result:='';
+  if aInput=_ZCFZB then
+    result:=_ZCFZBStr
+  else if aInput=_ZZSYB then
+    result:=_ZZSYBStr
+  else if aInput=_XJLLB then
+    result:=_XJLLBStr;
 end;
 
 function TAMainFrm.StartGet(): Boolean;
 var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : String;
-  tsSuc,tsFail,tsToBe,tsDat1,tsDat2,tsDat3,tsDat0,tsTemp1,tsTemp2,tsTemp3,tsTemp0:TStringList;
-  sYear,sQ:string; tsTr1CodeAry:array[0..2] of TStringList;
-  tdStrLst:_cStrLst2;
-  aIFRSTopNodeList:array of TIFRSTopNodeRec; aComCodeList:array of TIFRSNodeRec;
-  iClassIdx:Char; bChangeComCode:boolean; bListErr,bScan,bHis:boolean; iAry:integer;
+  tsSuc,tsFail,tsToBe,tsDat1,tsDat2,tsDat3,tsDat11,tsDat22,tsDat33,tsDat0,tsDat00,tsTemp1,tsTemp2,tsTemp3,tsTemp0:TStringList;
+  sYear,sQ:string;
+  iClassIdx:Char; bListErr,bScan,bHis:boolean; iAry:integer;
+  aDbTblCol1,aDbTblCol2,aDbTblCol3:TTIFRSColRecC1Ary;
+  tsTblColWarnAry:array[0..2] of TStringList; tsTr1CodeList:array[0..2] of TStringList;
 
-
-      function InitComCodeRecList():integer;
-      var xx1,xx2:integer; xxsFile00,xxsFile01:string;
-          xxf1: File  of TIFRSNodeRec;
-          xxf2: File  of TIFRSTopNodeRec;
+      procedure SaveExceptionMsg(aInputMsg:string);
+      begin
+        ShowMsgEx(aInputMsg,False);
+        //I/O error
+        //Read beyond end of file
+        if (Pos(LowerCase('I/O error'),LowerCase(aInputMsg))<=0) and
+           (Pos(LowerCase('Read beyond end of file'),LowerCase(aInputMsg))<=0) then
+          WriteExceptionMsg(aInputMsg);
+      end;
+      function InitDbTblColList():integer;
+      var xx1,xx2,xc1,xc2,xc3:integer; xxsFile00,xxsFile01,xsLine:string;
+          xxf1: File  of TIFRSColRec;  xRecs:array of TIFRSColRec;
+        procedure GetFullColText(aInputIndex:integer;var aInputText:string);
+        begin
+          if not (  (aInputIndex>=Low(xRecs)) and (aInputIndex<=High(xRecs))  ) then
+            exit;
+          if not SameText(xRecs[aInputIndex].Name,'負債及權益') then
+          begin
+            if aInputText='' then aInputText:=xRecs[aInputIndex].Name
+            else aInputText:=aInputText+_ColSep+xRecs[aInputIndex].Name;
+          end;
+          if xRecs[aInputIndex].ParentNodeIdx>-1 then
+           GetFullColText(xRecs[aInputIndex].ParentNodeIdx,aInputText);
+        end;
       begin
         Result:=0;
-        SetLength(aComCodeList,0);
-        xxsFile00:=FTrlDBPath+'CBData\IFRS\'+_IFRSNodeF;
+        SetLength(aDbTblCol1,0);
+        SetLength(aDbTblCol2,0);
+        SetLength(aDbTblCol3,0);
+        xxsFile00:=FTrlDBPath+'CBData\IFRS\'+_IFRSColNodeF;
         xxsFile01:=FDataPath+ExtractFileName(xxsFile00);
         if FileExists(xxsFile00) then
         if not CpyDatF(xxsFile00,xxsFile01) then
@@ -968,155 +977,83 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
             FileMode := 0;
             ReSet(xxf1);
             xx1 := FileSize(xxf1);
-            SetLength(aComCodeList,xx1);
-            BlockRead(xxf1,aComCodeList[0],xx1,xx2);
+            SetLength(xRecs,xx1);
+            BlockRead(xxf1,xRecs[0],xx1,xx2);
           finally
             try CloseFile(xxf1); except end;
           end;
+
+          SetLength(aDbTblCol1,xx1);
+          SetLength(aDbTblCol2,xx1);
+          SetLength(aDbTblCol3,xx1);
+          xc1:=0; xc2:=0; xc3:=0;
+          for xx1:=Low(xRecs) to High(xRecs) do
+          begin
+            with xRecs[xx1] do
+            begin
+              xsLine:='';
+              GetFullColText(Idx,xsLine);
+              if TblType=_ZCFZB then
+              begin
+                aDbTblCol1[xc1].F1:=Name;
+                aDbTblCol1[xc1].F2:=xsLine;
+                aDbTblCol1[xc1].Flag:=Idx;
+                inc(xc1);
+              end
+              else if TblType=_ZZSYB then
+              begin
+                aDbTblCol2[xc2].F1:=Name;
+                aDbTblCol2[xc2].F2:=xsLine;
+                aDbTblCol2[xc2].Flag:=Idx;
+                inc(xc2);
+              end
+              else if TblType=_XJLLB then
+              begin
+                aDbTblCol3[xc3].F1:=Name;
+                aDbTblCol3[xc3].F2:=xsLine;
+                aDbTblCol3[xc3].Flag:=Idx;
+                inc(xc3);
+              end;
+            end;
+          end;
+          SetLength(aDbTblCol1,xc1);
+          SetLength(aDbTblCol2,xc2);
+          SetLength(aDbTblCol3,xc3);
+
           Result:=1;
         finally
           DelDatF(xxsFile01);
         end;
-
-        xxsFile00:=FTrlDBPath+'CBData\IFRS\'+_IFRSTopNodeF;
-        try
-          if FileExists(xxsFile00) then
-          try
-            AssignFile(xxf2,xxsFile00);
-            FileMode := 0;
-            ReSet(xxf2);
-            xx1 := FileSize(xxf2);
-            SetLength(aIFRSTopNodeList,xx1);
-            BlockRead(xxf2,aIFRSTopNodeList[0],xx1,xx2);
-          finally
-            try CloseFile(xxf2); except end;
-          end;
-          Result:=1;
-        finally
-        end;
       end;
 
-      //查找頂層節點是否存在  aParentNode=頂層節點名稱   aClassIdx=哪一個表
-      function IndexOfIFRSTopNode(aClassIdx:char;aParentNode:string):integer;
-      var xx1,xx2,xx3,xx4:integer;
+      function IndexOfIFRSColNodeSub(aName:string;aInputDbTblCol:TTIFRSColRecC1Ary):integer;
+      var xi:integer;
       begin
         result:=-1;
-        for xx1:=0 to High(aIFRSTopNodeList) do
+        for xi:=Low(aInputDbTblCol) to High(aInputDbTblCol) do
         begin
-          Application.ProcessMessages;
-          if (sametext(aIFRSTopNodeList[xx1].TblType,aClassIdx)) and
-             (sametext(aIFRSTopNodeList[xx1].Name,aParentNode)) then
+          with aInputDbTblCol[xi] do
           begin
-            result:=aIFRSTopNodeList[xx1].Idx;
-            break;
-          end;
-        end;
-      end;
-
-      //查找會計欄目節點是否存在  aParentNode=頂層節點名稱  aName會計欄目名稱  aClassIdx=哪一個表
-      function IndexOfComCode(aClassIdx:char;aName,aParentNode:string):integer;
-      var xx1,xx2,xx1s,xx1e:integer; xb1:boolean;
-      begin
-        result:=-1;
-        xx1s:=Low(aComCodeList);
-        xx1e:=High(aComCodeList);
-        for xx1:=xx1s to xx1e do
-        begin
-          Application.ProcessMessages;
-          if aParentNode='' then
-            raise Exception.create('aParentNode=null.'+aClassIdx+','+aName+','+aParentNode)
-          else begin
-            xx2:=aComCodeList[xx1].ParentNodeIdx;
-            xb1:=(sametext(aComCodeList[xx1].TblType,aClassIdx)) and
-             (sametext(aComCodeList[xx1].Name,aName)) and
-             ( (xx2<=High(aIFRSTopNodeList)) and
-               (sametext(aIFRSTopNodeList[xx2].Name,aParentNode))
-             );
-          end;
-          if xb1 then
-          begin
-            result:=aComCodeList[xx1].Idx;
-            break;
-          end;
-        end;
-      end;
-      
-      function SendToComCode(aClassIdx:char;aName,aParentNode:string):integer;
-      var xx1,xx2,xx3,xx4:integer;
-      begin
-        result:=-1;
-        xx2:=IndexOfComCode(aClassIdx,aName,aParentNode);
-        if xx2=-1 then
-        begin
-          bChangeComCode:=true;
-          if aParentNode='' then
-          begin
-            xx4:=-1;
-          end
-          else begin
-            xx4:=IndexOfIFRSTopNode(aClassIdx,aParentNode);
-            if xx4=-1 then
+            if SameText(F2,aName) then
             begin
-              raise Exception.Create('TopNode not define.'+aClassIdx+';'+aParentNode);
-            end;
-          end;
-          xx3:=Length(aComCodeList);
-          SetLength(aComCodeList,xx3+1);
-          aComCodeList[xx3].Idx:=xx3;
-          aComCodeList[xx3].ParentNodeIdx:=xx4;
-          aComCodeList[xx3].Name:=aName;
-          aComCodeList[xx3].ListNo:=-1;
-          aComCodeList[xx3].TblType:=aClassIdx;
-          result:=aComCodeList[xx3].Idx;
-        end
-        else begin
-          result:=aComCodeList[xx2].Idx;
-        end;
-      end;
-
-      function FreeComCodeRecList():integer;
-      var xx1,xx2,xx3,xx4:integer; xxsFile00,xxsFile01,xxPath:string;
-          xxf1: File  of TIFRSNodeRec;
-      begin
-        Result:=0;
-        xxsFile00:=FTrlDBPath+'CBData\IFRS\'+_IFRSNodeF;
-        xxPath:=ExtractFilePath(xxsFile00);
-        if not DirectoryExists(xxPath) then
-          Mkdir_Directory(xxPath);
-        xxsFile01:=FDataPath+ExtractFileName(xxsFile00);
-        try
-          if Length(aComCodeList)>0 then
-          begin
-            try
-              AssignFile(xxf1,xxsFile01);
-              FileMode := 2;
-              Rewrite(xxf1);
-              xx1 := Length(aComCodeList);
-              BlockWrite(xxf1,aComCodeList[0],xx1);
-            finally
-              try CloseFile(xxf1); except end;
-            end;
-            if not CpyDatF(xxsFile01,xxsFile00) then
-            begin
-              ShowMsgEx('(warn)'+'copy fail.'+xxsFile01);
+              result:=Flag;
               exit;
             end;
           end;
-          Result:=1;
-        finally
-          //DelDatF(xxsFile01);
         end;
       end;
-
-      procedure DelLocalComCodeFile();
-      var xx1,xx2,xx3,xx4:integer; xxsFile00,xxsFile01:string;
+      //查找科目是否存在  aName=科目名稱,如:庫存現金---->現金及約當現金---->流動資產---->資產   aClassIdx=哪一個表
+      function IndexOfIFRSColNode(aClassIdx:char;aName:string):integer;
       begin
-        xxsFile00:=FTrlDBPath+'CBData\IFRS\'+_IFRSNodeF;
-        xxsFile01:=FDataPath+ExtractFileName(xxsFile00);
-        DelDatF(xxsFile01);
+        result:=-1;
+        if aClassIdx=_ZCFZB then
+          result:=IndexOfIFRSColNodeSub(aName,aDbTblCol1)
+        else if aClassIdx=_ZZSYB then
+          result:=IndexOfIFRSColNodeSub(aName,aDbTblCol2)
+        else if aClassIdx=_XJLLB then
+          result:=IndexOfIFRSColNodeSub(aName,aDbTblCol3);
       end;
 
-      
   function GetSubUrlText(aInputUrl,aHint:string):boolean;
   var x1:integer; xb:Boolean;
   begin
@@ -1144,8 +1081,8 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
     end;
     if not xb then
     begin
-        ShowMsgEx('(warn)'+aHint+'網頁取得失敗');
-        exit;
+      ShowMsgEx('(warn)'+aHint+'網頁取得失敗');
+      exit;
     end;
   end;
 
@@ -1247,11 +1184,11 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
       end;
 
       xstr4:=TrlDataFileByYQ(sYear,sQ,_ZCFZB);
-      IFRS_GetCodeList(xstr4,tsTr1CodeAry[0]);
+      IFRS_GetCodeList(xstr4,tsTr1CodeList[0]);
       xstr4:=TrlDataFileByYQ(sYear,sQ,_ZZSYB);
-      IFRS_GetCodeList(xstr4,tsTr1CodeAry[1]);
+      IFRS_GetCodeList(xstr4,tsTr1CodeList[1]);
       xstr4:=TrlDataFileByYQ(sYear,sQ,_XJLLB);
-      IFRS_GetCodeList(xstr4,tsTr1CodeAry[2]);
+      IFRS_GetCodeList(xstr4,tsTr1CodeList[2]);
 
       xTs.LoadFromFile(xstr1);
       for xi3:=0 to xTs.count-1 do
@@ -1273,9 +1210,9 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
                 //若只下載tr1db中沒有的時候
                 if not bScan then
                 begin
-                  if (tsTr1CodeAry[0].IndexOf(xStrLst[0])>=0) and
-                     (tsTr1CodeAry[1].IndexOf(xStrLst[0])>=0) and
-                     (tsTr1CodeAry[2].IndexOf(xStrLst[0])>=0) then
+                  if (tsTr1CodeList[0].IndexOf(xStrLst[0])>=0) and
+                     (tsTr1CodeList[1].IndexOf(xStrLst[0])>=0) and
+                     (tsTr1CodeList[2].IndexOf(xStrLst[0])>=0) then
                   begin
                     ValueStatusCodeFromIni(xStrLst[0],_CNoNeedShen2);
                     tsSuc.Add(xStrLst[0]);
@@ -1284,16 +1221,21 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
                 end
                 else tsToBe.Add(xStrLst[0]);
               end
-              else if (xStrLst[1]=_CXiaOK) or (xStrLst[1]=_CShen) or (xStrLst[1]=_CShen2) or (xStrLst[1]=_CNoNeedShen) or (xStrLst[1]=_CNoNeedShen2) then
+              else if (xStrLst[1]=_CXiaOK) or
+                      (xStrLst[1]=_CShen) or
+                      (xStrLst[1]=_CShen2) or
+                      (xStrLst[1]=_CNoNeedShen) or
+                      (xStrLst[1]=_CNoNeedShen2) then
                 tsSuc.Add(xStrLst[0])
-              else if (xStrLst[1]=_CXiaFail) then
+              else if (xStrLst[1]=_CXiaFail) or
+                      (xStrLst[1]=_CNoNeedShen3)  then  //_CNoNeedShen3的代碼會在下載時，若exceptcodelist存在，則置為_CNoNeedShen
               begin
                 //若只下載tr1db中沒有的時候
                 if not bScan then
                 begin
-                  if (tsTr1CodeAry[0].IndexOf(xStrLst[0])>=0) and
-                     (tsTr1CodeAry[1].IndexOf(xStrLst[0])>=0) and
-                     (tsTr1CodeAry[2].IndexOf(xStrLst[0])>=0) then
+                  if (tsTr1CodeList[0].IndexOf(xStrLst[0])>=0) and
+                     (tsTr1CodeList[1].IndexOf(xStrLst[0])>=0) and
+                     (tsTr1CodeList[2].IndexOf(xStrLst[0])>=0) then
                   begin
                     ValueStatusCodeFromIni(xStrLst[0],_CNoNeedShen2);
                     tsSuc.Add(xStrLst[0]);
@@ -1317,245 +1259,39 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
     result:=true;
   end;
 
-  function DivTdItems(aInput:string):_cStrLst2;
-  var xstr1,xstr2,xstr3:string; xi,xi2,xi3,xiC:integer;
-  begin
-    SetLength(Result,0);
-    xstr1:=aInput;
-    xstr1:=StringReplace(xstr1,#13#10,'',[rfReplaceAll]);
-    xstr1:=StringReplace(xstr1,'<td',#13#10+'<td',[rfReplaceAll]);
-    tsTemp0.Text:=xstr1;
-    SetLength(Result,tsTemp0.Count);
-    xiC:=0;
-    for xi:=0 to tsTemp0.Count-1 do
-    begin
-      xstr2:=tsTemp0[xi];
-      if Pos('<td',xstr2)>0 then
-      begin
-        xstr3:=GetStrOnly2('>','</td>',xstr2,false);
-        Result[xiC]:=xstr3;
-        Inc(xiC);
-      end;
-    end;
-    SetLength(Result,xiC);
-  end;
-
-  function WriteToFile(aInputCode:string):boolean;
-  var f: File  of TIFRSDatRec; xrAry:TIFRSDatRec;
-      xFile,xsDatPath,xParentNode:string;  x2,x3,x4,xiAry,xJRCode,x5,x6:integer;
-      xf1:Double;xf2:int64;
-  begin
-    result:=false;
-    bChangeComCode:=False;
-    if (
-         (tsDat1.Count=0) and
-         (tsDat2.Count=0) and
-         (tsDat3.Count=0)
-       ) or
-       (
-         ((tsDat1.Count mod 2)<>0) or
-         ((tsDat2.Count mod 2)<>0) or
-         ((tsDat3.Count mod 2)<>0)
-       )
-        then
-    begin
-      result:=true;
-      Exit;
-    end;
-
-    try
-      for x4:=1 to 3 do
-      begin
-        iClassIdx:=' '; tsDat0:=nil;
-        if x4=1 then
-        begin
-          iClassIdx:=_ZCFZB;
-          tsDat0:=tsDat1;
-        end
-        else if x4=2 then
-        begin
-          iClassIdx:=_ZZSYB;
-          tsDat0:=tsDat2;
-        end
-        else if x4=3 then
-        begin
-          iClassIdx:=_XJLLB;
-          tsDat0:=tsDat3;
-        end;
-
-        Init_TIFRSDatRec(xrAry);
-        xiAry:=-1;
-        xParentNode:='';
-        x2:=0; xJRCode:=0;
-
-        if (iClassIdx=_ZZSYB) then
-          xJRCode:=1;
-        while x2+1<tsDat0.count do
-        begin
-          {if (iClassIdx=_ZZSYB) and (x2=0) then
-          begin
-            if IndexOfIFRSTopNode(iClassIdx,tsDat0[x2])=-1 then
-              xJRCode:=1;
-          end;
-          if (iClassIdx=_ZCFZB) and (x2=0) then
-          begin
-            if IndexOfIFRSTopNode(iClassIdx,tsDat0[x2])=-1 then
-              xJRCode:=1;
-          end;}
-          if (iClassIdx=_ZZSYB) then
-          begin
-            if SameText('營業費用',tsDat0[x2]) then
-              xJRCode:=0;
-            if SameText('本期淨利(淨損)',tsDat0[x2]) or
-               SameText('本期稅後淨利(淨損)',tsDat0[x2]) then
-              xJRCode:=1;
-            if SameText('本期綜合損益總額',tsDat0[x2]) or
-               SameText('本期綜合損益總額(稅後)',tsDat0[x2]) then
-              xJRCode:=0;
-          end;
-          if (xJRCode=1)  and (iClassIdx=_ZCFZB) then
-          begin
-            //http://mops.twse.com.tw/mops/web/ajax_t164sb03?step=2&firstin=1&off=1&co_id=2820&year=102&season=1&report_id=c
-            //個別資產負債表中無  歸屬於母公司業主之權益，則一直向下查找父節點
-            {if SameText('負債總額',tsDat0[x2]) then
-            begin
-              if (x2+2<tsDat0.count) and (tsDat0[x2+2]='歸屬於母公司業主之權益') then
-                xJRCode:=0;
-            end;}
-          end;
-          
-
-          if not IsNullNum(StrToFloat(tsDat0[x2+1])) then
-          begin
-            xParentNode:='';
-            //--找到父節點
-            //一般都是向上找，但金融業的損益表比較特殊：“本期稅後淨利(淨損)”開始向上找，之上的則是向下找（判斷依據是第一項是否為頂層定義節點）
-            if IndexOfIFRSTopNode(iClassIdx,tsDat0[x2])>=0 then
-            begin
-              xParentNode:=tsDat0[x2];//自己就是父節點
-            end
-            else begin
-              if xJRCode=0 then
-              begin
-                //向上找父節點
-                x5:=x2-2;
-                while x5>=0 do
-                begin
-                  if IndexOfIFRSTopNode(iClassIdx,tsDat0[x5])>=0 then
-                  begin
-                    xParentNode:=tsDat0[x5];
-                    break;
-                  end;
-                  x5:=x5-2;
-                end;
-              end
-              else begin
-                //向下找父節點
-                x5:=x2+2;
-                while x5+1<tsDat0.count do
-                begin
-                  if IndexOfIFRSTopNode(iClassIdx,tsDat0[x5])>=0 then
-                  begin
-                    xParentNode:=tsDat0[x5];
-                    break;
-                  end;
-                  x5:=x5+2;
-                end;
-              end;
-            end;
-            {if (tsDat0[x2]='營業毛利(毛損)') and ((xParentNode='營業毛利(毛損)淨額')  )then
-            begin
-              //raise Exception.Create(' top node error.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode );
-              WriteLineForApp(' top node error.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode ,'x');
-            end;
-            }
-
-            if xParentNode='' then
-            begin
-              raise Exception.Create('not find top node.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode );
-            end;
-
-            x3:=SendToComCode(iClassIdx,RplNode(tsDat0[x2]),xParentNode);
-            if (x3=-1)  then
-            begin
-              raise Exception.Create('SendToComCode fail2.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode );
-            end;
-            xrAry.CompCode:=aInputCode;
-            try
-              xf2:=(StrToInt64(tsDat0[x2+1]));
-              xf2:=xf2;
-              xf1:=xf2;
-              Inc(xiAry);
-              if xiAry>299 then
-              begin
-                raise Exception.Create('items>299.'+(iClassIdx)+','+aInputCode );
-              end;
-              xrAry.NumAry[xiAry]:=xf1;
-              xrAry.IdxAry[xiAry]:=x3;
-            except
-              ShowMessage(Format('%d,%d,%d,',[x3,x2+1,tsDat0.count])+(iClassIdx));
-            end;
-          end
-          else begin
-            if IndexOfIFRSTopNode(iClassIdx,tsDat0[x2])=-1 then
-            begin
-              //WriteLineForApp('top node undefine.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode+','+sYear+'_'+sQ,'');
-              //raise Exception.Create('top node undefine.'+tsDat0[x2]+','+(iClassIdx)+','+aInputCode );
-            end;
-            //xParentNode:=RplNode(tsDat0[x2]);
-          end;
-          //Format('%s,%s',[sYear,sQ]);  iClassIdx
-          x2:=x2+2;
-        end;
-
-        xFile:=DataFileByCode(aInputCode,sYear,sQ,iClassIdx);
-        xsDatPath:=ExtractFilePath(xFile);
-        if not DirectoryExists(xsDatPath) then
-          Mkdir_Directory(xsDatPath);
-        AssignFile(f,xFile);
-        FileMode := 1;
-        ReWrite(f);
-        Write(f,xrAry);
-        CloseFile(f);
-      end;
-
-      
-      result:=True;
-    finally
-      if bChangeComCode then
-        FreeComCodeRecList;
-    end;
-  end;
-
-  function GetSubUrlTextTest(aTblIdx:integer;aInCode:string):Boolean;
+  function GetSubUrlTextTest(aInCode:string):Boolean;
   var xUrl:string;
   begin
     result:=false;
     ResultStr:='';
-    xUrl:=Format('%s_%s_%s_%d',[aInCode,sYear,sQ,aTblIdx]);
+    xUrl:=Format('%s_%s_%s',[aInCode,sYear,sQ]);
     ShowURL(xUrl);
-    xUrl:='E:\TestProgram\TestOfParseShenBaoDocTitile\ifrs\'+Format('%s_%s_%s_%d',[aInCode,sYear,sQ,aTblIdx])+'.txt';
+    xUrl:='E:\TestProgram\TestOfParseShenBaoDocTitile\ifrs\'+Format('%s_%s_%s_0',[aInCode,sYear,sQ])+'.txt';
     if FileExists(xUrl) then
     begin
       GetTextByTs(xUrl,ResultStr);
       result:=True;
     end;
   end;
-  function DoDownText(aTblIdx:integer;aFmtUrl,aInCode,aInputHint:string;var aFrequence:Boolean):Boolean;
+  function DoDownText(aFmtUrl,aInCode,aInputHint:string;var aFrequence:Boolean):Boolean;
   var xb:boolean;
   begin
       result:=false; aFrequence:=false;
       
       sDownUrl:=aFmtUrl;
       sDownUrl:=StringReplace(sDownUrl,'%stkcode%',aInCode,[]);
-      sDownUrl:=StringReplace(sDownUrl,'%year%',sYear,[]);
+      sDownUrl:=StringReplace(sDownUrl,'%year%',Inttostr( strtoint(sYear)+1911 ),[]);
       sDownUrl:=StringReplace(sDownUrl,'%qnum%',sQ,[]);
-      xb:=GetSubUrlText(sDownUrl,aInCode+' '+aInputHint);
-      //xb:=GetSubUrlTextTest(aTblIdx,aInCode);
+      //xb:=GetSubUrlText(sDownUrl,aInCode+' '+aInputHint);
+      xb:=GetSubUrlTextTest(aInCode);
+
+      SetTextByTs(ExtractFilePath(ParamStr(0))+'Data\DwnDocLog\DownIFRS\'+Format('%s_%s_%s.htm',[aInCode,sYear,sQ]),ResultStr);
 
       if xb then
       begin
-        ResultStr:=UTF8Decode(ResultStr);
+        if Trim(UTF8Decode(ResultStr))<>'' then
+          ResultStr:=UTF8Decode(ResultStr);
+        
         if Pos('查詢過於頻繁',ResultStr)>0 then
         begin
           xb:=false;
@@ -1566,7 +1302,6 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
       else begin
         SaveMsg('(warn)'+'down fail.'+sDownUrl,false);
       end;
-      
       result:=xb;
   end;
 
@@ -1584,7 +1319,7 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
     result:=true;
   end;
    
-  function DoDownTextEx(aTblIdx:integer;aFmtUrl,aInCode,aInputHint:string):Boolean;
+  function DoDownTextEx(aFmtUrl,aInCode,aInputHint:string):Boolean;
   var aFrequence,xb:Boolean; x1:Integer;
   begin
     result:=false;
@@ -1592,7 +1327,7 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
     begin
       if StopRunning then
         exit;
-      xb:=DoDownText(aTblIdx,aFmtUrl,aInCode,aInputHint,aFrequence);
+      xb:=DoDownText(aFmtUrl,aInCode,aInputHint,aFrequence);
       UptLstIni();
       if not xb then
       begin
@@ -1613,11 +1348,264 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
     end;
   end;
 
+  function ReflectKJKMOfTbl(aInput:string;aInputReflectTbl:TReplaceRecAry):string;
+  var xi:integer;
+  begin
+    result:=aInput;
+    for xi:=Low(aInputReflectTbl) to High(aInputReflectTbl) do
+    begin
+      with aInputReflectTbl[xi] do
+      begin
+        if SameText(Src,aInput) then
+        begin
+          result:=Dst;
+          exit;
+        end;
+      end;
+    end;
+  end;
+  function SpecTbl2(aInputTbl:Char):boolean;
+  begin
+    result:=IfrsSpecTbl2(aInputTbl,StrToInt(sQ));
+  end;
+  function CheckHtmlTextCol(aInputTbl:Char;aInputHintKey,aInputColText,aInputValueText,aInputValueTextAdd:string):Boolean;
+  var xstr:string; xi,xIdx,xc1,xc2:integer;
+  begin
+    result:=false;                      
+    xc1:=0; xc2:=0;
+    tsTemp1.text:=aInputColText;
+    tsTemp2.text:=aInputValueText;
+    tsTemp3.text:=aInputValueTextAdd;
+    for xi:=0 to tsTemp1.Count-1 do
+    begin
+      if aInputTbl=_ZCFZB then tsTemp1[xi]:=ReflectKJKMOfTbl(tsTemp1[xi],FReflectTbl1)
+      else if aInputTbl=_ZZSYB then tsTemp1[xi]:=ReflectKJKMOfTbl(tsTemp1[xi],FReflectTbl2)
+      else if aInputTbl=_XJLLB then tsTemp1[xi]:=ReflectKJKMOfTbl(tsTemp1[xi],FReflectTbl3);
+
+      if SameText(tsTemp1[xi],'負債及權益') then
+        Continue;
+      xIdx:=IndexOfIFRSColNode(aInputTbl,tsTemp1[xi]);
+      if xIdx=-1 then
+      begin
+        Inc(xc2);
+        tsDat0:=nil;
+        if aInputTbl=_ZCFZB then tsDat0:=tsTblColWarnAry[0]
+        else if aInputTbl=_ZZSYB then tsDat0:=tsTblColWarnAry[1]
+        else if aInputTbl=_XJLLB then tsDat0:=tsTblColWarnAry[2];
+        if tsDat0.IndexOf(tsTemp1[xi])=-1 then
+        begin
+          tsDat0.Add(tsTemp1[xi]);
+          WriteTblColWarn(aInputTbl+'',tsTemp1[xi],aInputHintKey);
+        end;
+      end
+      else begin
+        tsDat0:=nil;
+        if aInputTbl=_ZCFZB then tsDat0:=tsDat1
+        else if aInputTbl=_ZZSYB then tsDat0:=tsDat2
+        else if aInputTbl=_XJLLB then tsDat0:=tsDat3;
+        tsDat0.Add(IntToStr(xIdx));
+
+        if aInputTbl=_ZZSYB then
+        begin
+          if SameText(sQ,'1') then
+          begin
+            xstr:=Trim(tsTemp2[xi]);
+            xstr:=StringReplace(xstr,',','',[rfReplaceAll]);
+            tsDat0.Add(xstr);
+            tsDat0.Add('');
+          end
+          else if SameText(sQ,'2') or SameText(sQ,'3') then
+          begin
+            if aInputValueText<>'' then
+            begin
+              xstr:=Trim(tsTemp2[xi]);
+              xstr:=StringReplace(xstr,',','',[rfReplaceAll]);
+              tsDat0.Add(xstr);
+            end
+            else tsDat0.Add('');
+            if aInputValueTextAdd<>'' then
+            begin
+              xstr:=Trim(tsTemp3[xi]);
+              xstr:=StringReplace(xstr,',','',[rfReplaceAll]);
+              tsDat0.Add(xstr);
+            end
+            else tsDat0.Add('');
+          end
+          else if SameText(sQ,'4') then
+          begin
+            xstr:=Trim(tsTemp3[xi]);
+            xstr:=StringReplace(xstr,',','',[rfReplaceAll]);
+            tsDat0.Add('');
+            tsDat0.Add(xstr);
+          end;
+        end
+        else begin
+          xstr:=Trim(tsTemp2[xi]);
+          xstr:=StringReplace(xstr,',','',[rfReplaceAll]);
+          tsDat0.Add(xstr);
+        end;
+        Inc(xc1);
+      end;
+    end;
+    if (xc2=0) then
+      Result:=True;
+  end;
+  function CFS(aInputNum:string):Double;
+  begin
+    if MayBeDigital(aInputNum) then
+      result:=StrToFloat(aInputNum)
+    else
+      result:=NoneNum;
+  end;
+  function WriteToFile(aInputCode:string):boolean;
+  var f: File  of TIFRSDatRec; xrAry,xrAry2:TIFRSDatRec;
+      xFile,xsDatPath:string;  x2,x3,x4,xiAry,xiAry2,x5,x6,x7,x8:integer;
+      xf1,xf11:Double;xf2:int64;
+  begin
+      result:=false;
+      if (
+           (tsDat1.Count=0) and
+           (tsDat2.Count=0) and
+           (tsDat3.Count=0)
+         ) 
+          then
+      begin
+        result:=true;
+        Exit;
+      end;
+
+      for x4:=1 to 3 do
+      begin
+        iClassIdx:=' '; tsDat0:=nil; tsDat00:=nil;
+        if x4=1 then
+        begin
+          iClassIdx:=_ZCFZB;
+          tsDat0:=tsDat1;
+          tsDat00:=tsDat11;
+        end
+        else if x4=2 then
+        begin
+          iClassIdx:=_ZZSYB;
+          tsDat0:=tsDat2;
+          tsDat00:=tsDat22;
+        end
+        else if x4=3 then
+        begin
+          iClassIdx:=_XJLLB;
+          tsDat0:=tsDat3;
+          tsDat00:=tsDat33;
+        end;
+        
+        xiAry:=-1; xiAry2:=-1;
+        if iClassIdx=_ZZSYB then
+        begin
+          Init_TIFRSDatRec(xrAry);
+          xrAry.Year:=StrToInt(sYear);
+          xrAry.Q:=StrToInt(sQ);
+          xrAry.Tbl:=StrToInt(_ZZSYB);
+          Init_TIFRSDatRec(xrAry2);
+          xrAry2.Year:=StrToInt(sYear);
+          xrAry2.Q:=StrToInt(sQ);
+          xrAry2.Tbl:=StrToInt(_ZZSYB2);
+
+          x2:=0;
+          while x2+2<tsDat0.count do
+          begin
+            xrAry.CompCode:=aInputCode;
+            xrAry2.CompCode:=aInputCode;
+            try
+              x3:=(StrToInt64(tsDat0[x2]));
+              if not SameText(tsDat0[x2+1],'del') then
+              begin
+                xf1:=CFS(tsDat0[x2+1]);
+                if xf1<>NoneNum then
+                begin
+                  Inc(xiAry);
+                  if xiAry>_IFRSDatColSize then
+                    raise Exception.Create('報表中會計科目數目超出預期.');
+                  xrAry.NumAry[xiAry]:=xf1;
+                  xrAry.IdxAry[xiAry]:=x3;
+                end;
+              end;
+              if not SameText(tsDat0[x2+2],'del') then
+              begin
+                xf11:=CFS(tsDat0[x2+2]);
+                if xf11<>NoneNum then
+                begin
+                  Inc(xiAry2);
+                  if xiAry2>_IFRSDatColSize then
+                    raise Exception.Create('報表中會計科目數目超出預期.');
+                  xrAry2.NumAry[xiAry2]:=xf11;
+                  xrAry2.IdxAry[xiAry2]:=x3;
+                end;
+              end;
+            except
+              on e:exception do
+                raise Exception.Create(aInputCode+'解析'+'('+sYear+'Q'+sQ+')'+IFRSTblC2S(iClassIdx)+'失敗.'+e.Message);
+            end;
+            x2:=x2+3;
+          end;
+        end
+        else begin
+          Init_TIFRSDatRec(xrAry);
+          xrAry.Year:=StrToInt(sYear);
+          xrAry.Q:=StrToInt(sQ);
+          xrAry.Tbl:=StrToInt(iClassIdx+'');
+
+          x2:=0;
+          while x2+1<tsDat0.count do
+          begin
+            xrAry.CompCode:=aInputCode;
+            try
+              x3:=(StrToInt64(tsDat0[x2]));
+              if not SameText(tsDat0[x2+1],'del') then
+              begin
+                xf1:=CFS(tsDat0[x2+1]);
+                if xf1<>NoneNum then
+                begin
+                  Inc(xiAry);
+                  if xiAry>_IFRSDatColSize then
+                    raise Exception.Create('報表中會計科目數目超出預期.');
+                  xrAry.NumAry[xiAry]:=xf1;
+                  xrAry.IdxAry[xiAry]:=x3;
+                end;
+              end;
+            except
+              on e:exception do
+                raise Exception.Create(aInputCode+'解析'+'('+sYear+'Q'+sQ+')'+IFRSTblC2S(iClassIdx)+'失敗.'+e.Message);
+            end;
+            x2:=x2+2;
+          end;
+        end;
+        xFile:=DataFileByCode(aInputCode,sYear,sQ,iClassIdx);
+        xsDatPath:=ExtractFilePath(xFile);
+        if not DirectoryExists(xsDatPath) then
+          Mkdir_Directory(xsDatPath);
+        if (xiAry=-1) and (xiAry2=-1) then
+          exit;
+        try
+          AssignFile(f,xFile);
+          FileMode := 1;
+          ReWrite(f);
+          if (xiAry>=0) then
+            Write(f,xrAry);
+          if (xiAry2>=0) then
+            Write(f,xrAry2);
+        finally
+          CloseFile(f);
+        end;
+      end;
+      result:=True;
+  end;
   procedure DoPro(aInputHint:string;aBInputFail:boolean;var tsInPut:TStringList);
-  var i,t,t0,t1,t2,t3,t4 : integer;
-      xbStart,xb,xb2:boolean; xCode,xSpcstr,xstr1,xstr2,xstr3:string; xSrcTextAry:array[0..2] of string;
-      xf2:int64;
-      sTimeKey,sLogOpCur,sIDName,sSaveStatus:string; 
+  var i,t,t0,t1,t2,t3,t4,tiTag : integer; tiOp:Char;
+      xbStart,xb,xb2:boolean; xCode,xstr1,xstr2,xstr3:string; xSrcTextAry:array[0..11] of string;
+      xf2:int64; xbOk:boolean;
+      sTimeKey,sLogOpCur,sIDName,sSaveStatus:string;
+    function MyKey:string;
+    begin
+      result:=xCode+','+sYear+','+sQ;
+    end;
   begin
     i:=0;
     while i<tsInPut.count do
@@ -1625,194 +1613,164 @@ var aSource,aTemp,aTemp01,aTemp02,aTemp03:string;  sDownUrl,ResultStr,vErrMsg : 
       tsDat1.Clear;
       tsDat2.Clear;
       tsDat3.Clear;
+      tsDat11.Clear;
+      tsDat22.Clear;
+      tsDat33.Clear;
+
       xCode:=tsInPut[i];
       if StopRunning Then exit;
       SetCodeToLast(xCode);
+      //------
+      if Fexceptcodelist.IndexOf(xCode)>=0 then
+      begin
+        tsInPut.Delete(i);
+        ValueStatusCodeFromIni(xCode,_CNoNeedShen);
+        Continue;
+      end;
 
-      xSpcstr:='value="詳細資料"';
-      xSpcstr:=StringReplace(xSpcstr,'"',chr(39),[rfReplaceAll]);
       showsb(1,Format('正處理(%s) 待下載(%d) 成功(%d) 失敗(%d)',
          [xCode,tsToBe.count,tsSuc.count,tsFail.count]));
       for t4:=0 to High(xSrcTextAry) do
         xSrcTextAry[t4]:='';
-      xb:=True;
-      if xb then
-      begin
-        xb:=DoDownTextEx(1,FUrl1,xCode,aInputHint);
-        if xb then
-        if Pos(xSpcstr,ResultStr)>0 then
-        begin
-          xstr1:=FUrl1;
-          xstr1:=StringReplace(xstr1,'?step=1&','?step=2&',[rfReplaceAll]);
-          xb:=DoDownTextEx(1,xstr1,xCode,aInputHint);
-        end;
-        xSrcTextAry[0]:=ResultStr;
-      end;
-      if xb then
-      begin
-        xb:=DoDownTextEx(2,FUrl2,xCode,aInputHint);
-        if xb then 
-        if Pos(xSpcstr,ResultStr)>0 then
-        begin
-          xstr1:=FUrl2;
-          xstr1:=StringReplace(xstr1,'?step=1&','?step=2&',[rfReplaceAll]);
-          xb:=DoDownTextEx(2,xstr1,xCode,aInputHint);
-        end;
-        xSrcTextAry[1]:=ResultStr;
-      end;
-      if xb then
-      begin
-        xb:=DoDownTextEx(3,FUrl3,xCode,aInputHint);
-        if xb then 
-        if Pos(xSpcstr,ResultStr)>0 then
-        begin
-          xstr1:=FUrl3;
-          xstr1:=StringReplace(xstr1,'?step=1&','?step=2&',[rfReplaceAll]);
-          xb:=DoDownTextEx(3,xstr1,xCode,aInputHint);
-        end;
-        xSrcTextAry[2]:=ResultStr;
-      end;
-
+      xb:=DoDownTextEx(FUrlFmt,xCode,aInputHint);
       SleepAWhile(FSleepPerStkCode);
       StatusBar1.Panels[2].Text := '';
-      
-      if not xb then
+      tiOp:=_CXiaFail;
+      if xb then
       begin
-        ValueStatusCodeFromIni(xCode,_CXiaFail);
-        if aBInputFail then
+        tiTag:=IFRSHtmlSourceType(ResultStr);
+        if tiTag=0 then
         begin
-          Inc(i);
-          Continue;
-        end
-        else begin
-          tsInPut.Delete(i);
-          tsFail.Add(xCode);
-          Continue;
-        end;
-      end;
+          xstr1:=ParseIFRSHtml(xCode,sYear,sQ,ResultStr,
+            xSrcTextAry[0],xSrcTextAry[1],xSrcTextAry[2],xSrcTextAry[3],xSrcTextAry[11],xSrcTextAry[4],xSrcTextAry[5]);
+          if xstr1='111' then
+          begin
+            xbok:=true;
+            if not HtmlIFRSColList2TextIFRSColList(xSrcTextAry[0],xSrcTextAry[6]) then
+              raise Exception.create('HtmlIFRSColList2TextIFRSColList fail.'+MyKey+'.1');
+            xSrcTextAry[8]:=xSrcTextAry[6]; xSrcTextAry[9]:=xSrcTextAry[1]; xSrcTextAry[10]:=''; 
+            if not TextIFRSColListPro1(xSrcTextAry[8],xSrcTextAry[9],xSrcTextAry[10],xSrcTextAry[6],xSrcTextAry[1],xSrcTextAry[10]) then
+              raise Exception.create('TextIFRSColListPro1 fail.'+MyKey+'.1');
+            if not TextIFRSColList2IFRSColRecC1(xSrcTextAry[6],xSrcTextAry[7]) then
+              raise Exception.create('TextIFRSColList2IFRSColRecC1 fail.'+MyKey+'.1');
+            xbok:=xbok and CheckHtmlTextCol(_ZCFZB,MyKey,xSrcTextAry[7],xSrcTextAry[1],'');
 
-      for t4:=0 to High(xSrcTextAry) do
-      begin
-          ResultStr:=xSrcTextAry[t4];
-          //SaveLog('TEST',ResultStr);
-          if NoDataInText(ResultStr) then
-            continue;
-          xstr1:='<table class="hasBorder" align="center">';
-          xstr1:=StringReplace(xstr1,'"',chr(39),[rfReplaceAll]);
-          xstr2:='</table>';
-          xstr3:=GetStrOnly2(xstr1,xstr2,ResultStr,false);
-          if xstr3='' then
-          begin
-            raise Exception.Create('html format exception.'+xCode);
-          end;
-          ResultStr:=xstr3;
+            if not HtmlIFRSColList2TextIFRSColList(xSrcTextAry[2],xSrcTextAry[6]) then
+              raise Exception.create('HtmlIFRSColList2TextIFRSColList fail.'+MyKey+'.2');
+            xSrcTextAry[8]:=xSrcTextAry[6]; xSrcTextAry[9]:=xSrcTextAry[3]; xSrcTextAry[10]:=xSrcTextAry[11];
+            if not TextIFRSColListPro1(xSrcTextAry[8],xSrcTextAry[9],xSrcTextAry[10],xSrcTextAry[6],xSrcTextAry[3],xSrcTextAry[11]) then
+              raise Exception.create('TextIFRSColListPro1 fail.'+MyKey+'.2');
+            if not TextIFRSColList2IFRSColRecC1(xSrcTextAry[6],xSrcTextAry[7]) then
+              raise Exception.create('TextIFRSColList2IFRSColRecC1 fail.'+MyKey+'.2');
+            if SameText(sQ,'1') then
+              xbok:=xbok and CheckHtmlTextCol(_ZZSYB,MyKey,xSrcTextAry[7],xSrcTextAry[3],'')
+            else if SameText(sQ,'2') or SameText(sQ,'3') then
+              xbok:=xbok and CheckHtmlTextCol(_ZZSYB,MyKey,xSrcTextAry[7],xSrcTextAry[3],xSrcTextAry[11])
+            else if SameText(sQ,'4') then
+              xbok:=xbok and CheckHtmlTextCol(_ZZSYB,MyKey,xSrcTextAry[7],'',xSrcTextAry[3]);
 
-          aSource:=ResultStr;
-          aSource:=StringReplace(aSource,#13#10,'',[rfReplaceAll]);
-          aSource:=StringReplace(aSource,'<tr',#13#10+'<tr',[rfReplaceAll]);
+            if not HtmlIFRSColList2TextIFRSColList(xSrcTextAry[4],xSrcTextAry[6]) then
+              raise Exception.create('HtmlIFRSColList2TextIFRSColList fail.'+MyKey+'.3');
+            xSrcTextAry[8]:=xSrcTextAry[6]; xSrcTextAry[9]:=xSrcTextAry[5]; xSrcTextAry[10]:=''; 
+            if not TextIFRSColListPro1(xSrcTextAry[8],xSrcTextAry[9],xSrcTextAry[10],xSrcTextAry[6],xSrcTextAry[5],xSrcTextAry[10]) then
+              raise Exception.create('TextIFRSColListPro1 fail.'+MyKey+'.3');
+            if not TextIFRSColList2IFRSColRecC1(xSrcTextAry[6],xSrcTextAry[7]) then
+              raise Exception.create('TextIFRSColList2IFRSColRecC1 fail.'+MyKey+'.3');
+            xbok:=xbok and CheckHtmlTextCol(_XJLLB,MyKey,xSrcTextAry[7],xSrcTextAry[5],'');
 
-          iClassIdx:=' '; tsDat0:=nil; 
-          if t4=0 then
-          begin
-            iClassIdx:=_ZCFZB;
-            tsDat0:=tsDat1;
-          end
-          else if t4=1 then
-          begin
-            iClassIdx:=_ZZSYB;
-            tsDat0:=tsDat2;
-          end
-          else if t4=2 then
-          begin
-            iClassIdx:=_XJLLB;
-            tsDat0:=tsDat3;
-          end
-          else
-            raise Exception.Create('programe exception.');
-
-          tsTemp2.Text:=aSource;
-          for t:=0 to tsTemp2.Count-1 do
-          begin
-              Application.ProcessMessages;
-              if StopRunning Then exit;
-              aTemp02:=tsTemp2[t];
-              if (Pos('<td class=',aTemp02)>0) then
+            if xbok then
+            begin
+              if WriteToFile(xCode) then
               begin
-                tdStrLst:=DivTdItems(aTemp02);
-                //if t=39 then
-                //  ShowMessage(aTemp02);
-                if (Length(tdStrLst)>=2) then
+                if ( (tsDat1.Count=0) and (tsDat2.Count=0) and (tsDat3.Count=0) ) then
+                  sSaveStatus:=_CNoNeedShen3 //若未解析全部三個財務報表的資料時，則視為 無資料原因不明，到客戶端處理
+                else if (SameIFRS(xCode,sYear,sQ)) then
+                  sSaveStatus:=_CNoNeedShen2
+                else
+                  sSaveStatus:=_CXiaOK;
+                ValueStatusCodeFromIni(xCode,sSaveStatus);
+                tsInPut.Delete(i);
+                tsSuc.Add(xCode);
+
+                if sSaveStatus=_CXiaOK then 
+                if (bHis) or (not ExistsInTr1StkList(xCode)) then
                 begin
-                  aTemp02:=RplNode0(tdStrLst[0]);
-                  aTemp02:=RplNode(aTemp02);
-                  aTemp02:=ProKJLMName(aTemp02);
-                  
-                  tsDat0.Add(aTemp02);
-                  xf2:=cfs100(RplNode(tdStrLst[1]));
-                  aTemp02:=floatToStr(xf2);
-                  tsDat0.Add(aTemp02);
+                  sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
+                  sLogOpCur:=CAppTopic;
+                  //sIDName:=GetIDNameByCode(xCode);
+                  sIDName:=(xCode);
+                  if UpdateGuidOfWorkList_IFRS(sLogOpCur,sTimeKey,xCode,sYear,sQ,
+                    sIDName,_OpAutoAudit,_IFRSCBDBNodeCaption,'') then
+                  begin
+                    ValueStatusCodeFromIni(xCode,_CShen2);
+                    SaveMsg('生成IFRS上傳任務清單ok.'+Format('%s,%s,%s',[xCode,sYear,sQ]),false);
+                  end
+                  else begin
+                    SaveMsg('(warn)'+'生成IFRS上傳任務清單fail.'+Format('%s,%s,%s',[xCode,sYear,sQ]),false);
+                  end;
+                end;
+                Continue;
+              end
+              else begin
+                SaveMsg('(warn)'+'WriteToFile fail.'+tsToBe[i],false);
+                ValueStatusCodeFromIni(tsToBe[i],_CXiaFail);
+                if aBInputFail then
+                begin
+                  Inc(i);
+                  Continue;
+                end
+                else begin
+                  tsInPut.Delete(i);
+                  tsFail.Add(xCode);
+                  Continue;
                 end;
               end;
-          end;
+            end else
+              tiOp:=_CXiaFail;
+          end else 
+            tiOp:=_CXiaFail;
+        end
+        else if tiTag in [2] then
+          tiOp:=_CNoNeedShen
+        else if tiTag in [1] then
+          tiOp:=_CXiaFail
+        else
+          tiOp:=_CNoNeedShen3;
       end;
 
-      {tsDat1.SaveToFile('e:\1.txt');
-      tsDat2.SaveToFile('e:\2.txt');
-      tsDat3.SaveToFile('e:\3.txt');}
-      if WriteToFile(xCode) then
+      tsInPut.Delete(i);
+      if tiOp=_CXiaFail then 
       begin
-        if ( (tsDat1.Count=0) and (tsDat2.Count=0) and (tsDat3.Count=0) ) then
-          sSaveStatus:=_CNoNeedShen
-        else if (SameIFRS(xCode,sYear,sQ)) then
-          sSaveStatus:=_CNoNeedShen2
-        else
-          sSaveStatus:=_CXiaOK;
-        ValueStatusCodeFromIni(xCode,sSaveStatus);
-        tsInPut.Delete(i);
-        tsSuc.Add(xCode);
-
-        if sSaveStatus=_CXiaOK then 
-        if (bHis) or (not ExistsInTr1StkList(xCode)) then
-        begin
-          sTimeKey:=FormatDateTime('yyyymmdd_hhmmsszzz',now);
-          sLogOpCur:=CAppTopic;
-          //sIDName:=GetIDNameByCode(xCode);
-          sIDName:=(xCode);
-          if UpdateGuidOfWorkList_IFRS(sLogOpCur,sTimeKey,xCode,sYear,sQ,
-            sIDName,_OpAutoAudit,_IFRSCBDBNodeCaption,'') then
-          begin
-            ValueStatusCodeFromIni(xCode,_CShen2);
-            SaveMsg('生成IFRS上傳任務清單ok.'+Format('%s,%s,%s',[xCode,sYear,sQ]),false);
-          end
-          else begin
-            SaveMsg('(warn)'+'生成IFRS上傳任務清單fail.'+Format('%s,%s,%s',[xCode,sYear,sQ]),false);
-          end;
-        end;
+        ValueStatusCodeFromIni(xCode,_CXiaFail);
+        tsFail.Add(xCode);
         Continue;
       end
-      else begin
-        SaveMsg('(warn)'+'WriteToFile fail.'+tsToBe[i],false);
-        ValueStatusCodeFromIni(tsToBe[i],_CXiaFail);
-        if aBInputFail then
-        begin
-          Inc(i);
-          Continue;
-        end
-        else begin
-          tsInPut.Delete(i);
-          tsFail.Add(xCode);
-        end;
+      else if tiOp=_CNoNeedShen3 then
+      begin
+        ValueStatusCodeFromIni(xCode,_CNoNeedShen3);
+        tsFail.Add(xCode);
+        Continue;
+      end
+      else if tiOp=_CNoNeedShen then
+      begin
+        ValueStatusCodeFromIni(xCode,_CNoNeedShen);
+        Continue;
       end;
-      if StopRunning Then exit;
-      Inc(i);
-    end;
+    end;//while i<tsInPut.count do
   end;
 
 begin
   Result := false;
-  bChangeComCode:=False;
   ShowMsgEx('開始取得IFRS...');
+  ReadIfrsExceptCodeListEx(Fexceptcodelist);
   if StopRunning Then exit;
+  ReadReplaceRecordsEx('replace',FRplRecs);
+  ReadReplaceRecordsEx('1',FReflectTbl1);
+  ReadReplaceRecordsEx('2',FReflectTbl2);
+  ReadReplaceRecordsEx('3',FReflectTbl3);
+  //Application.Terminate;
+  //Halt;
+  
   bListErr:=false; bScan:=false; bHis:=false;
   try
   try
@@ -1822,22 +1780,30 @@ begin
     tsDat1:=TStringList.create;
     tsDat2:=TStringList.create;
     tsDat3:=TStringList.create;
+    tsDat11:=TStringList.create;
+    tsDat22:=TStringList.create;
+    tsDat33:=TStringList.create;
     tsTemp1:=TStringList.create;
     tsTemp2:=TStringList.create;
     tsTemp3:=TStringList.create;
     tsTemp0:=TStringList.create;
-    for iAry:=0 to High(tsTr1CodeAry) do
-      tsTr1CodeAry[iAry]:=TStringList.Create;
+    for iAry:=0 to High(tsTblColWarnAry) do
+      tsTblColWarnAry[iAry]:=TStringList.Create;
+    for iAry:=0 to High(tsTr1CodeList) do
+      tsTr1CodeList[iAry]:=TStringList.Create;
 
+    if not ReadtsTblColWarnAry(tsTblColWarnAry[0],tsTblColWarnAry[1],tsTblColWarnAry[2]) then
+    begin
+      exit;
+    end;
+    
     if not GetParasFromIni then
     begin
       bListErr:=true;
       exit;
     end;
-    if InitComCodeRecList<>1 then
+    if InitDbTblColList<>1 then
       exit;
-
-
 
 
     aTemp02:=TrlDataFileByYQ(sYear,sQ,_ZCFZB);
@@ -1873,27 +1839,29 @@ begin
   Except
      On E:Exception do
      Begin
-         ShowMsgEx(E.Message,false);
+       SaveExceptionMsg(E.Message);
      End;
   End;
   finally
      ShowMsgEx('');
-     try SetLength(aComCodeList,0); except end;
-     try SetLength(tdStrLst,0); except end;
      try FreeAndNil(tsSuc); except end;
      try FreeAndNil(tsFail); except end;
      try FreeAndNil(tsToBe); except end;
      try FreeAndNil(tsDat1); except end;
      try FreeAndNil(tsDat2); except end;
      try FreeAndNil(tsDat3); except end;
+     try FreeAndNil(tsDat11); except end;
+     try FreeAndNil(tsDat22); except end;
+     try FreeAndNil(tsDat33); except end;
      try FreeAndNil(tsTemp1); except end;
      try FreeAndNil(tsTemp2); except end;
      try FreeAndNil(tsTemp3); except end;
      try FreeAndNil(tsTemp0); except end;
-     for iAry:=0 to High(tsTr1CodeAry) do
-      try FreeAndNil(tsTr1CodeAry[iAry]); except end;
-     
-     DelLocalComCodeFile();
+     for iAry:=0 to High(tsTblColWarnAry) do
+      try FreeAndNil(tsTblColWarnAry[iAry]); except end;
+     for iAry:=0 to High(tsTr1CodeList) do
+      try FreeAndNil(tsTr1CodeList[iAry]); except end;
+
      if not bListErr then
      begin
        if result then
@@ -1927,7 +1895,7 @@ function TAMainFrm.DataFileByCode(aCode,sYear,sQ:string;aClassIdx:char):string;
 var s:string;
 begin
   s:=aClassIdx;
-  result := Format('%s\%s_%s_%s_%s.dat',[FDataPath,sYear,sQ,aCode,s]);
+  result := Format('%s%s_%s_%s_%s.dat',[FDataPath,sYear,sQ,aCode,s]);
 end;
 
 function TAMainFrm.TrlDataFileByYQ(sYear,sQ:string;aClassIdx:char):string;
@@ -1944,11 +1912,17 @@ begin
   result:=false;
   sFile1:=DataFileByCode(aCode,sYear,sQ,aClassIdx);
   sFile2:=TrlDataFileByYQ(sYear,sQ,aClassIdx);
-  sFile2:=FDataPath+ExtractFileName(sFile2);
-  aRec1:=IFRS_GetRecOfIFRSData(aCode,sFile1);
-  aRec2:=IFRS_GetRecOfIFRSData(aCode,sFile2);
+  if not FileExists(sFile1) then exit;
+  if not FileExists(sFile2) then exit;
 
-  if not SameText(aRec1.CompCode,aRec2.CompCode) then
+  aRec1:=IFRS_GetRecOfIFRSData(StrToInt(sYear),StrToInt(sQ),StrToInt(aClassIdx+''),aCode,sFile1);
+  aRec2:=IFRS_GetRecOfIFRSData(StrToInt(sYear),StrToInt(sQ),StrToInt(aClassIdx+''),aCode,sFile2);
+  if not ( (Trim(aRec1.CompCode)<>'') and
+           SameText(aRec1.CompCode,aRec2.CompCode) and
+           (aRec1.Year=aRec2.Year) and
+           (aRec1.Q=aRec2.Q) and
+           (aRec1.Tbl=aRec2.Tbl)
+    ) then
     exit;
   for i:=0 to high(aRec1.NumAry) do
   begin
@@ -1957,6 +1931,26 @@ begin
     if aRec1.IdxAry[i]<>aRec2.IdxAry[i] then
       exit;
   end;
+
+  if IfrsSpecTbl2(aClassIdx,StrToInt(sQ)) then
+  begin
+    aRec1:=IFRS_GetRecOfIFRSData(StrToInt(sYear),StrToInt(sQ),StrToInt(_ZZSYB2+''),aCode,sFile1);
+    aRec2:=IFRS_GetRecOfIFRSData(StrToInt(sYear),StrToInt(sQ),StrToInt(_ZZSYB2+''),aCode,sFile2);
+    if not (  SameText(aRec1.CompCode,aRec2.CompCode) and
+             (aRec1.Year=aRec2.Year) and
+             (aRec1.Q=aRec2.Q) and
+             (aRec1.Tbl=aRec2.Tbl)
+      ) then
+      exit;
+    for i:=0 to high(aRec1.NumAry) do
+    begin
+      if aRec1.NumAry[i]<>aRec2.NumAry[i] then
+        exit;
+      if aRec1.IdxAry[i]<>aRec2.IdxAry[i] then
+        exit;
+    end;
+  end;
+
   result:=true;
 end;
 
@@ -2057,6 +2051,7 @@ begin
       result:=True;
 end;
 
+
 function TAMainFrm.GetCodeList: boolean;
 var sCodeFile1,sCodePath1,sCode:string;
    i,j,ic:integer;  ts1:TStringList;
@@ -2151,7 +2146,7 @@ begin
          then
       begin
         if (not IsJRCode(sCode)) and
-           (not ((sCode='1409') or (sCode='1718') or (sCode='2514') or (sCode='2905'))  ) then
+           (Fexceptcodelist.IndexOf(sCode)=-1) then
         begin
           FIDLstMgr.Add(sCode);
           FIDNameLstMgr.Add(sCode); //+#9+sName
@@ -2350,13 +2345,7 @@ begin
       end;
     except
     end;
-    try
-      if Assigned(ts) then
-      begin
-        FreeAndNil(ts);
-      end;
-    except
-    end;
+    try if Assigned(ts) then FreeAndNil(ts); except end;
   end;
 end;
 

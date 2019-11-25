@@ -11,6 +11,7 @@ const
   _CShen='4';
   _CShen2='b';
   _CNoNeedShen='5';//無資料
+  _CNoNeedShen3='c';//無資料且原因不明
   _CNoNeedShen2='a';//tr1db中已經存在資料
   _CCreateWorkList='6';
   _CCreateWorkListFail='7';
@@ -53,11 +54,14 @@ function FindNodeOfIFRS(aTblType:integer;aNode,aParentNode:string;ts:TStringList
 function RplNode(aNode:string):string;
 function RplNode0(aNode:string):string;
 function UptIFRSRecToTr1db(aSrcF,aDstF:string):integer;
+function UptIFRSRecToTr1dbBatch(tsSrc:TStringList;aDstF:string;var tsRst:TStringList):boolean;
 function GetIFRSFile2File(aSrcF,aDstF,aCode:string):boolean;
 function IFRSTblChr2Str(aTblChr:char):string;
 
 procedure Init_TIFRSDatRec(var Rec:TIFRSDatRec);
-function IFRS_GetRecOfIFRSData(aInputCode,aDataFile:string):TIFRSDatRec;
+function IfrsSpecTbl2(aInputTbl:Char;aQ:Integer):boolean;
+procedure AssignTIFRSDatRec(aSrc:TIFRSDatRec;var aDst:TIFRSDatRec);
+function IFRS_GetRecOfIFRSData(aYear,aQ,aTbl:integer;aInputCode,aDataFile:string):TIFRSDatRec;
 function IFRS_GetCodeList(aDataFile:string;var ts:TStringList):boolean;
 
 
@@ -371,23 +375,27 @@ end;
 
 //0==no need upt -1=upt fail 1=upt ok 
 function UptIFRSRecToTr1db(aSrcF,aDstF:string):integer;
-var f: File  of TIFRSDatRec; recs:TIFRSDatRecAry; srcrec:TIFRSDatRec;
- b:boolean;  i,j,ReMain,GotCount:integer;
+var f: File  of TIFRSDatRec; recs:TIFRSDatRecAry; srcrec:TIFRSDatRecAry;
+ b:boolean;  i,j,ReMain,GotCount,n:integer;
  sTmpFile,sTemp1:string;
 begin
   result:=-1;
-  sTmpFile:=ChangeFileExt(aDstF,'.tmp');
+  sTmpFile:=ChangeFileExt(aDstF,'.temp');
 try
   if not FileExists(aSrcF) then
   begin
     result:=0;
     exit;
   end;
+  SetLength(srcrec,0);
   try
     AssignFile(f,aSrcF);
     FileMode := 0;
     reset(f);
-    read(f,srcrec);
+    ReMain := FileSize(f);
+    SetLength(srcrec,ReMain);
+    if ReMain>0 then
+      BlockRead(f,srcrec[0],ReMain,GotCount);
   finally
     try CloseFile(f); except end;
   end;
@@ -407,31 +415,29 @@ try
     end;
   end;
 
-  b:=False;
-  for i:=0 to High(recs) do
+  for n:=0 to High(srcrec) do
   begin
-    if SameText(recs[i].CompCode,srcrec.CompCode) then
+    b:=False;
+    for i:=0 to High(recs) do
     begin
-      b:=true;
-      for j:=0 to High(srcrec.NumAry) do
+      if SameText(recs[i].CompCode,srcrec[n].CompCode) and
+         (recs[i].Year=srcrec[n].Year) and
+         (recs[i].Q=srcrec[n].Q) and
+         (recs[i].Tbl=srcrec[n].Tbl)  then
       begin
-        recs[i].NumAry[j]:=srcrec.NumAry[j];
-        recs[i].IdxAry[j]:=srcrec.IdxAry[j];
+        b:=true;
+        AssignTIFRSDatRec(srcrec[n],recs[i]);
+        Break;
       end;
-      Break;
     end;
-  end;
-  if not b then
-  begin
-    GotCount:=Length(recs);
-    setLength(recs,GotCount+1);
-    recs[GotCount].CompCode:=srcrec.CompCode;
-    for i:=0 to High(srcrec.NumAry) do
+    if not b then
     begin
-      recs[GotCount].NumAry[i]:=srcrec.NumAry[i];
-      recs[GotCount].IdxAry[i]:=srcrec.IdxAry[i];
+      GotCount:=Length(recs);
+      setLength(recs,GotCount+1);
+      AssignTIFRSDatRec(srcrec[n],recs[GotCount]);
     end;
   end;
+
   SortIFRSDatRecAry(recs);
   try
     AssignFile(f,sTmpFile);
@@ -446,6 +452,120 @@ try
   result:=1;
 finally
   try SetLength(recs,0); except end;
+  try SetLength(srcrec,0); except end;
+  if FileExists(sTmpFile) then
+    DeleteFile(sTmpFile);
+end;
+end;
+
+//--批量更新到某個年季檔案中
+function UptIFRSRecToTr1dbBatch(tsSrc:TStringList;aDstF:string;var tsRst:TStringList):boolean;
+var f: File  of TIFRSDatRec; recs:TIFRSDatRecAry; srcrec:TIFRSDatRecAry;
+ b:boolean;  i,j,k,n,ReMain,ReMain2,ReMain3,GotCount,ic,ReMain4,GotCount4:integer;
+ sTmpFile,sTemp1,sOneRst:string;
+begin
+  result:=false;
+  sTmpFile:=ChangeFileExt(aDstF,'.temp');
+try
+  ReMain2:=tsSrc.count*2; ReMain:=0; GotCount:=0; SetLength(recs,0);
+  if FileExists(aDstF) then
+  begin
+    try
+      AssignFile(f,aDstF);
+      FileMode := 0;
+      reset(f);
+      ReMain := FileSize(f);
+      ReMain2:=ReMain+tsSrc.count*2;
+      SetLength(recs,ReMain2);
+      if ReMain>0 then
+        BlockRead(f,recs[0],ReMain,GotCount);
+    finally
+      try CloseFile(f); except end;
+    end;
+  end
+  else begin
+    SetLength(recs,ReMain2);
+  end;
+  for k:=GotCount to High(recs) do
+    recs[k].CompCode:='';
+  //WriteLineForApp(aDstF+'ReMain2='+inttostr(ReMain2));
+
+  tsRst.clear;
+  for k:=0 to tsSrc.count-1 do
+  begin
+    sOneRst:='0';
+    if FileExists(tsSrc[k]) then
+    begin
+      SetLength(srcrec,0);
+      try
+        AssignFile(f,tsSrc[k]);
+        FileMode := 0;
+        reset(f);
+        ReMain4 := FileSize(f);
+        SetLength(srcrec,ReMain4);
+        if ReMain4>0 then
+          BlockRead(f,srcrec[0],ReMain4,GotCount4);
+      finally
+        try CloseFile(f); except end;
+      end;
+
+      for n:=0 to High(srcrec) do
+      begin
+        //--如果是相同的代碼，則只更新數據，否則新增一筆
+        b:=False;
+        for i:=0 to High(recs) do
+        begin
+          if SameText(recs[i].CompCode,srcrec[n].CompCode) and
+             (recs[i].Year=srcrec[n].Year) and
+             (recs[i].Q=srcrec[n].Q) and
+             (recs[i].Tbl=srcrec[n].Tbl)  then
+          begin
+            b:=true;
+            AssignTIFRSDatRec(srcrec[n],recs[i]);
+            Break;
+          end;
+        end;
+        if not b then
+        begin
+          //WriteLineForApp(Format('%d/%d GotCount=%d.%s.  n=%d,%s,%dQ%d,%d',[k+1,tsSrc.count,GotCount,tsSrc[k],
+          // n,srcrec[n].CompCode,srcrec[n].Year,srcrec[n].Q,srcrec[n].Tbl    ]) );
+          AssignTIFRSDatRec(srcrec[n],recs[GotCount]);
+          Inc(GotCount);
+        end;
+      end;
+      sOneRst:='1';
+    end;
+    tsRst.Add(sOneRst);
+  end;
+  if tsRst.Count<>tsSrc.Count then
+    exit;
+  if Length(recs)<>GotCount then
+    SetLength(recs,GotCount);
+
+  SortIFRSDatRecAry(recs);
+  try
+    AssignFile(f,sTmpFile);
+    FileMode := 2;
+    Rewrite(f);
+    GotCount:=Length(recs);
+    BlockWrite(f,recs[0],GotCount);
+  finally
+    try CloseFile(f); except end;
+  end;
+  b:=false;
+  for i:=1 to 5 do
+  begin
+    b:=CopyFile(PChar(sTmpFile),PChar(aDstF),False);
+    if b then
+      Break
+    else
+      Sleep(1500);
+  end;
+
+  result:=true;
+finally
+  try SetLength(recs,0); except end;
+  try SetLength(srcrec,0); except end;
   if FileExists(sTmpFile) then
     DeleteFile(sTmpFile);
 end;
@@ -455,7 +575,7 @@ function IFRSTblChr2Str(aTblChr:char):string;
 begin
   if aTblChr=_ZCFZB then
     result:=_ZCFZBStr
-  else if aTblChr=_ZZSYB then
+  else if (aTblChr=_ZZSYB) or (aTblChr=_ZZSYB2) then
     result:=_ZZSYBStr
   else if aTblChr=_XJLLB then
     result:=_XJLLBStr;
@@ -467,6 +587,9 @@ begin
   with Rec do
   begin
     CompCode:='';
+    Year:=0;
+    Q:=0;
+    Tbl:=0;
     for i:=0 to High(NumAry) do
     begin
       NumAry[i]:=NoneNum2;
@@ -475,7 +598,21 @@ begin
   end;
 end;
 
-function IFRS_GetRecOfIFRSData(aInputCode,aDataFile:string):TIFRSDatRec;
+procedure AssignTIFRSDatRec(aSrc:TIFRSDatRec;var aDst:TIFRSDatRec);
+var i:integer;
+begin
+  aDst.CompCode:=aSrc.CompCode;
+  aDst.Year:=aSrc.Year;
+  aDst.Q:=aSrc.Q;
+  aDst.Tbl:=aSrc.Tbl;
+  for i:=0 to High(aSrc.NumAry) do
+  begin
+    aDst.NumAry[i]:=aSrc.NumAry[i];
+    aDst.IdxAry[i]:=aSrc.IdxAry[i];
+  end;
+end;
+
+function IFRS_GetRecOfIFRSData(aYear,aQ,aTbl:integer;aInputCode,aDataFile:string):TIFRSDatRec;
 var fBCode: File  of TIFRSDatRec; rBCode: TIFRSDatRec;
   ReMain,GotCount,j:integer;
 begin
@@ -488,7 +625,11 @@ begin
     while not Eof(fBCode) do
     begin
       read(fBCode,rBCode);
-      if SameText(rBCode.CompCode,aInputCode) then
+      if SameText(rBCode.CompCode,aInputCode) and
+         (rBCode.Year=aYear) and
+         (rBCode.Q=aQ) and
+         (rBCode.Tbl=aTbl)
+          then
       begin
         result:=rBCode;
         Exit;
@@ -497,6 +638,11 @@ begin
   finally
     try CloseFile(fBCode); except end;
   end;
+end;
+
+function IfrsSpecTbl2(aInputTbl:Char;aQ:Integer):boolean;
+begin
+  result:=(aInputTbl=_ZZSYB) and ( aQ in [2,3] );
 end;
 
 function IFRS_GetCodeList(aDataFile:string;var ts:TStringList):boolean;

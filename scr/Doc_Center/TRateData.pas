@@ -2,7 +2,7 @@ unit TRateData;
 
 interface
 uses
-  Controls, Windows;
+  Controls, Windows,SysUtils,Classes;
 
 Const
   DefNum = -999999999;
@@ -256,11 +256,73 @@ TNTDToUSDRec=record
 end;
 TNTDToUSDRecLST = Array of TNTDToUSDRec;
 
-
-
+function TECBRate1Rec2Str(aRec:TECBRate1Rec; var aStr:string):Boolean;
+function Str2TECBRate1Rec(aStr:string; var aRec:TECBRate1Rec):Boolean;overload;
+function Str2TECBRate1Rec(ts:TStringList;aStr:string; var aRec:TECBRate1Rec):Boolean;overload;
 
 implementation
 
+function TECBRate1Rec2Str(aRec:TECBRate1Rec; var aStr:string):Boolean;
+var sDemite:string;
+begin
+  result:=False;
+  aStr:='';
+  sDemite:=',';
+  with aRec do
+  begin
+    aStr:=FloatToStr(Adate)+sDemite+FloatToStr(Months1)+sDemite+FloatToStr(Months3)+sDemite+FloatToStr(Months6)+sDemite+
+      FloatToStr(Years1)+sDemite+FloatToStr(Years2)+sDemite+FloatToStr(Years3)+sDemite+
+      FloatToStr(Years5)+sDemite+FloatToStr(Years7)+sDemite+
+      FloatToStr(Years10)+sDemite+FloatToStr(Years20)+sDemite+FloatToStr(Years30);
+  end;
+  result:=true;
+end;
+
+function Str2TECBRate1Rec(ts:TStringList;aStr:string; var aRec:TECBRate1Rec):Boolean;
+begin
+  result:=False;
+  if Trim(aStr)='' then
+    exit;
+  if Assigned(ts) then
+  begin
+    ts.Delimiter:=',';
+    ts.DelimitedText:=aStr;
+    if ts.Count=12 then
+    begin
+      with aRec do
+      begin
+        Adate  := StrToFloat(ts[0]);
+        Months1:= StrToFloat(ts[1]);
+        Months3:= StrToFloat(ts[2]);
+        Months6:= StrToFloat(ts[3]);
+        Years1:= StrToFloat(ts[4]);
+        Years2:= StrToFloat(ts[5]);
+        Years3:= StrToFloat(ts[6]);
+        Years5:= StrToFloat(ts[7]);
+        Years7:= StrToFloat(ts[8]);
+        Years10:= StrToFloat(ts[9]);
+        Years20:= StrToFloat(ts[10]);
+        Years30:= StrToFloat(ts[11]);
+      end;
+      result:=true;
+    end;
+  end;
+end;
+
+
+function Str2TECBRate1Rec(aStr:string; var aRec:TECBRate1Rec):Boolean;
+var ts:TStringList;
+begin
+  result:=False;
+  if Trim(aStr)='' then
+    exit;
+  try
+    ts:=TStringList.Create;
+    result:=Str2TECBRate1Rec(aStr,aRec);
+  finally
+    FreeAndNil(ts);
+  end;
+end;
 
 
 

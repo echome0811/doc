@@ -17,6 +17,7 @@ type
      destructor  Destroy; override;
   end;
 
+
   TCBDataWorkHandleThread=class(TThread)
   private
     procedure ProExecute;
@@ -26,7 +27,7 @@ type
     FCBDataAll_PackFile,FCBDataExceptCbdocAll_PackFile:string;
     FCBDataAll_PackTag,FCBDataExceptCbdocAll_PackTag:Boolean;
     FCBDataAry_PackTag:array of Boolean;
-    FCBNodeDat_PackTag:Boolean;
+    FCBNodeDat_PackTag:Boolean; FLockTimeOut:integer; FCBNodeDat_Token:string; FCBNodeDat_TokenTime:integer;
 
     FCBNodeDat_PackFile:string;
     FCBDataAry_PackFile:array of string;
@@ -40,7 +41,10 @@ type
      procedure PackCBDataFile(aFileName:string);
      procedure PackCBNodeFile();
 
-     constructor Create();
+     function LockNodeDat(aLocker:string):boolean;
+     function UnLockNodeDat(aLocker:string):boolean;
+
+     constructor Create(aLockTimeOut:integer);
      destructor  Destroy; override;
   end;
 
@@ -53,7 +57,7 @@ type
     FCBDataAll_PackFile,FCBDataExceptCbdocAll_PackFile:string;
     FCBDataAll_PackTag,FCBDataExceptCbdocAll_PackTag:Boolean;
     FCBDataAry_PackTag:array of Boolean;
-    FCBNodeDat_PackTag:Boolean;
+    FCBNodeDat_PackTag:Boolean; FLockTimeOut:integer; FCBNodeDat_Token:string; FCBNodeDat_TokenTime:integer;
 
     FCBNodeDat_PackFile:string;
     FCBDataAry_PackFile:array of string;
@@ -66,7 +70,10 @@ type
      procedure PackCBDataFile(aFileName:string);
      procedure PackCBNodeFile();
 
-     constructor Create();
+     function LockNodeDat(aLocker:string):boolean;
+     function UnLockNodeDat(aLocker:string):boolean;
+
+     constructor Create(aLockTimeOut:integer);
      destructor  Destroy; override;
   end;
   
@@ -247,6 +254,35 @@ end;
 
 { TCBDataWorkHandleThread }
 
+function TCBDataWorkHandleThread.LockNodeDat(aLocker:string):boolean;
+begin
+  Result:=false;
+  if (not SameText(FCBNodeDat_Token,'')) and
+     (not SameText(FCBNodeDat_Token,aLocker))  then
+    exit;
+  try
+    FCBNodeDat_TokenTime:=GetTickCount;
+    FCBNodeDat_Token:=aLocker;
+    result:=true;
+  finally
+  end;
+end;
+
+function TCBDataWorkHandleThread.UnLockNodeDat(aLocker:string):boolean;
+begin
+  Result:=false;
+  if (not SameText(FCBNodeDat_Token,'')) and
+     (not SameText(FCBNodeDat_Token,aLocker))  then
+    exit;
+  try
+    FCBNodeDat_Token:='';
+    FCBNodeDat_TokenTime:=0;
+    result:=true;
+  finally
+  end;
+end;
+
+
 procedure TCBDataWorkHandleThread.PackCBNodeFile();
 var sNodeDatPath,sZearoFile,sTempUplFile:string; tsNeedTransfer:TStringList;
 begin
@@ -367,10 +403,14 @@ begin
 end;
 
 
-constructor TCBDataWorkHandleThread.Create();
+constructor TCBDataWorkHandleThread.Create(aLockTimeOut:integer);
 var sTempPath,sTempName,sLoc:string;
   i:integer; 
 begin
+  FLockTimeOut:=aLockTimeOut;
+  FCBNodeDat_Token:='';
+  FCBNodeDat_TokenTime:=0;
+
   FGUIDOfCBData:='';
   FGUIDOfNodeData:='';
   FGUIDOfIFRSData:='';
@@ -436,6 +476,38 @@ begin
   ProExecute;
 end;
 
+function GetFieldsOfIfrsop(aIfrsopFile:string;tsTemp:TStringList;var tsDat:TStringList):Boolean;
+   function GetFV(aInputF:string):string;
+   var xi:integer; xstr,xstr2:String;
+   begin
+     result:='';
+     xstr:=aInputF+'=';
+     for xi:=0 to tsTemp.count-1 do
+     begin
+       xstr2:=tsTemp[xi];
+       if Pos(xstr,xstr2)=1 then
+       begin
+         result:=Copy(xstr2,Length(xstr)+1,Length(xstr2));
+       end;  
+     end;
+   end;
+var sLine:string;
+begin
+  result:=False;
+  tsTemp.clear;
+  if FileExists(aIfrsopFile) then
+  begin
+    tsTemp.LoadFromFile(aIfrsopFile);
+    sLine:='222'+
+           '<1>'+GetFV('year')+'</1>'+
+           '<2>'+GetFV('q')+'</2>'+
+           '<3>'+GetFV('code')+'</3>'+
+           '<4>'+ExtractFileName(aIfrsopFile)+'</4>';
+    tsDat.add(sLine);
+  end;
+  result:=true;
+end;
+
 procedure TCBDataWorkHandleThread.ProExecute;
 
   procedure SleepWhile;
@@ -459,13 +531,13 @@ procedure TCBDataWorkHandleThread.ProExecute;
     end;
   end;
 
-var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer; sTempGuidOfProIFRSData:string;
-    sMsg,sTemp,sOperator,sTimeKey,sUptfile,
-    sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn,sLogFile:string;
-    aLogRec:TTrancsationRec;
+var i,i1,i2,i3,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer; sTempGuidOfProIFRSData:string;
+    sMsg,sTemp,sOperator,sTimeKey,sUptfile,sCid,sOldCid,sNodeOp,sOnePath,
+    sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn,sLogFile,sStatus:string;
+    aLogRec:TTrancsationRec; iTick:DWORD;
 
-    tsCBDataWork,tsNodeWork,tsIFRSWork,tsTemp:TStringList;
-    StrLst:_cStrLst; bOk:Boolean;
+    tsCBDataWork,tsNodeWork,tsIFRSWork,tsTemp,tsIFRSCache:TStringList;  tsAry:array[0..9] of TStringList;
+    StrLst:_cStrLst; bOk:Boolean; sDstFile,sSrFile:array[0..2] of string;
 
     function GetDataWorkList:Boolean;
     var x1,x2:integer; xstr1,xstr2,xstr3:string;
@@ -499,6 +571,25 @@ var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer; sTempG
         try if Assigned(xfini) then FreeAndNil(xfini); except end;
       end;
     end;
+    function GetParamsOfOpNode(aInputFile:string;var aOperator,aTimeKey,aCid,aOldCid,aNodeOp:string):boolean;
+    var xfini:TIniFile;
+    begin
+      result:=false;
+      if not FileExists(aInputFile) then
+        exit;
+      xfini:=TIniFile.Create(aInputFile);
+      try
+        aOperator:=xfini.ReadString('data','operator','');
+        aTimeKey:=xfini.ReadString('data','timekey','');
+        aCid:=xfini.ReadString('data','uptfile','');
+        aOldCid:=xfini.ReadString('data','cidold','');
+        aNodeOp:=xfini.ReadString('data','nodeop','');
+        if (aOperator<>'') and (aTimeKey<>'') and (aCid<>'') and (aNodeOp<>'') then
+          result:=true;
+      finally
+        try if Assigned(xfini) then FreeAndNil(xfini); except end;
+      end;
+    end;
     function GetIFRSParamsOfOp(aInputFile:string;var aOperator,aTimeKey,aCode,aYear,aQ,aIDName,aOp,aMName,aMNameEn:string):boolean;
     var xfini:TIniFile;
     begin
@@ -525,15 +616,37 @@ var i,iCount,iErrOfProCBData,iErrOfProNodeData,iErrOfProIFRSData:Integer; sTempG
         try if Assigned(xfini) then FreeAndNil(xfini); except end;
       end;
     end;
+    function IFRSStatusSet(aInputStr1,aStatusStr:string;aInputSite:integer):string;
+    begin
+      Result:=aInputStr1;
+      Result[aInputSite]:=aStatusStr[1];
+    end;
 begin
   //inherited;
   try
     tsCBDataWork:=TStringList.create;
     tsNodeWork:=TStringList.create;
     tsIFRSWork:=TStringList.create;
+    tsIFRSCache:=TStringList.create;
     tsTemp:=TStringList.create;
+    for i:=Low(tsAry) to High(tsAry) do
+      tsAry[i]:=TStringList.create;
+
     while not Self.Terminated do
-    begin
+    begin              
+        if FCBNodeDat_Token<>'' then
+        begin
+          iTick:=GetTickCount;
+          if (iTick-FCBNodeDat_TokenTime>FLockTimeOut*1000) then
+          begin
+            try
+              FCBNodeDat_Token:='';
+              FCBNodeDat_TokenTime:=0;
+            finally
+            end;
+          end;
+        end;
+
         SleepWhile;
         if (Time>=AMainFrm.FSendMailOfOpLogTime) and
            (AMainFrm.FSendMailOfOpLogFlag<FmtDt8(date)) then
@@ -602,9 +715,9 @@ begin
             for i:=0 to tsNodeWork.Count-1 do
             begin
               Sleep(5);
-              if GetParamsOfOp(tsNodeWork[i],sOperator,sTimeKey,sUptfile) then
+              if GetParamsOfOpNode(tsNodeWork[i],sOperator,sTimeKey,sCid,sOldCid,sNodeOp) then
               begin
-                bOk:=CBDataMgr.SetNodeUpload(sOperator,sTimeKey);
+                bOk:=CBDataMgr.SetNodeUpload(sNodeOp,sOldCid,sCid,sOperator,sTimeKey);
                 if bOk then 
                 begin
                   if FileExists(tsNodeWork[i]) then
@@ -636,50 +749,154 @@ begin
             end;
           end;
 
-          
+          try
+
           if tsIFRSWork.Count>0 then
           begin
+            for i:=Low(tsAry) to High(tsAry) do
+              tsAry[i].clear;
+            //--將任務年、季、代碼、ifrsop文件名添加到緩存列表tsIFRSCache，并按照年、季排序
+            tsIFRSCache.clear;
+            sOnePath:=ExtractFilePath(tsIFRSWork[0]);
             for i:=0 to tsIFRSWork.Count-1 do
             begin
-              Sleep(5);
-              if FileExists(tsIFRSWork[i]) then
+              GetFieldsOfIfrsop(tsIFRSWork[i],tsTemp,tsIFRSCache);
+            end;
+            tsIFRSCache.Sort;
+            //
+            i:=0;
+            while i<tsIFRSCache.count do
+            begin
+              sYear:=GetStrOnly2('<1>','</1>',tsIFRSCache[i],false);
+              sQ:=GetStrOnly2('<2>','</2>',tsIFRSCache[i],false);
+              sCode:=GetStrOnly2('<3>','</3>',tsIFRSCache[i],false);
+              if (sYear='') or (sQ='') or (sCode='') then
               begin
-                if GetIFRSParamsOfOp(tsIFRSWork[i],sOperator,sTimeKey,sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn) then
+                tsIFRSCache.delete(i);
+                continue;
+              end;
+              //--將與當前年、季相同的任務集合起來，執行批量的tr1db數據更新
+              sSrFile[0] := Format('%sData\IFRS\%s_%s_%s_1.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+              sSrFile[0] := LowerCase(sSrFile[0]);
+              sSrFile[1] := Format('%sData\IFRS\%s_%s_%s_2.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+              sSrFile[1] := LowerCase(sSrFile[1]);
+              sSrFile[2] := Format('%sData\IFRS\%s_%s_%s_3.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+              sSrFile[2] := LowerCase(sSrFile[2]);
+              tsAry[0].Add(sSrFile[0]);
+              tsAry[1].Add(sSrFile[1]);
+              tsAry[2].Add(sSrFile[2]);
+              
+              sDstFile[0] := Format('%sCBData\ifrs\%s_%s_1.dat',[CBDataMgr.GetTr1DBPath,sYear,sQ]);
+              sDstFile[0] := LowerCase(sDstFile[0]);
+              sDstFile[1] := Format('%sCBData\ifrs\%s_%s_2.dat',[CBDataMgr.GetTr1DBPath,sYear,sQ]);
+              sDstFile[1] := LowerCase(sDstFile[1]);
+              sDstFile[2] := Format('%sCBData\ifrs\%s_%s_3.dat',[CBDataMgr.GetTr1DBPath,sYear,sQ]);
+              sDstFile[2] := LowerCase(sDstFile[2]);
+
+              i2:=i;           
+              for i1:=i+1 to tsIFRSCache.count-1 do
+              begin
+                if (GetStrOnly2('<1>','</1>',tsIFRSCache[i1],false)<>sYear) or
+                   (GetStrOnly2('<2>','</2>',tsIFRSCache[i1],false)<>sQ) then
                 begin
-                  sLogFile:=ExtractFilePath(ParamStr(0))+IFRSOpLogDir+copy(sTimeKey,1,8)+'.log';
-                  if CBDataMgr.SetIFRSTFN(sCode, strtoint(sYear),strtoint(sQ),sOperator,sTimeKey) then
+                  break;
+                end;
+                sCode:=GetStrOnly2('<3>','</3>',tsIFRSCache[i1],false);
+                if (sCode='') then
+                begin
+                  break;
+                end;
+
+                sSrFile[0] := Format('%sData\IFRS\%s_%s_%s_1.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+                sSrFile[0] := LowerCase(sSrFile[0]);
+                sSrFile[1] := Format('%sData\IFRS\%s_%s_%s_2.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+                sSrFile[1] := LowerCase(sSrFile[1]);
+                sSrFile[2] := Format('%sData\IFRS\%s_%s_%s_3.dat',[ExtractFilePath(ParamStr(0)),sYear,sQ,sCode]);
+                sSrFile[2] := LowerCase(sSrFile[2]);
+                tsAry[0].Add(sSrFile[0]);
+                tsAry[1].Add(sSrFile[1]);
+                tsAry[2].Add(sSrFile[2]);
+
+                i2:=i1; 
+              end;
+              bOk:=true;
+              bOk:=bOk and UptIFRSRecToTr1dbBatch(tsAry[0],sDstFile[0],tsAry[3]);
+              if bOk then
+              begin
+                for i1:=0 to tsAry[3].Count-1 do
+                  tsIFRSCache[i+i1]:=IFRSStatusSet(tsIFRSCache[i+i1],tsAry[3][i1],1);
+              end;
+              bOk:=bOk and UptIFRSRecToTr1dbBatch(tsAry[1],sDstFile[1],tsAry[4]);
+              if bOk then
+              begin
+                for i1:=0 to tsAry[4].Count-1 do
+                  tsIFRSCache[i+i1]:=IFRSStatusSet(tsIFRSCache[i+i1],tsAry[4][i1],2);
+              end;
+              bOk:=bOk and UptIFRSRecToTr1dbBatch(tsAry[2],sDstFile[2],tsAry[5]);
+              if bOk then
+              begin
+                for i1:=0 to tsAry[5].Count-1 do
+                  tsIFRSCache[i+i1]:=IFRSStatusSet(tsIFRSCache[i+i1],tsAry[5][i1],3);
+              end;
+              //--批量數據更新成功后，逐一審核任務
+              if bOk then
+              begin
+                for i1:=i to i2 do
+                begin
+                  sUptfile:=GetStrOnly2('<4>','</4>',tsIFRSCache[i1],false);
+                  sStatus:=Copy(tsIFRSCache[i1],1,3);
+                  if (sUptfile<>'') and (Length(sStatus)=3) then
                   begin
-                    {if SameText('DownIFRS',sOperator) then
-                      SetStatusOfIFRS(sCode,_CShen2)
-                    else
-                      SetStatusOfIFRS(sCode,_CShen);}
-                    with aLogRec do
-                    begin
-                       ID := Format('%s,%s',[sYear,sQ]);
-                       IDName := sIDName;
-                       Op := sOp;
-                       OpTime := sTimeKey;
-                       Operator := sOperator;
-                       ModouleName := sMName;
-                       ModouleNameEn := sMNameEn;
-                       BeSave := False;
-                    end;
-                    WriteARecToFile(aLogRec,sLogFile);
-                    if FileExists(tsIFRSWork[i]) then
-                      DeleteFile(tsIFRSWork[i]);
-                    Continue;
-                  end
-                  else begin
-                    iErrOfProIFRSData:=1;
-                    AddMsg('處理IFRS審核資料失敗.'+tsIFRSWork[i]);
+                      sUptfile:=sOnePath+sUptfile;
+                      if FileExists(sUptfile) then
+                      begin
+                        if GetIFRSParamsOfOp(sUptfile,sOperator,sTimeKey,sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn) then
+                        begin
+                          AddMsg('處理....'+Format('%s(%s,%sQ%s),%s',[sOperator,sCode,sYear,sQ,sTimeKey]));
+                          sLogFile:=ExtractFilePath(ParamStr(0))+IFRSOpLogDir+copy(sTimeKey,1,11)+'.log';
+                          if CBDataMgr.SetIFRSTFN(sCode, strtoint(sYear),strtoint(sQ),sOperator,sTimeKey,sStatus,sDstFile[0],sDstFile[1],sDstFile[2]) then
+                          begin
+                            {if SameText('DownIFRS',sOperator) then
+                              SetStatusOfIFRS(sCode,_CShen2)
+                            else
+                              SetStatusOfIFRS(sCode,_CShen);}
+                            with aLogRec do
+                            begin
+                               ID := Format('%s,%s',[sYear,sQ]);
+                               IDName := sIDName;
+                               Op := sOp;
+                               OpTime := sTimeKey;
+                               Operator := sOperator;
+                               ModouleName := sMName;
+                               ModouleNameEn := sMNameEn;
+                               BeSave := False;
+                            end;
+                            WriteARecToFile(aLogRec,sLogFile);
+                            if FileExists(sUptfile) then
+                              DeleteFile(sUptfile);
+                            AddMsg('處理IFRS審核資料ok.'+Format('%s(%s,%sQ%s),%s',[sOperator,sCode,sYear,sQ,sTimeKey]));
+                            Continue;
+                          end
+                          else begin
+                            iErrOfProIFRSData:=1;
+                            AddMsg('處理IFRS審核資料失敗.'+sUptfile);
+                          end;
+                        end
+                        else begin
+                          iErrOfProIFRSData:=1;
+                          AddMsg('IFRS獲取操作記錄參數失敗.'+sUptfile);
+                        end;
+                      end;
                   end;
-                end
-                else begin
-                  iErrOfProIFRSData:=1;
-                  AddMsg('IFRS獲取操作記錄參數失敗.'+tsIFRSWork[i]);
+
                 end;
               end;
+              //--準備下一批，批量更新數據，并執行審核
+              i:=i2+1;
             end;
+
+
+            
             if iErrOfProIFRSData=0 then
             begin
               if sTempGuidOfProIFRSData=FGUIDOfIFRSData then
@@ -698,6 +915,13 @@ begin
               FLastGUIDOfIFRSData:=FGUIDOfIFRSData;
             end;
           end;
+          except
+            on e:Exception do
+            begin
+              AddMsg('IFRS do exception.'+e.Message);
+              e:=nil;
+            end;
+          end;
           
         end;
 
@@ -707,12 +931,44 @@ begin
       try if Assigned(tsCBDataWork) then FreeAndNil(tsCBDataWork); except end;
       try if Assigned(tsNodeWork) then FreeAndNil(tsNodeWork); except end;
       try if Assigned(tsIFRSWork) then FreeAndNil(tsIFRSWork); except end;
+      try if Assigned(tsIFRSCache) then FreeAndNil(tsIFRSCache); except end;
+      for i:=Low(tsAry) to High(tsAry) do
+        FreeAndNil(tsAry[i]);
       try setlength(StrLst,0); except end;
   end;
 end;
 
 
 { TCBDataWorkHandleThreadEcb }
+
+function TCBDataWorkHandleThreadEcb.LockNodeDat(aLocker:string):boolean;
+begin
+  Result:=false;
+  if (not SameText(FCBNodeDat_Token,'')) and
+     (not SameText(FCBNodeDat_Token,aLocker))  then
+    exit;
+  try
+    FCBNodeDat_TokenTime:=GetTickCount;
+    FCBNodeDat_Token:=aLocker;
+    result:=true;
+  finally
+  end;
+end;
+
+function TCBDataWorkHandleThreadEcb.UnLockNodeDat(aLocker:string):boolean;
+begin
+  Result:=false;
+  if (not SameText(FCBNodeDat_Token,'')) and
+     (not SameText(FCBNodeDat_Token,aLocker))  then
+    exit;
+  try
+    FCBNodeDat_Token:='';
+    FCBNodeDat_TokenTime:=0;
+    result:=true;
+  finally
+  end;
+end;
+
 
 procedure TCBDataWorkHandleThreadEcb.PackCBNodeFile();
 var sNodeDatPath,sZearoFile,sTempUplFile:string; tsNeedTransfer:TStringList;
@@ -834,10 +1090,14 @@ begin
 end;
 
 
-constructor TCBDataWorkHandleThreadEcb.Create();
+constructor TCBDataWorkHandleThreadEcb.Create(aLockTimeOut:integer);
 var sTempPath,sTempName,sLoc:string;
   i:integer; 
 begin
+  FLockTimeOut:=aLockTimeOut;
+  FCBNodeDat_Token:='';
+  FCBNodeDat_TokenTime:=0;
+
   FGUIDOfCBData:='';
   FGUIDOfNodeData:='';
   FLastGUIDOfCBData:='';
@@ -919,7 +1179,7 @@ procedure TCBDataWorkHandleThreadEcb.ProExecute;
   end;
 
 var i,iCount,iErrOfProCBData,iErrOfProNodeData:Integer;
-    sMsg,sTemp,sOperator,sTimeKey,sUptfile,
+    sMsg,sTemp,sOperator,sTimeKey,sUptfile,sCid,sOldCid,sNodeOp,
     sCode,sYear,sQ,sIDName,sOp,sMName,sMNameEn,sLogFile:string;
     aLogRec:TTrancsationRec;
 
@@ -952,6 +1212,25 @@ var i,iCount,iErrOfProCBData,iErrOfProNodeData:Integer;
         aTimeKey:=xfini.ReadString('data','timekey','');
         aUptfile:=xfini.ReadString('data','uptfile','');
         if (aOperator<>'') and (aTimeKey<>'') and (aUptfile<>'') then
+          result:=true;
+      finally
+        try if Assigned(xfini) then FreeAndNil(xfini); except end;
+      end;
+    end;
+    function GetParamsOfOpNode(aInputFile:string;var aOperator,aTimeKey,aCid,aOldCid,aNodeOp:string):boolean;
+    var xfini:TIniFile;
+    begin
+      result:=false;
+      if not FileExists(aInputFile) then
+        exit;
+      xfini:=TIniFile.Create(aInputFile);
+      try
+        aOperator:=xfini.ReadString('data','operator','');
+        aTimeKey:=xfini.ReadString('data','timekey','');
+        aCid:=xfini.ReadString('data','uptfile','');
+        aOldCid:=xfini.ReadString('data','cidold','');
+        aNodeOp:=xfini.ReadString('data','nodeop','');
+        if (aOperator<>'') and (aTimeKey<>'') and (aCid<>'') and (aNodeOp<>'') then
           result:=true;
       finally
         try if Assigned(xfini) then FreeAndNil(xfini); except end;
@@ -1035,9 +1314,9 @@ begin
             for i:=0 to tsNodeWork.Count-1 do
             begin
               Sleep(5);
-              if GetParamsOfOp(tsNodeWork[i],sOperator,sTimeKey,sUptfile) then
+              if GetParamsOfOpNode(tsNodeWork[i],sOperator,sTimeKey,sCid,sOldCid,sNodeOp) then
               begin
-                bOk:=CBDataMgrEcb.SetNodeUpload(sOperator,sTimeKey);
+                bOk:=CBDataMgrEcb.SetNodeUpload(sNodeOp,sOldCid,sCid,sOperator,sTimeKey);
                 
                 if bOk then 
                 begin

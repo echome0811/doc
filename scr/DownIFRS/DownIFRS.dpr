@@ -3,7 +3,8 @@ program DownIFRS;
 uses
   Forms,
   MainFrm in 'MainFrm.pas' {AMainFrm},
-  TDocMgr in '..\TDefine\TDocMgr.pas';
+  TDocMgr in '..\TDefine\TDocMgr.pas',
+  uComFunc in 'uComFunc.pas';
 
 {$R *.res}
 

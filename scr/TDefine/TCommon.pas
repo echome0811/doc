@@ -79,7 +79,7 @@ var
   OpTrancsationRecs:TTrancsationRecs;
 
 function CpyF(aDatFS,aDatFD:ShortString):boolean;
-function DelF(aDatF:ShortString):boolean;
+function DelF(aDatF:ShortString):boolean;  
 procedure DoStrArrayTs(Str:String;sep:String; var tsRst:TStringList);
 //--
 procedure GetYearAndQ(ADate:TDate;var aYear,aQ:Integer;var aIsQMon:boolean);
@@ -1324,7 +1324,6 @@ begin
   result:=true;
 end;
 
-
 function CpyF(aDatFS,aDatFD:ShortString):boolean;
 var i:integer;
 begin
@@ -1367,6 +1366,7 @@ begin
     Sleep(500);
   end;
 end;
+
 
 procedure DoStrArrayTs(Str:String;sep:String; var tsRst:TStringList);
 var ts:TStringList;
@@ -3325,6 +3325,7 @@ end;
 
 function SaveIniFile(SectionName:PChar;keyName:PChar;keyVal:PChar;FileName:PChar):ShortString;
 begin
+
      WritePrivateProfileString(SectionName,KeyName,
                                KeyVal,FileName);
 end;
