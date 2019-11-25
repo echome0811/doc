@@ -41,7 +41,7 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=E:\Apps\Bak183Doc
+OutputDir=
 UnitOutputDir=
 PackageDLLOutputDir=
 PackageDCPOutputDir=
@@ -66,7 +66,7 @@ AutoIncBuild=1
 MajorVer=4
 MinorVer=3
 Release=0
-Build=238
+Build=242
 Debug=0
 PreRelease=0
 Special=0
@@ -77,7 +77,7 @@ CodePage=936
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=4.3.0.238
+FileVersion=4.3.0.242
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -93,8 +93,8 @@ Count=1
 Item0=..\TDefine
 [HistoryLists\hlOutputDirectorry]
 Count=6
-Item0=E:\Apps\Bak183Doc
-Item1=..\..\Build
+Item0=..\..\Build
+Item1=E:\Apps\Bak183Doc
 Item2=F:\Doc_4.0.0.0(Huangcq-090714)\QA197DocMgr
 Item3=F:\DocMgr_CN
 Item4=F:\DocMgr2.3TW(From172)

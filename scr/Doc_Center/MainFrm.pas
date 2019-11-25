@@ -379,6 +379,7 @@ type
     procedure AppExcept(Sender: TObject; E: Exception);
     procedure chkAutoAuditDocOnClick(Sender: TObject);
     function LoadOfDocDataMgr_2DocList(aChkDocListCount,aChkNowIsLoading:Boolean):Boolean;
+    function LoadOfDocDataMgr_1DocList(aChkDocListCount,aChkNowIsLoading:Boolean):Boolean;
   public
     { Public declarations }
     FStopRunning: Boolean;
@@ -2792,22 +2793,12 @@ begin
 
         if SRequest = 'READNEWDOC1' Then
         Begin
-          try
-            NowIsLoading := True;
-            //if DocDataMgr_1.DocList.Count=0 Then
-            Begin
-              if DocDataMgr_1.TempDocFileNameExists Then
-              Begin
-                ShowMsgTw('加載擬發信息檔案...');
-                DocDataMgr_1.LoadFromTempDocFile;
-                ShowMsgTw('加載完成,共有擬發公告' + IntToStr(DocDataMgr_1.DocList.Count) + ' 待審核');
-              End;
-            End;
-          finally
-            NowIsLoading   := false;
-          end;
-           AMemoryStream := TMemoryStream.Create();
-           CompressStream(DocDataMgr_1.DocListText,AMemoryStream);
+          LoadOfDocDataMgr_1DocList(false,true);
+          AMemoryStream := TMemoryStream.Create();
+          if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            CompressStream('',AMemoryStream)
+          else
+            CompressStream(DocDataMgr_1.DocListText,AMemoryStream);
         End;
 
         if SRequest = 'READNEWDOC2' Then
@@ -2822,8 +2813,11 @@ begin
 
         if SRequest = 'READNEWDOC3' Then
         Begin
-           AMemoryStream := TMemoryStream.Create();
-           CompressStream(DocDataMgr_3.DocListText,AMemoryStream);
+          AMemoryStream := TMemoryStream.Create();
+          if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            CompressStream('',AMemoryStream)
+          else
+            CompressStream(DocDataMgr_3.DocListText,AMemoryStream);
         End;
 
         if Assigned(AMemoryStream)Then
@@ -2883,23 +2877,13 @@ begin
         AMemoryStream := nil;
         if SRequest = 'INITREADNEWDOC1' Then
         Begin
-          try
-            NowIsLoading := True;
-            if DocDataMgr_1.DocList.Count=0 Then
-            Begin
-              if DocDataMgr_1.TempDocFileNameExists Then
-              Begin
-                ShowMsgTw('加載擬發信息檔案...');
-                DocDataMgr_1.LoadFromTempDocFile;
-                ShowMsgTw('加載完成,共有擬發公告' + IntToStr(DocDataMgr_1.DocList.Count) + ' 待審核');
-              End;
-            End;
-          finally
-            NowIsLoading   := false;
-          end;
-
-           AMemoryStream := TMemoryStream.Create();
-           CompressStream(DocDataMgr_1.DocListText,AMemoryStream);
+          if DocDataMgr_1.DocList.Count=0 Then
+            LoadOfDocDataMgr_1DocList(True,True);
+          AMemoryStream := TMemoryStream.Create();
+          if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            CompressStream('',AMemoryStream)
+          else 
+            CompressStream(DocDataMgr_1.DocListText,AMemoryStream);
         End;
 
         if SRequest = 'INITREADNEWDOC2' Then
@@ -2915,8 +2899,11 @@ begin
 
         if SRequest = 'INITREADNEWDOC3' Then
         Begin
-           AMemoryStream := TMemoryStream.Create();
-           CompressStream(DocDataMgr_3.DocListText,AMemoryStream);
+          AMemoryStream := TMemoryStream.Create();
+          if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            CompressStream('',AMemoryStream)
+          else 
+            CompressStream(DocDataMgr_3.DocListText,AMemoryStream);
         End;
 
         if Assigned(AMemoryStream)Then
@@ -3261,10 +3248,16 @@ begin
         Begin
           if (DocTag = 'DOC1') Then
           Begin
-            ADoc2.Memo    := ADoc.Memo;
-            ADoc2.DOCID   := ADoc.DOCID;
-            if SRequest = 'DOCOK'  Then
-               DocDataMgr_1.SetChkDocIDIsOk(DocTag,ADoc2.GUID);
+            if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            begin
+              ShowMsg(FAppParam.TwConvertStr('當前為自動審核模式,忽略手動審核. ')+ADoc.Title,false);
+            end
+            else begin
+              ADoc2.Memo    := ADoc.Memo;
+              ADoc2.DOCID   := ADoc.DOCID;
+              if SRequest = 'DOCOK'  Then
+                 DocDataMgr_1.SetChkDocIDIsOk(DocTag,ADoc2.GUID);
+            end;
           End;
 
           if (DocTag = 'DOC2') Then
@@ -3288,8 +3281,14 @@ begin
 
           if (DocTag = 'DOC3') Then
           Begin
-            if SRequest = 'DOCOK'  Then
+            if chkAutoAuditDoc.Checked and (not FAppParam.IsTwSys) then
+            begin
+              ShowMsg(FAppParam.TwConvertStr('當前為自動審核模式,忽略手動審核. ')+ADoc.Title,false);
+            end
+            else begin
+              if SRequest = 'DOCOK'  Then
                 DocDataMgr_3.SetChkDocIDIsOk(DocTag,ADoc2.GUID);
+            end;
           End;
           ShowMsgTW('完成公告審核.');
         End Else
@@ -6784,6 +6783,35 @@ try
         AutoDOCOK02(true,ADoc2);
       end;
     end;
+
+    if (not FAppParam.IsTwSys) then
+    begin
+      //-----擬發
+      if DocDataMgr_1.DocList.Count=0 Then
+        LoadOfDocDataMgr_1DocList(true,false);
+      if DocDataMgr_1.DocList.Count>0 Then
+      begin
+        ShowMsgTw('執行批量擬發公告自動審核,數量:'+IntToStr(DocDataMgr_1.DocList.Count));
+        for i:=DocDataMgr_1.DocList.Count-1 downto 0 do
+        begin
+          ADoc2:=DocDataMgr_1.DocList.Items[i];
+          ShowMsg(FAppParam.TwConvertStr('自動審核擬發公告 ')+ADoc2.Title,false);
+          DocDataMgr_1.SetChkDocIDIsOk('DOC1',ADoc2.GUID);
+        end;
+      end;
+
+      //-----過會
+      if DocDataMgr_3.DocList.Count>0 Then
+      begin
+        ShowMsgTw('執行批量過會公告自動審核,數量:'+IntToStr(DocDataMgr_3.DocList.Count));
+        for i:=DocDataMgr_3.DocList.Count-1 downto 0 do
+        begin
+          ADoc2:=DocDataMgr_3.DocList.Items[i];
+          ShowMsg(FAppParam.TwConvertStr('自動審核過會公告 ')+ADoc2.Title,false);
+          DocDataMgr_3.SetChkDocIDIsOk('DOC3',ADoc2.GUID);
+        end;
+      end;
+    end;
   end;
 Except
    ON E: Exception do
@@ -8183,6 +8211,37 @@ begin
           DocDataMgr_2.SetDocLstCBID(FIDLstMgr);
         End;
         ShowMsgTw('加載完成,共有公告' + IntToStr(DocDataMgr_2.DocList.Count) + ' 待審核');
+      End;
+      result:=true;
+    End;
+  finally
+    if aChkNowIsLoading then NowIsLoading   := false;
+  end;
+end;
+
+function TAMainFrm.LoadOfDocDataMgr_1DocList(aChkDocListCount,aChkNowIsLoading:Boolean):Boolean;
+var bLoad:Boolean; sFileOutList:string;
+begin
+  result:=false;
+  if aChkNowIsLoading then
+  begin
+    if NowIsLoading then
+      exit;
+  end;
+  
+  try
+    if aChkNowIsLoading then NowIsLoading := True;
+    bLoad:=(not aChkDocListCount) or
+           ( (aChkDocListCount) and
+             (DocDataMgr_1.DocList.Count=0)
+           ) ;
+    if bLoad then
+    Begin
+      if DocDataMgr_1.TempDocFileNameExists Then
+      Begin
+        ShowMsgTw('加載擬發信息檔案...');
+        DocDataMgr_1.LoadFromTempDocFile;
+        ShowMsgTw('加載完成,共有擬發公告' + IntToStr(DocDataMgr_1.DocList.Count) + ' 待審核');
       End;
       result:=true;
     End;
